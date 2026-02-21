@@ -1,0 +1,978 @@
+{
+  "app": {
+    "tagline": "Sprachen Leicht Lernen"
+  },
+  "common": {
+    "loading": "Wird geladen...",
+    "error": "Ein Fehler ist aufgetreten",
+    "save": "Speichern",
+    "saveChanges": "Änderungen speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "search": "Suchen",
+    "submit": "Absenden",
+    "back": "Zurück",
+    "next": "Weiter",
+    "previous": "Zurück",
+    "close": "Schließen",
+    "confirm": "Bestätigen",
+    "yes": "Ja",
+    "no": "Nein",
+    "all": "Alle",
+    "noResults": "Keine Ergebnisse",
+    "viewMore": "Mehr anzeigen",
+    "showLess": "Weniger anzeigen",
+    "viewAll": "Alle anzeigen",
+    "select": "Auswählen",
+    "selectLanguage": "Sprache auswählen",
+    "clearFilters": "Filter löschen",
+    "filters": "Filter",
+    "language": "Sprache",
+    "home": "Startseite",
+    "sending": "Wird gesendet...",
+    "soon": "Demnächst",
+    "unknown": "Unbekannt",
+    "and": "und",
+    "featured": "Empfohlen",
+    "linkCopied": "Link kopiert!",
+    "minRead": "Min. Lesezeit",
+    "notFoundHint": "Dieser Inhalt wurde möglicherweise entfernt oder die URL ist falsch",
+    "relatedArticles": "Verwandte Artikel",
+    "resultsCount": "{{count}} Ergebnisse",
+    "retry": "Erneut versuchen",
+    "searchPlaceholder": "Suchen...",
+    "serverError": "Ein Fehler ist aufgetreten",
+    "share": "Teilen",
+    "tryAgainLater": "Bitte versuchen Sie es später erneut",
+    "tryDifferentFilter": "Versuchen Sie, die Filter oder Suchbegriffe zu ändern",
+    "views": "Aufrufe"
+  },
+  "user": {
+    "role": {
+      "admin": "Administrator",
+      "staff": "Mitarbeiter",
+      "member": "Mitglied"
+    },
+    "memberLevel": "Gelehrtes Mitglied"
+  },
+  "nav": {
+    "home": "Startseite",
+    "resources": "Bibliothek",
+    "videos": "Videos",
+    "partners": "Community",
+    "chat": "Nachrichten",
+    "forum": "Forum",
+    "search": "Suchen",
+    "profile": "Profil",
+    "settings": "Einstellungen",
+    "requests": "Anfragen",
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "logout": "Abmelden",
+    "adminPanel": "Admin-Bereich",
+    "tagline": "Das Wissensarchiv",
+    "contact": "Kontakt",
+    "about": "Über uns",
+    "terms": "Nutzungsbedingungen",
+    "privacy": "Datenschutz",
+    "news": "Nachrichten",
+    "allNews": "Alle Nachrichten",
+    "germanNews": "Deutsch lernen",
+    "englishNews": "Englisch lernen",
+    "studyAbroad": "Studium im Ausland",
+    "events": "Veranstaltungen",
+    "knowledge": "Wissen",
+    "allKnowledge": "Alles Wissen",
+    "grammar": "Grammatik",
+    "lectures": "Vorlesungen",
+    "vocabulary": "Vokabeln",
+    "examPrep": "Prüfungsvorbereitung",
+    "culture": "Kultur",
+    "tips": "Lerntipps",
+    "tools": "Werkzeuge",
+    "allTools": "Alle Werkzeuge",
+    "translation": "Übersetzung",
+    "dictionary": "Wörterbuch",
+    "practice": "Übung",
+    "software": "Software",
+    "community": "Community",
+    "language": "Sprache wechseln",
+    "menu": "Menü",
+    "notifications": "Benachrichtigungen"
+  },
+  "home": {
+    "seo": {
+      "title": "UnstressVN - Sprachlern-Community",
+      "description": "Treten Sie unserer Community bei, um Sprachlernressourcen, Videolektionen zu entdecken und sich mit Lernenden weltweit zu verbinden."
+    },
+    "hero": {
+      "badge": "Das Wissensarchiv",
+      "title": "Entdecken. Verbinden. Meistern.",
+      "subtitle": "Ihr modernes Refugium für Sprachressourcen, kuratierte Videolektionen und lebendige Community-Diskussionen.",
+      "cta": "Jetzt starten",
+      "welcome": "Willkommen, {{name}}!"
+    },
+    "stats": {
+      "label": "Plattform-Statistiken",
+      "title": "Statistiken",
+      "users": "Mitglieder",
+      "resources": "Ressourcen",
+      "videos": "Videos",
+      "posts": "Diskussionen",
+      "languages": "Sprachen"
+    },
+    "books": {
+      "badge": "Neue Einträge",
+      "viewAll": "Bibliothek durchsuchen"
+    },
+    "videos": {
+      "badge": "Medienarchiv",
+      "title": "Kuratierte Videolektionen",
+      "viewAll": "Alle ansehen"
+    },
+    "forum": {
+      "badge": "Community-Bulletin",
+      "viewAll": "Forum beitreten"
+    },
+    "features": {
+      "title": "Warum UnstressVN?",
+      "resources": {
+        "title": "Umfangreiche Bibliothek",
+        "description": "Zugang zu kuratierten Lernmaterialien für mehrere Sprachen.",
+        "cta": "Bibliothek erkunden"
+      },
+      "partners": {
+        "title": "Partner finden",
+        "description": "Verbinden Sie sich mit Sprachpartnern weltweit.",
+        "cta": "Partner finden"
+      },
+      "forum": {
+        "title": "Community-Forum",
+        "description": "Nehmen Sie an Diskussionen teil und teilen Sie Ihre Lernreise.",
+        "cta": "Forum beitreten"
+      },
+      "news": {
+        "title": "Nachrichten & Wissen",
+        "description": "Aktuelle Nachrichten zum Studium, Alltag und Sprachwissen.",
+        "cta": "Nachrichten lesen"
+      },
+      "videos": {
+        "title": "Lernvideos",
+        "description": "Videolektionen, Kurzfilme und vielfältige Lerninhalte.",
+        "cta": "Videos ansehen"
+      }
+    },
+    "howItWorks": {
+      "badge": "Erste Schritte",
+      "title": "So funktioniert UnstressVN",
+      "subtitle": "Starten Sie Ihre Sprachlernreise in nur 3 einfachen Schritten",
+      "step1": {
+        "title": "Artikel lesen",
+        "description": "Erkunden Sie unsere Wissensdatenbank mit Artikeln über Grammatik, Vokabeln und Lerntipps."
+      },
+      "step2": {
+        "title": "Materialien herunterladen",
+        "description": "Laden Sie Bücher, Lehrbücher und Lernmaterialien für Deutsch/Englisch kostenlos herunter."
+      },
+      "step3": {
+        "title": "Lernwerkzeuge nutzen",
+        "description": "Lernen Sie mit Karteikarten, üben Sie die Aussprache und nutzen Sie Wörterbuch-Tools."
+      }
+    },
+    "cta": {
+      "title": "Bereit, Ihre Lernreise zu beginnen?",
+      "description": "Schließen Sie sich Tausenden von Sprachlernenden an. Greifen Sie auf kostenlose Ressourcen zu, finden Sie Lernpartner und verbinden Sie sich mit einer globalen Community.",
+      "signup": "Kostenlos beitreten",
+      "learn": "Mehr erfahren"
+    },
+    "topArticles": {
+      "label": "Top-Artikel",
+      "badge": "Top-Artikel",
+      "title": "Beliebte Artikel",
+      "viewAll": "Alle anzeigen",
+      "mostViewed": "Am meisten gesehen",
+      "newest": "Neueste",
+      "featured": "Empfohlen",
+      "oldest": "Älteste",
+      "noArticles": "Noch keine Artikel",
+      "columnTitle": "Titel",
+      "columnCategory": "Kategorie",
+      "columnLevel": "Niveau",
+      "columnViews": "Aufrufe"
+    },
+    "latestResources": {
+      "title": "Neueste Ressourcen"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Anmelden",
+      "username": "Benutzername",
+      "password": "Passwort",
+      "remember": "Angemeldet bleiben",
+      "rememberMe": "Angemeldet bleiben",
+      "forgot": "Passwort vergessen?",
+      "forgotPassword": "Passwort vergessen?",
+      "submit": "Anmelden",
+      "noAccount": "Noch kein Konto?",
+      "register": "Jetzt registrieren",
+      "error": "Ungültiger Benutzername oder Passwort"
+    },
+    "register": {
+      "title": "Konto erstellen",
+      "username": "Benutzername",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "confirmPassword": "Passwort bestätigen",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "targetLanguage": "Zielsprache",
+      "selectLanguage": "Zielsprache auswählen",
+      "level": "Aktuelles Niveau",
+      "selectLevel": "Niveau auswählen",
+      "skillFocus": "Fokusfähigkeit",
+      "selectSkill": "Fokusfähigkeit auswählen",
+      "agreeTerms": "Ich stimme den Nutzungsbedingungen und der Datenschutzrichtlinie zu",
+      "agreeToTerms": "Ich stimme den",
+      "terms": "Nutzungsbedingungen",
+      "privacy": "Datenschutzrichtlinie",
+      "submit": "Konto erstellen",
+      "hasAccount": "Bereits ein Konto?",
+      "login": "Anmelden",
+      "error": "Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "errors": {
+        "usernameRequired": "Benutzername ist erforderlich",
+        "emailRequired": "E-Mail ist erforderlich",
+        "emailInvalid": "Ungültige E-Mail-Adresse",
+        "passwordRequired": "Passwort ist erforderlich",
+        "passwordLength": "Passwort muss mindestens 8 Zeichen haben",
+        "passwordMismatch": "Passwörter stimmen nicht überein",
+        "targetLanguageRequired": "Bitte wählen Sie eine Zielsprache",
+        "agreeTermsRequired": "Sie müssen den Bedingungen zustimmen",
+        "termsRequired": "Sie müssen den Nutzungsbedingungen zustimmen"
+      }
+    },
+    "changePassword": "Passwort ändern",
+    "currentPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "confirmNewPassword": "Neues Passwort bestätigen",
+    "oldPasswordRequired": "Bitte geben Sie Ihr aktuelles Passwort ein",
+    "newPasswordRequired": "Bitte geben Sie ein neues Passwort ein",
+    "passwordTooShort": "Passwort muss mindestens 8 Zeichen haben",
+    "passwordMismatch": "Passwörter stimmen nicht überein",
+    "passwordChanged": "Passwort erfolgreich geändert"
+  },
+  "profile": {
+    "title": "Mein Profil",
+    "editTitle": "Profil aktualisieren",
+    "editSubtitle": "Aktualisieren Sie Ihre persönlichen Informationen",
+    "edit": "Profil bearbeiten",
+    "settings": "Einstellungen",
+    "bio": "Über mich",
+    "bioPlaceholder": "Schreiben Sie ein paar Zeilen über sich...",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "username": "Benutzername",
+    "nativeLanguage": "Muttersprache",
+    "learningLanguages": "Lernsprachen",
+    "interests": "Interessen",
+    "interestsPlaceholder": "Interessen eingeben, durch Kommas getrennt",
+    "avatar": "Profilbild",
+    "avatarHint": "Format: JPG, PNG. Max. 5MB.",
+    "memberSince": "Mitglied seit",
+    "email": "E-Mail",
+    "lastLogin": "Letzte Anmeldung",
+    "never": "Nie",
+    "accountInfo": "Kontoinformationen",
+    "addLanguage": "Sprache hinzufügen",
+    "notSet": "Nicht festgelegt",
+    "noLanguages": "Keine Lernsprachen",
+    "noInterests": "Keine Interessen",
+    "notFound": "Benutzer nicht gefunden",
+    "notFoundDescription": "Dieser Benutzer existiert nicht oder wurde gelöscht.",
+    "targetLanguage": "Zielsprache",
+    "level": "Niveau",
+    "skillFocus": "Schwerpunkt",
+    "changeAvatar": "Profilbild ändern",
+    "isPublic": "Profil öffentlich anzeigen",
+    "updateSuccess": "Profil erfolgreich aktualisiert",
+    "viewPublic": "Öffentliches Profil anzeigen",
+    "backToProfile": "Zurück zum Profil",
+    "basicInfo": "Grundinformationen",
+    "learningSettings": "Lerneinstellungen",
+    "learningInfo": "Lerninformationen",
+    "socialLinks": "Soziale Links",
+    "website": "Webseite",
+    "privacySettings": "Datenschutzeinstellungen",
+    "publicProfile": "Öffentliches Profil",
+    "publicProfileDesc": "Anderen erlauben, Ihr Profil zu sehen",
+    "showOnlineStatus": "Online-Status anzeigen",
+    "showOnlineStatusDesc": "Anderen erlauben zu sehen, wenn Sie online sind",
+    "allowMessages": "Nachrichten erlauben",
+    "allowMessagesDesc": "Anderen erlauben, Ihnen Nachrichten zu senden",
+    "location": "Standort",
+    "locationPlaceholder": "Stadt, Land",
+    "stats": "Statistiken",
+    "resources": "Ressourcen",
+    "friends": "Lernfreunde",
+    "posts": "Beiträge",
+    "bookmarks": "Gespeichert",
+    "quickActions": "Schnellzugriff"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "subtitle": "Verwalten Sie Ihr Konto und Ihre Einstellungen",
+    "backToProfile": "Zurück zum Profil",
+    "languageAndAppearance": "Sprache & Darstellung",
+    "language": "Sprache",
+    "theme": "Design",
+    "lightTheme": "Hell",
+    "darkTheme": "Dunkel",
+    "systemTheme": "System",
+    "privacy": "Datenschutz",
+    "notifications": "Benachrichtigungen",
+    "emailNotifications": "E-Mail-Benachrichtigungen",
+    "emailNotificationsDesc": "E-Mail-Benachrichtigungen für wichtige Updates erhalten",
+    "pushNotifications": "Push-Benachrichtigungen",
+    "pushNotificationsDesc": "Push-Benachrichtigungen im Browser erhalten",
+    "friendRequestNotifications": "Freundschaftsanfragen",
+    "friendRequestNotificationsDesc": "Benachrichtigt werden, wenn jemand eine Freundschaftsanfrage sendet",
+    "messageNotifications": "Nachrichtenbenachrichtigungen",
+    "messageNotificationsDesc": "Benachrichtigt werden, wenn neue Nachrichten eingehen",
+    "account": "Konto",
+    "changePassword": "Passwort ändern",
+    "changePasswordDesc": "Ihr Kontopasswort aktualisieren",
+    "logout": "Abmelden",
+    "logoutDesc": "Von Ihrem Konto abmelden",
+    "deleteAccount": "Konto löschen",
+    "deleteAccountDesc": "Ihr Konto und alle Daten dauerhaft löschen",
+    "deleteAccountConfirm": "Konto löschen?",
+    "deleteAccountWarning": "Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, Beiträge und Ressourcen werden dauerhaft gelöscht.",
+    "confirmDelete": "Ja, mein Konto löschen"
+  },
+  "resources": {
+    "title": "Ressourcenbibliothek",
+    "subtitle": "Ausgewählte Materialien für jedes Niveau",
+    "searchPlaceholder": "Ressourcen suchen...",
+    "allLanguages": "Alle Sprachen",
+    "allLevels": "Alle Niveaus",
+    "allTypes": "Alle Typen",
+    "resultsCount": "{{count}} Ergebnisse",
+    "resultUnit": "Ressource(n)",
+    "gridView": "Rasteransicht",
+    "listView": "Listenansicht",
+    "noResults": "Keine passenden Ressourcen gefunden",
+    "notFound": "Ressource nicht gefunden",
+    "notFoundDescription": "Diese Ressource existiert nicht oder wurde entfernt.",
+    "backToList": "Zurück zur Liste",
+    "download": "Herunterladen",
+    "downloadNow": "Jetzt herunterladen",
+    "loginToDownload": "Anmelden zum Herunterladen",
+    "visitLink": "Link besuchen",
+    "noDownload": "Kein Download verfügbar",
+    "stats": "Statistiken",
+    "views": "Aufrufe",
+    "downloads": "Downloads",
+    "created": "Erstellt",
+    "uploadedBy": "Hochgeladen von",
+    "related": "Verwandte Ressourcen",
+    "types": {
+      "book": "Buch",
+      "audio": "Audio",
+      "video": "Video",
+      "article": "Artikel",
+      "other": "Andere"
+    },
+    "filters": {
+      "category": "Kategorie",
+      "language": "Sprache",
+      "level": "Niveau",
+      "type": "Typ"
+    },
+    "detail": {
+      "download": "Herunterladen",
+      "downloads": "Downloads",
+      "views": "Aufrufe",
+      "uploadedBy": "Hochgeladen von",
+      "related": "Verwandte Ressourcen"
+    },
+    "empty": "Keine Ressourcen verfügbar",
+    "library": "Bibliothek",
+    "registerToDownload": "Registrieren zum Herunterladen",
+    "save": "Speichern",
+    "category": "Kategorie",
+    "unknownLevel": "Unbekanntes Niveau",
+    "seo": {
+      "title": "Ressourcenbibliothek - UnstressVN",
+      "description": "Durchsuchen Sie unsere umfangreiche Sprachlern-Bibliothek mit Büchern, Audio, Video und Artikeln für alle Niveaus."
+    },
+    "tryDifferent": "Versuchen Sie, Ihre Filter anzupassen"
+  },
+  "videos": {
+    "title": "Videolektionen",
+    "pageTitle": "Videolektionen",
+    "subtitle": "Kuratierte Sammlung von Videolektionen",
+    "seo": {
+      "title": "Videolektionen - UnstressVN",
+      "description": "Kuratierte Sammlung von Videolektionen zur Verbesserung Ihrer Sprachkenntnisse."
+    },
+    "searchPlaceholder": "Videos suchen...",
+    "allLanguages": "Alle Sprachen",
+    "allLevels": "Alle Niveaus",
+    "noResults": "Keine Videos gefunden",
+    "noVideos": "Keine Videos gefunden",
+    "noVideosDescription": "Schauen Sie später wieder vorbei für neue Videos!",
+    "noResultsFiltered": "Versuchen Sie, die Filter oder Suchbegriffe zu ändern.",
+    "error": "Videos konnten nicht geladen werden",
+    "errorDescription": "Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "videosCount": "Videos",
+    "notFound": "Video nicht gefunden",
+    "notDisplaying": "Video wird nicht angezeigt?",
+    "watchOnYouTube": "Auf YouTube ansehen",
+    "save": "Video speichern",
+    "saved": "Gespeichert",
+    "loginToSave": "Anmelden zum Speichern",
+    "noRelated": "Keine verwandten Videos",
+    "viewAll": "Alle Videos ansehen",
+    "backToList": "Zurück zur Liste",
+    "watchNow": "Jetzt ansehen",
+    "views": "Aufrufe",
+    "related": "Verwandte Videos",
+    "resultsCount": "{{count}} Videos"
+  },
+  "partners": {
+    "title": "Lernpartner finden",
+    "pageTitle": "Lernräume",
+    "subtitle": "Treten Sie Lernräumen bei, um gemeinsam zu lernen und zu wachsen",
+    "seo": {
+      "title": "Lernräume - UnstressVN",
+      "description": "Finden Sie Lernräume, die zu Ihrem Niveau und Ihren Lernzielen passen."
+    },
+    "myRequests": "Meine Anfragen",
+    "rooms": "Lernräume",
+    "createRoom": "Raum erstellen",
+    "searchPlaceholder": "Räume suchen...",
+    "nativeLanguage": "Muttersprache",
+    "learningLanguage": "Lernsprache",
+    "allLanguages": "Alle Sprachen",
+    "allLevels": "Alle Niveaus",
+    "allPurposes": "Alle Zwecke",
+    "allSkills": "Alle Fähigkeiten",
+    "level": "Niveau",
+    "purpose": "Zweck",
+    "skill": "Fähigkeit",
+    "resultsCount": "{{count}} Ergebnisse",
+    "noResults": "Keine passenden Partner gefunden",
+    "native": "Muttersprache",
+    "learning": "Lernt",
+    "viewProfile": "Profil anzeigen",
+    "sendRequest": "Anfrage senden",
+    "backToSearch": "Zurück zur Suche",
+    "receivedRequests": "Erhaltene Anfragen",
+    "sentRequests": "Gesendete Anfragen",
+    "noReceivedRequests": "Keine Anfragen erhalten",
+    "noSentRequests": "Sie haben noch keine Anfragen gesendet",
+    "accept": "Akzeptieren",
+    "reject": "Ablehnen",
+    "cancel": "Abbrechen",
+    "status": {
+      "pending": "Ausstehend",
+      "accepted": "Akzeptiert",
+      "rejected": "Abgelehnt"
+    },
+    "roomsDescription": "Liste der verbundenen Lernpartner",
+    "noRooms": "Sie haben noch keine Lernpartner",
+    "findPartners": "Partner finden",
+    "partnersSince": "Verbunden seit",
+    "startChat": "Chat starten",
+    "search": {
+      "title": "Partner finden",
+      "placeholder": "Nach Name oder Bio suchen..."
+    },
+    "filters": {
+      "language": "Lernsprache",
+      "level": "Niveau",
+      "skill": "Fähigkeit"
+    },
+    "request": {
+      "send": "Anfrage senden",
+      "sent": "Anfrage gesendet",
+      "accept": "Akzeptieren",
+      "reject": "Ablehnen",
+      "cancel": "Anfrage abbrechen",
+      "message": "Nachricht",
+      "messagePlaceholder": "Hallo! Ich würde gerne mit dir lernen..."
+    },
+    "empty": "Keine Partner gefunden",
+    "friendList": "Freunde",
+    "friendListDescription": "Sehen und verwalten Sie Ihre Sprachlernfreunde. Starten Sie Gespräche und üben Sie gemeinsam.",
+    "loginToViewFriends": "Bitte melden Sie sich an, um Ihre Freunde zu sehen.",
+    "friendsCount": "Freunde"
+  },
+  "studyRooms": {
+    "title": "Lernräume",
+    "create": "Raum erstellen",
+    "join": "Beitreten",
+    "leave": "Verlassen",
+    "delete": "Raum löschen",
+    "members": "Mitglieder",
+    "owner": "Eigentümer",
+    "roomName": "Raumname",
+    "description": "Beschreibung",
+    "language": "Sprache",
+    "level": "Niveau",
+    "purpose": "Zweck",
+    "skill": "Fähigkeit",
+    "maxMembers": "Max. Mitglieder",
+    "noRooms": "Keine Lernräume verfügbar",
+    "createNew": "Neuen Raum erstellen",
+    "joinSuccess": "Erfolgreich dem Raum beigetreten",
+    "leaveSuccess": "Erfolgreich den Raum verlassen",
+    "deleteConfirm": "Möchten Sie diesen Raum wirklich löschen?",
+    "goToChat": "Zum Chat"
+  },
+  "chat": {
+    "title": "Nachrichten",
+    "you": "Sie",
+    "noConversations": "Noch keine Unterhaltungen",
+    "noConversationsHint": "Verbinden Sie sich mit Lernpartnern, um zu chatten",
+    "roomNotFound": "Unterhaltung nicht gefunden",
+    "backToList": "Zurück zur Liste",
+    "online": "Online",
+    "connecting": "Verbinde...",
+    "viewProfile": "Profil anzeigen",
+    "noMessages": "Noch keine Nachrichten. Starten Sie die Unterhaltung!",
+    "typePlaceholder": "Nachricht eingeben...",
+    "send": "Senden",
+    "conversations": "Unterhaltungen",
+    "newMessage": "Neue Nachricht",
+    "startChat": "Chat starten",
+    "viewAll": "Alle Nachrichten anzeigen",
+    "newConversation": "Neue Unterhaltung",
+    "subtitle": "Alle Ihre Unterhaltungen",
+    "searchPlaceholder": "Unterhaltungen suchen..."
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "pageTitle": "Benachrichtigungen",
+    "pageDescription": "Alle Ihre Benachrichtigungen anzeigen",
+    "subtitle": "Neueste Aktivitätsupdates",
+    "markAllRead": "Alle als gelesen markieren",
+    "markAsRead": "Als gelesen markieren",
+    "read": "Gelesen",
+    "unread": "ungelesen",
+    "total": "Gesamte Benachrichtigungen",
+    "allNotifications": "Alle Benachrichtigungen",
+    "empty": "Keine Benachrichtigungen",
+    "emptyHint": "Sie werden benachrichtigt, wenn es neue Aktivitäten gibt",
+    "viewAll": "Alle Benachrichtigungen anzeigen",
+    "type": {
+      "friend_request": "Freundschaftsanfrage",
+      "like": "Gefällt mir",
+      "comment": "Kommentar",
+      "message": "Nachricht"
+    }
+  },
+  "forum": {
+    "title": "Community-Forum",
+    "pageTitle": "Community-Forum",
+    "subtitle": "Teilen, lernen und gemeinsam wachsen",
+    "discussionCount": "Diskussionen",
+    "createPost": "Beitrag erstellen",
+    "editPost": "Beitrag bearbeiten",
+    "searchPlaceholder": "Beiträge suchen...",
+    "allCategories": "Alle Kategorien",
+    "noPosts": "Noch keine Beiträge",
+    "createFirst": "Erstellen Sie den ersten Beitrag",
+    "postNotFound": "Beitrag nicht gefunden",
+    "backToList": "Zurück zur Liste",
+    "views": "Aufrufe",
+    "comments": "Kommentare",
+    "writeComment": "Kommentar schreiben...",
+    "submitComment": "Kommentar absenden",
+    "toComment": "um zu kommentieren",
+    "noComments": "Noch keine Kommentare",
+    "postTitle": "Beitragstitel",
+    "category": "Kategorie",
+    "selectCategory": "Kategorie auswählen",
+    "content": "Inhalt",
+    "contentPlaceholder": "Schreiben Sie Ihren Beitrag...",
+    "markdownSupported": "Markdown wird unterstützt",
+    "publish": "Veröffentlichen",
+    "errors": {
+      "titleRequired": "Titel ist erforderlich",
+      "contentRequired": "Inhalt ist erforderlich"
+    },
+    "posts": "Beiträge",
+    "newPost": "Neuer Beitrag",
+    "postContent": "Inhalt",
+    "likes": "Gefällt mir",
+    "share": "Teilen",
+    "reply": "Antworten",
+    "deleteConfirm": "Möchten Sie diesen Beitrag wirklich löschen?",
+    "sortBy": {
+      "latest": "Neueste",
+      "popular": "Beliebt",
+      "trending": "Trending"
+    }
+  },
+  "search": {
+    "title": "Suche",
+    "placeholder": "Ressourcen, Benutzer, Beiträge suchen...",
+    "search": "Suchen",
+    "searching": "Suche...",
+    "all": "Alle",
+    "resources": "Ressourcen",
+    "posts": "Beiträge",
+    "users": "Benutzer",
+    "viewMore": "Mehr anzeigen",
+    "noResults": "Keine Ergebnisse für \"{{query}}\" gefunden",
+    "enterQuery": "Suchbegriff eingeben",
+    "tabs": {
+      "all": "Alle",
+      "resources": "Ressourcen",
+      "users": "Benutzer",
+      "posts": "Beiträge"
+    },
+    "results": "Ergebnisse",
+    "books": "Bücher",
+    "videos": "Videos",
+    "discussions": "Diskussionen"
+  },
+  "languages": {
+    "en": "Englisch",
+    "de": "Deutsch",
+    "vi": "Vietnamesisch"
+  },
+  "nativeLanguages": {
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "de": "Deutsch",
+    "ja": "日本語",
+    "ko": "한국어",
+    "zh": "中文",
+    "fr": "Französisch"
+  },
+  "levels": {
+    "A1": "A1 - Anfänger",
+    "A2": "A2 - Grundlagen",
+    "B1": "B1 - Mittelstufe",
+    "B2": "B2 - Obere Mittelstufe",
+    "C1": "C1 - Fortgeschritten",
+    "C2": "C2 - Muttersprachlich",
+    "beginner": "Anfänger",
+    "elementary": "Grundlagen",
+    "intermediate": "Mittelstufe",
+    "upperIntermediate": "Obere Mittelstufe",
+    "advanced": "Fortgeschritten",
+    "native": "Muttersprachlich"
+  },
+  "skills": {
+    "reading": "Lesen",
+    "writing": "Schreiben",
+    "listening": "Hören",
+    "speaking": "Sprechen",
+    "grammar": "Grammatik",
+    "vocabulary": "Wortschatz",
+    "all": "Alle Fähigkeiten"
+  },
+  "purposes": {
+    "travel": "Reisen",
+    "work": "Arbeit",
+    "study": "Studium",
+    "hobby": "Hobby",
+    "exam": "Prüfungsvorbereitung",
+    "other": "Andere"
+  },
+  "footer": {
+    "explore": "Erkunden",
+    "support": "Unterstützung",
+    "about": "Über uns",
+    "contact": "Kontakt",
+    "terms": "Nutzungsbedingungen",
+    "privacy": "Datenschutzrichtlinie",
+    "copyright": "© 2026 UnstressVN. Alle Rechte vorbehalten.",
+    "allRightsReserved": "Alle Rechte vorbehalten.",
+    "craftedWith": "Mit ❤️ für Sprachlernende weltweit erstellt",
+    "knowledge": "Wissen",
+    "resources": "Materialien",
+    "tools": "Werkzeuge",
+    "news": "Nachrichten",
+    "tagline": "Sprachen leicht lernen"
+  },
+  "about": {
+    "seo": {
+      "title": "Über uns - UnstressVN",
+      "description": "Erfahren Sie mehr über UnstressVN, unsere Mission, Sprachlernende weltweit zu verbinden, und wie wir Menschen helfen, neue Sprachen durch gemeinschaftsbasiertes Lernen zu meistern."
+    },
+    "title": "Über UnstressVN",
+    "subtitle": "Sprachlernende verbinden und globale Kommunikation ermöglichen",
+    "mission": {
+      "title": "Unsere Mission",
+      "description": "UnstressVN wurde mit einem einfachen Glauben gegründet: Sprachlernen sollte zugänglich, gemeinschaftsbasiert und unterhaltsam sein. Wir schaffen einen Raum, in dem Lernende aus allen Hintergründen sich verbinden, Ressourcen teilen und gemeinsam wachsen können."
+    },
+    "features": {
+      "title": "Was wir bieten",
+      "resources": {
+        "title": "Kuratierte Ressourcen",
+        "description": "Zugang zu einer Bibliothek hochwertiger Lernmaterialien einschließlich Bücher, Videos, Audiokurse und Artikel für mehrere Sprachen und alle Fähigkeitsstufen."
+      },
+      "partners": {
+        "title": "Sprachpartner",
+        "description": "Finden Sie Muttersprachler und Mitlernende zum Üben. Unser Matching-System hilft Ihnen, die richtigen Lernpartner basierend auf Ihren Zielen zu finden."
+      },
+      "community": {
+        "title": "Aktive Gemeinschaft",
+        "description": "Nehmen Sie an Diskussionen teil, stellen Sie Fragen und teilen Sie Ihre Lernreise mit Tausenden von Sprachbegeisterten aus aller Welt."
+      }
+    },
+    "stats": {
+      "title": "Unsere wachsende Gemeinschaft",
+      "members": "Mitglieder",
+      "resources": "Ressourcen",
+      "languages": "Sprachen",
+      "connections": "Verbindungen"
+    },
+    "values": {
+      "title": "Unsere Werte",
+      "inclusivity": {
+        "title": "Inklusivität",
+        "description": "Wir heißen Lernende aus allen Hintergründen, Kulturen und Fähigkeitsstufen willkommen."
+      },
+      "community": {
+        "title": "Gemeinschaft zuerst",
+        "description": "Wir glauben an die Kraft des gemeinschaftsbasierten Lernens und der gegenseitigen Unterstützung."
+      },
+      "quality": {
+        "title": "Qualitätsinhalt",
+        "description": "Wir kuratieren und teilen nur die besten Lernressourcen und Materialien."
+      },
+      "growth": {
+        "title": "Kontinuierliches Wachstum",
+        "description": "Wir fördern lebenslanges Lernen und feiern jeden Fortschritt."
+      }
+    }
+  },
+  "contact": {
+    "seo": {
+      "title": "Kontakt - UnstressVN",
+      "description": "Kontaktieren Sie das UnstressVN-Team. Wir helfen Ihnen gerne bei Fragen, Feedback oder Partnerschaftsanfragen."
+    },
+    "title": "Kontaktieren Sie uns",
+    "subtitle": "Haben Sie Fragen oder Feedback? Wir freuen uns, von Ihnen zu hören.",
+    "email": {
+      "title": "E-Mail an uns",
+      "description": "Wir antworten innerhalb von 24 Stunden"
+    },
+    "chat": {
+      "title": "Community-Forum",
+      "description": "Erhalten Sie Hilfe von der Gemeinschaft",
+      "link": "Forum besuchen"
+    },
+    "location": {
+      "title": "Standort",
+      "remote": "Remote-first Team",
+      "address": "Hanoi, Vietnam"
+    },
+    "success": {
+      "title": "Nachricht gesendet!",
+      "description": "Vielen Dank für Ihre Kontaktaufnahme. Wir werden uns bald bei Ihnen melden.",
+      "sendAnother": "Weitere Nachricht senden"
+    },
+    "form": {
+      "name": "Ihr Name",
+      "namePlaceholder": "Max Mustermann",
+      "email": "E-Mail-Adresse",
+      "emailPlaceholder": "max@example.com",
+      "subject": "Betreff",
+      "subjectPlaceholder": "Wie können wir helfen?",
+      "message": "Nachricht",
+      "messagePlaceholder": "Erzählen Sie uns mehr über Ihre Frage oder Ihr Feedback...",
+      "submit": "Nachricht senden"
+    }
+  },
+  "terms": {
+    "seo": {
+      "title": "Nutzungsbedingungen - UnstressVN",
+      "description": "Lesen Sie unsere Nutzungsbedingungen, um Ihre Rechte und Pflichten bei der Nutzung von UnstressVN zu verstehen."
+    },
+    "title": "Nutzungsbedingungen",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "acceptance": {
+      "title": "Annahme der Bedingungen",
+      "content": "Durch den Zugriff auf und die Nutzung von UnstressVN erklären Sie sich damit einverstanden, diese Bedingungen einzuhalten. Wenn Sie einem Teil dieser Bedingungen nicht zustimmen, nutzen Sie bitte unsere Dienste nicht."
+    },
+    "account": {
+      "title": "Benutzerkonto",
+      "item1": "Sie müssen bei der Registrierung genaue und vollständige Informationen angeben.",
+      "item2": "Sie sind für die Sicherheit Ihrer Anmeldedaten verantwortlich.",
+      "item3": "Sie müssen mindestens 13 Jahre alt sein, um unsere Dienste zu nutzen.",
+      "item4": "Jede Person darf nur ein Konto besitzen."
+    },
+    "content": {
+      "title": "Benutzerinhalte",
+      "intro": "Beim Hochladen von Inhalten auf UnstressVN stimmen Sie zu, dass:",
+      "item1": "Der Inhalt Ihnen gehört oder Sie das Recht haben, ihn zu verwenden.",
+      "item2": "Der Inhalt keine Urheberrechte, Marken oder geistigen Eigentumsrechte anderer verletzt.",
+      "item3": "Der Inhalt keine falschen, irreführenden oder betrügerischen Informationen enthält.",
+      "item4": "Der Inhalt nicht pornografisch, gewalttätig oder hasserfüllt ist."
+    },
+    "prohibited": {
+      "title": "Verbotenes Verhalten",
+      "intro": "Folgende Verhaltensweisen sind auf der Plattform streng verboten:",
+      "item1": "Spam, unerlaubte Werbung oder Massennachrichten.",
+      "item2": "Belästigung, Drohungen oder Mobbing anderer Nutzer.",
+      "item3": "Identitätsdiebstahl oder Erstellung gefälschter Konten.",
+      "item4": "Angriffe, Sabotage oder Eingriffe in das System.",
+      "item5": "Sammeln von Benutzerdaten ohne Einwilligung."
+    },
+    "intellectual": {
+      "title": "Geistiges Eigentum",
+      "content": "Alle Inhalte, Designs, Logos und UnstressVN-Marken sind unser Eigentum und durch Gesetze zum geistigen Eigentum geschützt. Sie dürfen ohne schriftliche Genehmigung nicht kopieren, verteilen oder abgeleitete Werke erstellen."
+    },
+    "disclaimer": {
+      "title": "Haftungsausschluss",
+      "item1": "Dienste werden \"wie besehen\" ohne Garantien bereitgestellt.",
+      "item2": "Wir sind nicht verantwortlich für nutzergenerierte Inhalte.",
+      "item3": "Wir garantieren nicht, dass die Dienste ununterbrochen oder fehlerfrei funktionieren.",
+      "item4": "Sie tragen das volle Risiko beim Herunterladen von Materialien von der Plattform."
+    },
+    "changes": {
+      "title": "Änderungen der Bedingungen",
+      "content": "Wir behalten uns das Recht vor, diese Bedingungen jederzeit zu aktualisieren. Änderungen werden sofort nach Veröffentlichung wirksam. Die weitere Nutzung nach Änderungen bedeutet Akzeptanz der neuen Bedingungen."
+    },
+    "contact": {
+      "title": "Kontakt",
+      "content": "Bei Fragen zu den Nutzungsbedingungen kontaktieren Sie uns bitte über die"
+    }
+  },
+  "privacy": {
+    "seo": {
+      "title": "Datenschutzrichtlinie - UnstressVN",
+      "description": "Erfahren Sie, wie UnstressVN Ihre persönlichen Daten sammelt, verwendet und schützt."
+    },
+    "title": "Datenschutzrichtlinie",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "intro": "Bei UnstressVN verpflichten wir uns zum Schutz Ihrer Privatsphäre. Diese Richtlinie erklärt, wie wir Ihre persönlichen Daten sammeln, verwenden und schützen, wenn Sie unsere Plattform nutzen.",
+    "collection": {
+      "title": "Informationen, die wir sammeln",
+      "provided": "Von Ihnen bereitgestellte Informationen:",
+      "item1": "Registrierungsinformationen: Name, E-Mail, Passwort",
+      "item2": "Profilinformationen: Avatar, Bio, Lernsprachen",
+      "item3": "Von Ihnen gepostete Inhalte: Artikel, Kommentare, Nachrichten",
+      "automatic": "Automatisch gesammelte Informationen:",
+      "item4": "IP-Adresse und Geräteinformationen",
+      "item5": "Cookies und Sitzungsdaten",
+      "item6": "Zugriffshistorie und Plattformaktivität"
+    },
+    "usage": {
+      "title": "Wie wir Informationen verwenden",
+      "item1": "Dienste bereitstellen und verbessern",
+      "item2": "Benutzererfahrung personalisieren",
+      "item3": "Kontoaktivitätsbenachrichtigungen senden",
+      "item4": "Analyse und Forschung für Produktentwicklung",
+      "item5": "Sicherheit gewährleisten und Betrug verhindern",
+      "item6": "Gesetzliche Anforderungen erfüllen"
+    },
+    "sharing": {
+      "title": "Informationsweitergabe",
+      "intro": "Wir verkaufen Ihre persönlichen Daten NICHT. Wir teilen nur in folgenden Fällen:",
+      "item1": "Mit Ihrer ausdrücklichen Zustimmung",
+      "item2": "Mit vertrauenswürdigen Dienstpartnern (Hosting, E-Mail, Analytics)",
+      "item3": "Wenn gesetzlich vorgeschrieben",
+      "item4": "Zum Schutz der Rechte und Sicherheit der Plattform"
+    },
+    "security": {
+      "title": "Datensicherheit",
+      "intro": "Wir wenden fortschrittliche Sicherheitsmaßnahmen an:",
+      "item1": "SSL/TLS-Verschlüsselung für alle Verbindungen",
+      "item2": "Passwortverschlüsselung mit bcrypt",
+      "item3": "Regelmäßige Sicherheitsaudits",
+      "item4": "Eingeschränkter interner Datenzugriff",
+      "item5": "Regelmäßige Datensicherungen"
+    },
+    "cookies": {
+      "title": "Cookies",
+      "intro": "Wir verwenden Cookies für:",
+      "item1": "Aufrechterhaltung Ihrer Anmeldesitzung",
+      "item2": "Speichern von Sprach- und Oberflächeneinstellungen",
+      "item3": "Verkehrsanalyse (Google Analytics)",
+      "control": "Sie können Cookies über Ihre Browsereinstellungen steuern."
+    },
+    "rights": {
+      "title": "Ihre Rechte",
+      "intro": "Sie haben folgende Rechte bezüglich Ihrer persönlichen Daten:",
+      "access": "Recht auf Zugang:",
+      "accessDesc": "Daten einsehen, die wir über Sie speichern",
+      "rectify": "Recht auf Berichtigung:",
+      "rectifyDesc": "Ungenaue Informationen aktualisieren",
+      "delete": "Recht auf Löschung:",
+      "deleteDesc": "Konto- und Datenlöschung anfordern",
+      "export": "Recht auf Datenübertragbarkeit:",
+      "exportDesc": "Eine Kopie Ihrer Daten herunterladen",
+      "optout": "Recht auf Widerspruch:",
+      "optoutDesc": "Marketing-Benachrichtigungen abbestellen"
+    },
+    "changes": {
+      "title": "Richtlinienänderungen",
+      "content": "Wir können diese Richtlinie von Zeit zu Zeit aktualisieren. Wesentliche Änderungen werden per E-Mail oder Plattformbenachrichtigung mitgeteilt. Das Aktualisierungsdatum steht oben auf der Seite."
+    },
+    "contact": {
+      "title": "Datenschutzkontakt",
+      "content": "Bei Fragen oder Anfragen zu persönlichen Daten kontaktieren Sie bitte:",
+      "page": "Kontaktseite:"
+    }
+  },
+  "errors": {
+    "notFound": {
+      "title": "Seite nicht gefunden",
+      "description": "Die gesuchte Seite existiert leider nicht.",
+      "goHome": "Zur Startseite",
+      "search": "Suchen"
+    },
+    "serverError": "Serverfehler",
+    "networkError": "Netzwerkfehler",
+    "unauthorized": "Bitte melden Sie sich an, um fortzufahren",
+    "noPermission": "Zugriff verweigert"
+  },
+  "errorBoundary": {
+    "title": "Ein Fehler ist aufgetreten",
+    "description": "Ein unerwarteter Fehler ist aufgetreten. Bitte laden Sie die Seite neu.",
+    "errorDetails": "Fehlerdetails",
+    "retry": "Erneut versuchen",
+    "home": "Startseite"
+  },
+  "timeAgo": {
+    "yearsAgo": "vor {{count}} Jahren",
+    "monthsAgo": "vor {{count}} Monaten",
+    "weeksAgo": "vor {{count}} Wochen",
+    "daysAgo": "vor {{count}} Tagen",
+    "hoursAgo": "vor {{count}} Stunden",
+    "minutesAgo": "vor {{count}} Minuten",
+    "justNow": "Gerade eben"
+  },
+  "media": {
+    "loadError": "Video konnte nicht geladen werden. Bitte versuchen Sie es später erneut.",
+    "subtitle": "Untertitel:",
+    "subtitleOff": "Aus",
+    "views": "Aufrufe",
+    "featured": "Empfohlen"
+  },
+  "knowledge": {
+    "allLanguages": "Alle Sprachen",
+    "allLevels": "Alle Niveaus",
+    "levelProgress": "Lernpfad nach Niveau"
+  },
+  "articles": {
+    "featured": "Empfohlen",
+    "popular": "Beliebt",
+    "latest": "Neueste",
+    "related": "Verwandte Artikel",
+    "noArticles": "Noch keine Artikel"
+  },
+  "seo": {
+    "defaultDescription": "UnstressVN Sprachlern-Community - Teilen Sie Materialien, Lernvideos für Englisch und Deutsch. Nachrichten, Wissen und Lernwerkzeuge.",
+    "defaultKeywords": "Sprachen lernen, Englisch, Deutsch, Lernmaterialien, Lernvideos, Community"
+  }
+}

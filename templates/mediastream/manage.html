@@ -1,0 +1,535 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Quản lý Media - UnstressVN{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .manage-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .manage-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .manage-header h1 {
+        font-size: 28px;
+        color: #417690;
+        margin: 0;
+    }
+    
+    .header-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    /* Filters */
+    .filters {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .filters select {
+        padding: 10px 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        min-width: 150px;
+    }
+    
+    .filters input[type="search"] {
+        padding: 10px 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        width: 250px;
+    }
+    
+    /* Table */
+    .media-table {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .media-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .media-table th {
+        background: #f8f9fa;
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .media-table td {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+    }
+    
+    .media-table tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .media-table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    /* Thumbnail */
+    .media-thumb {
+        width: 80px;
+        height: 50px;
+        background: #e9ecef;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+    }
+    
+    .media-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 6px;
+    }
+    
+    /* Info */
+    .media-info {
+        max-width: 300px;
+    }
+    
+    .media-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 4px;
+        display: block;
+    }
+    
+    .media-meta {
+        font-size: 12px;
+        color: #888;
+    }
+    
+    /* Badges */
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .badge-video { background: #e3f2fd; color: #1565c0; }
+    .badge-audio { background: #fce4ec; color: #c62828; }
+    .badge-vi { background: #ffebee; color: #c62828; }
+    .badge-en { background: #e3f2fd; color: #1565c0; }
+    .badge-de { background: #fff8e1; color: #f57f17; }
+    .badge-all { background: #f5f5f5; color: #616161; }
+    
+    /* Status */
+    .status-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 6px;
+    }
+    
+    .status-active { background: #4caf50; }
+    .status-inactive { background: #9e9e9e; }
+    
+    /* Actions */
+    .actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .btn {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #417690, #5a9bb6);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(65, 118, 144, 0.3);
+    }
+    
+    .btn-secondary {
+        background: #f5f5f5;
+        color: #666;
+        border: 1px solid #ddd;
+    }
+    
+    .btn-secondary:hover {
+        background: #e9e9e9;
+    }
+    
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background: #c82333;
+    }
+    
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    
+    /* URL display */
+    .url-cell {
+        max-width: 200px;
+    }
+    
+    .url-cell input {
+        width: 100%;
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 12px;
+        font-family: monospace;
+    }
+    
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #888;
+    }
+    
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: 15px;
+    }
+    
+    /* Modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-overlay.active {
+        display: flex;
+    }
+    
+    .modal {
+        background: white;
+        border-radius: 12px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 90vh;
+        overflow: auto;
+    }
+    
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-header h3 {
+        margin: 0;
+        color: #333;
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #999;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .embed-code {
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    
+    .copy-btn {
+        margin-top: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="manage-container">
+    <div class="manage-header">
+        <h1>📁 Quản lý Media</h1>
+        <div class="header-actions">
+            <a href="{% url 'mediastream:admin_upload' %}" class="btn btn-primary">
+                📤 Upload mới
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filters">
+        <select id="filterType" onchange="applyFilters()">
+            <option value="">Tất cả loại</option>
+            {% for value, label in media_types %}
+            <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        
+        <select id="filterLanguage" onchange="applyFilters()">
+            <option value="">Tất cả ngôn ngữ</option>
+            {% for value, label in languages %}
+            <option value="{{ value }}" {% if current_language == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        
+        <input type="search" id="searchInput" placeholder="Tìm kiếm..." onkeyup="filterTable()">
+    </div>
+    
+    <!-- Media Table -->
+    <div class="media-table">
+        {% if media_list %}
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:100px;">Preview</th>
+                    <th>Thông tin</th>
+                    <th style="width:100px;">Loại</th>
+                    <th style="width:100px;">Ngôn ngữ</th>
+                    <th style="width:100px;">Trạng thái</th>
+                    <th style="width:100px;">Lượt xem</th>
+                    <th style="width:220px;">Stream URL</th>
+                    <th style="width:150px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="mediaTable">
+                {% for media in media_list %}
+                <tr data-title="{{ media.title|lower }}" data-type="{{ media.media_type }}" data-language="{{ media.language }}">
+                    <td>
+                        <div class="media-thumb">
+                            {% if media.thumbnail %}
+                            <img src="{{ media.thumbnail.url }}" alt="{{ media.title }}">
+                            {% elif media.media_type == 'video' %}
+                            🎬
+                            {% else %}
+                            🎵
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="media-info">
+                            <span class="media-title">{{ media.title }}</span>
+                            <div class="media-meta">
+                                {{ media.file_size_display }} 
+                                {% if media.duration_display %} • {{ media.duration_display }}{% endif %}
+                                • {{ media.created_at|date:"d/m/Y" }}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ media.media_type }}">
+                            {{ media.get_media_type_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ media.language }}">
+                            {{ media.get_language_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="status-dot {% if media.is_active %}status-active{% else %}status-inactive{% endif %}"></span>
+                        {% if media.is_active %}Active{% else %}Inactive{% endif %}
+                    </td>
+                    <td>
+                        {{ media.view_count }}
+                    </td>
+                    <td class="url-cell">
+                        <input type="text" value="{{ media.get_stream_url }}" readonly onclick="this.select()">
+                    </td>
+                    <td>
+                        <div class="actions">
+                            <a href="{{ media.get_stream_url }}" target="_blank" class="btn btn-secondary btn-sm" title="Play">
+                                ▶
+                            </a>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="showEmbed('{{ media.uid }}', '{{ media.title|escapejs }}', '{{ media.media_type }}')" title="Embed Code">
+                                &lt;/&gt;
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="deleteMedia('{{ media.uid }}')" title="Delete">
+                                🗑
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h3>Chưa có media nào</h3>
+            <p>Bắt đầu upload video hoặc audio đầu tiên của bạn</p>
+            <a href="{% url 'mediastream:admin_upload' %}" class="btn btn-primary" style="margin-top:15px;">
+                📤 Upload ngay
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Embed Modal -->
+<div class="modal-overlay" id="embedModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>📋 Embed Code</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p><strong>Stream URL:</strong></p>
+            <div class="embed-code" id="embedUrl"></div>
+            
+            <p style="margin-top:20px;"><strong>HTML Embed:</strong></p>
+            <div class="embed-code" id="embedCode"></div>
+            
+            <button class="btn btn-primary copy-btn" onclick="copyEmbed()">
+                📋 Copy Embed Code
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function applyFilters() {
+    const type = document.getElementById('filterType').value;
+    const language = document.getElementById('filterLanguage').value;
+    
+    let url = '{% url "mediastream:admin_manage" %}?';
+    if (type) url += 'type=' + type + '&';
+    if (language) url += 'language=' + language + '&';
+    
+    window.location.href = url;
+}
+
+function filterTable() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('#mediaTable tr');
+    
+    rows.forEach(row => {
+        const title = row.dataset.title || '';
+        row.style.display = title.includes(search) ? '' : 'none';
+    });
+}
+
+function showEmbed(uid, title, type) {
+    const modal = document.getElementById('embedModal');
+    const urlEl = document.getElementById('embedUrl');
+    const codeEl = document.getElementById('embedCode');
+    
+    const streamUrl = '/media-stream/play/' + uid + '/';
+    urlEl.textContent = streamUrl;
+    
+    if (type === 'video') {
+        codeEl.textContent = `<video controls src="${streamUrl}" style="max-width:100%;">
+  Your browser does not support the video tag.
+</video>`;
+    } else {
+        codeEl.textContent = `<audio controls src="${streamUrl}">
+  Your browser does not support the audio tag.
+</audio>`;
+    }
+    
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('embedModal').classList.remove('active');
+}
+
+function copyEmbed() {
+    const code = document.getElementById('embedCode').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        alert('Đã copy embed code!');
+    });
+}
+
+async function deleteMedia(uid) {
+    if (!confirm('Bạn có chắc muốn xóa media này?')) return;
+    
+    try {
+        const response = await fetch(`/media-stream/admin/delete/${uid}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Lỗi: ' + (data.error || 'Unknown error'));
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+// Close modal on overlay click
+document.getElementById('embedModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+</script>
+{% endblock %}

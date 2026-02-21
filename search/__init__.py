@@ -1,0 +1,1 @@
+# Search App - Elasticsearch integration

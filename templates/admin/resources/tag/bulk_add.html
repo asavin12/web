@@ -1,0 +1,45 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <fieldset class="module aligned">
+        <h2>Nhập danh sách thẻ tag</h2>
+        
+        <div class="form-row">
+            <div>
+                {{ form.tags_text.label_tag }}
+                {{ form.tags_text }}
+                {% if form.tags_text.help_text %}
+                <p class="help">{{ form.tags_text.help_text }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </fieldset>
+    
+    <div class="submit-row">
+        <input type="submit" value="{% trans 'Tạo thẻ tag' %}" class="default">
+        <a href="{% url 'admin:resources_tag_changelist' %}" class="button cancel-link">{% trans 'Hủy' %}</a>
+    </div>
+</form>
+
+<style>
+    .form-row textarea {
+        width: 100%;
+        max-width: 600px;
+    }
+    .cancel-link {
+        margin-left: 10px;
+        background: #ba2121;
+        color: white !important;
+        padding: 10px 15px;
+    }
+    .cancel-link:hover {
+        background: #a41515;
+    }
+</style>
+{% endblock %}

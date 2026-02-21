@@ -1,0 +1,2160 @@
+# German translations for UnstressVN
+# Copyright (C) 2025 UnstressVN
+msgid ""
+msgstr ""
+"Project-Id-Version: UnstressVN 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-12-17 22:12+0700\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: accounts/forms.py:20 accounts/forms.py:147
+#: accounts/templates/accounts/profile_edit.html:104
+msgid "Email"
+msgstr "E-Mail"
+
+#: accounts/forms.py:23
+#, fuzzy
+#| msgid "Địa chỉ Email"
+msgid "Nhập địa chỉ email"
+msgstr "E-Mail-Adresse eingeben"
+
+#: accounts/forms.py:29 accounts/forms.py:158
+msgid "Họ"
+msgstr "Vorname"
+
+#: accounts/forms.py:32
+msgid "Nhập họ"
+msgstr "Vorname eingeben"
+
+#: accounts/forms.py:38 accounts/forms.py:159
+msgid "Tên"
+msgstr "Nachname"
+
+#: accounts/forms.py:41
+#, fuzzy
+#| msgid "Nhập họ"
+msgid "Nhập tên"
+msgstr "Vorname eingeben"
+
+#: accounts/forms.py:47 accounts/templates/accounts/register.html:141
+msgid "Ngôn ngữ muốn học"
+msgstr "Sprache zum Lernen"
+
+#: accounts/forms.py:48 accounts/templates/accounts/profile_edit.html:149
+#: accounts/templates/accounts/profile_edit.html:164
+#: accounts/templates/accounts/register.html:145
+msgid "Chọn ngôn ngữ"
+msgstr "Sprache wählen"
+
+#: accounts/forms.py:58 accounts/forms.py:106 accounts/forms.py:157
+#: accounts/templates/accounts/login.html:43
+#: accounts/templates/accounts/profile_edit.html:96
+#: accounts/templates/accounts/register.html:73
+msgid "Tên đăng nhập"
+msgstr "Benutzername"
+
+#: accounts/forms.py:66 accounts/forms.py:109
+#: accounts/templates/accounts/login.html:51
+msgid "Nhập tên đăng nhập"
+msgstr "Benutzername eingeben"
+
+#: accounts/forms.py:70 accounts/forms.py:120
+#: accounts/templates/accounts/login.html:66
+msgid "Nhập mật khẩu"
+msgstr "Passwort eingeben"
+
+#: accounts/forms.py:74 accounts/templates/accounts/register.html:134
+msgid "Nhập lại mật khẩu"
+msgstr "Passwort erneut eingeben"
+
+#: accounts/forms.py:78 accounts/forms.py:117
+#: accounts/templates/accounts/login.html:58
+#: accounts/templates/accounts/register.html:106
+msgid "Mật khẩu"
+msgstr "Passwort"
+
+#: accounts/forms.py:79 accounts/templates/accounts/register.html:126
+msgid "Xác nhận mật khẩu"
+msgstr "Passwort bestätigen"
+
+#: accounts/forms.py:82
+msgid "Tối đa 150 ký tự. Chỉ chứa chữ, số và @/./+/-/_"
+msgstr "Maximal 150 Zeichen. Nur Buchstaben, Zahlen und @/./+/-/_"
+
+#: accounts/forms.py:83 accounts/templates/accounts/register.html:44
+msgid "Mật khẩu phải có ít nhất 8 ký tự."
+msgstr "Das Passwort muss mindestens 8 Zeichen haben."
+
+#: accounts/forms.py:84
+msgid "Nhập lại mật khẩu để xác nhận."
+msgstr "Passwort zur Bestätigung erneut eingeben."
+
+#: accounts/forms.py:113
+msgid "Vui lòng nhập tên đăng nhập"
+msgstr "Bitte Benutzername eingeben"
+
+#: accounts/forms.py:123
+msgid "Vui lòng nhập mật khẩu"
+msgstr "Bitte Passwort eingeben"
+
+#: accounts/forms.py:130
+msgid "Nhớ đăng nhập"
+msgstr "Angemeldet bleiben"
+
+#: accounts/forms.py:137
+msgid "Tên đăng nhập hoặc mật khẩu không chính xác."
+msgstr "Falscher Benutzername oder Passwort."
+
+#: accounts/forms.py:138
+msgid "Tài khoản này đã bị vô hiệu hóa."
+msgstr "Dieses Konto wurde deaktiviert."
+
+#: accounts/forms.py:176
+msgid "Ảnh đại diện"
+msgstr "Profilbild"
+
+#: accounts/forms.py:177
+msgid "Giới thiệu bản thân"
+msgstr "Über mich"
+
+#: accounts/forms.py:178 partners/models.py:112
+#: partners/templates/partners/create_room.html:66
+#, fuzzy
+#| msgid "Ngôn ngữ muốn học"
+msgid "Ngôn ngữ mục tiêu"
+msgstr "Sprache zum Lernen"
+
+#: accounts/forms.py:179
+#, fuzzy
+#| msgid "Trình độ"
+msgid "Trình độ hiện tại"
+msgstr "Niveau"
+
+#: accounts/forms.py:180 accounts/templates/accounts/profile_edit.html:186
+#: partners/templates/partners/create_room.html:125
+msgid "Kỹ năng tập trung"
+msgstr "Fokus-Fähigkeit"
+
+#: accounts/forms.py:181
+#, fuzzy
+#| msgid "Cho phép người khác gửi tin nhắn cho bạn"
+msgid "Cho phép người khác tìm thấy tôi"
+msgstr "Erlauben Sie anderen, Ihnen Nachrichten zu senden"
+
+#: accounts/forms.py:187
+#, fuzzy
+#| msgid "Viết vài dòng về bản thân và mục tiêu học tập của bạn..."
+msgid "Giới thiệu ngắn về bản thân và mục tiêu học tập..."
+msgstr "Schreibe ein paar Zeilen über dich und deine Lernziele..."
+
+#: accounts/models.py:22 accounts/templates/accounts/profile_edit.html:165
+#: accounts/templates/accounts/register.html:146 partners/models.py:17
+#: partners/templates/partners/create_room.html:295
+#: partners/templates/partners/search.html:51
+msgid "Tiếng Anh"
+msgstr "Englisch"
+
+#: accounts/models.py:23 accounts/templates/accounts/profile_edit.html:166
+#: accounts/templates/accounts/register.html:147 partners/models.py:18
+#: partners/templates/partners/create_room.html:296
+#: partners/templates/partners/search.html:52
+msgid "Tiếng Đức"
+msgstr "Deutsch"
+
+#: accounts/models.py:28 core/models.py:25 partners/models.py:66
+msgid "A1 - Sơ cấp"
+msgstr "A1 - Anfänger"
+
+#: accounts/models.py:29 partners/models.py:67
+msgid "A2 - Sơ cấp"
+msgstr "A2 - Grundstufe"
+
+#: accounts/models.py:30 core/models.py:27 partners/models.py:68
+msgid "B1 - Trung cấp"
+msgstr "B1 - Mittelstufe"
+
+#: accounts/models.py:31 partners/models.py:69
+msgid "B2 - Trung cấp"
+msgstr "B2 - Mittelstufe"
+
+#: accounts/models.py:32 core/models.py:29 partners/models.py:70
+msgid "C1 - Cao cấp"
+msgstr "C1 - Fortgeschritten"
+
+#: accounts/models.py:33 partners/models.py:71
+msgid "C2 - Cao cấp"
+msgstr "C2 - Fortgeschritten"
+
+#: accounts/models.py:38 accounts/templates/accounts/profile_edit.html:190
+#: partners/models.py:55
+msgid "Nói"
+msgstr "Sprechen"
+
+#: accounts/models.py:39 accounts/templates/accounts/profile_edit.html:189
+#: partners/models.py:56
+msgid "Nghe"
+msgstr "Hören"
+
+#: accounts/models.py:40 accounts/templates/accounts/profile_edit.html:191
+#: partners/models.py:57
+msgid "Đọc"
+msgstr "Lesen"
+
+#: accounts/models.py:41 accounts/templates/accounts/profile_edit.html:192
+#: partners/models.py:58
+msgid "Viết"
+msgstr "Schreiben"
+
+#: accounts/models.py:42 accounts/templates/accounts/profile_edit.html:193
+#: partners/models.py:59
+msgid "Ngữ pháp"
+msgstr "Grammatik"
+
+#: accounts/models.py:43 accounts/templates/accounts/profile_edit.html:194
+#: partners/models.py:60
+msgid "Từ vựng"
+msgstr "Wortschatz"
+
+#: accounts/models.py:44 accounts/templates/accounts/notifications.html:62
+#: accounts/templates/accounts/saved_items.html:59
+#: core/templates/core/video_list.html:54
+#: core/templates/core/video_list.html:65
+#: forum/templates/forum/post_list.html:90
+#: resources/templates/resources/list.html:51
+#: resources/templates/resources/list.html:62
+#: search/templates/search/results.html:26
+msgid "Tất cả"
+msgstr "Alle"
+
+#: accounts/templates/accounts/login.html:5
+#: accounts/templates/accounts/login.html:93
+msgid "Đăng Nhập"
+msgstr "Anmelden"
+
+#: accounts/templates/accounts/login.html:19
+msgid "Chào Mừng Trở Lại"
+msgstr "Willkommen zurück"
+
+#: accounts/templates/accounts/login.html:22
+msgid "Đăng nhập để tiếp tục hành trình học tập."
+msgstr "Melden Sie sich an, um Ihre Lernreise fortzusetzen."
+
+#: accounts/templates/accounts/login.html:35
+msgid "Tên đăng nhập hoặc mật khẩu không đúng."
+msgstr "Falscher Benutzername oder Passwort."
+
+#: accounts/templates/accounts/login.html:81
+msgid "Ghi nhớ đăng nhập"
+msgstr "Angemeldet bleiben"
+
+#: accounts/templates/accounts/login.html:85
+msgid "Quên mật khẩu?"
+msgstr "Passwort vergessen?"
+
+#: accounts/templates/accounts/login.html:104
+msgid "Hoặc tiếp tục với"
+msgstr "Oder fortfahren mit"
+
+#: accounts/templates/accounts/login.html:131
+msgid "Chưa có tài khoản?"
+msgstr "Noch kein Konto?"
+
+#: accounts/templates/accounts/login.html:133
+msgid "Đăng ký ngay"
+msgstr "Jetzt registrieren"
+
+#: accounts/templates/accounts/notifications.html:5
+#: accounts/templates/accounts/notifications.html:22
+#: accounts/templates/accounts/notifications.html:34
+#: templates/partials/navbar.html:445
+msgid "Thông báo"
+msgstr "Benachrichtigungen"
+
+#: accounts/templates/accounts/notifications.html:16
+#: accounts/templates/accounts/saved_items.html:16
+#: core/templates/core/home.html:5 forum/templates/forum/post_list.html:18
+#: resources/templates/resources/detail.html:16
+msgid "Trang chủ"
+msgstr "Startseite"
+
+#: accounts/templates/accounts/notifications.html:40
+msgid "Quản lý tất cả thông báo của bạn"
+msgstr "Verwalten Sie alle Ihre Benachrichtigungen"
+
+#: accounts/templates/accounts/notifications.html:49
+msgid "Đánh dấu tất cả đã đọc"
+msgstr "Alle als gelesen markieren"
+
+#: accounts/templates/accounts/notifications.html:67
+msgid "Chưa đọc"
+msgstr "Ungelesen"
+
+#: accounts/templates/accounts/notifications.html:112
+#: accounts/templates/accounts/profile.html:171
+#: chat/templates/chat/list.html:60 forum/templates/forum/post_detail.html:204
+#: forum/templates/forum/post_list.html:215
+msgid "trước"
+msgstr "vor"
+
+#: accounts/templates/accounts/notifications.html:122
+msgid "Xóa"
+msgstr "Löschen"
+
+#: accounts/templates/accounts/notifications.html:131
+msgid "Xem chi tiết"
+msgstr "Details ansehen"
+
+#: accounts/templates/accounts/notifications.html:170
+#: templates/partials/navbar.html:511
+msgid "Không có thông báo"
+msgstr "Keine Benachrichtigungen"
+
+#: accounts/templates/accounts/notifications.html:172
+msgid ""
+"Bạn sẽ nhận được thông báo khi có người gửi lời mời kết bạn, nhắn tin hoặc "
+"trả lời bài viết của bạn."
+msgstr ""
+"Sie erhalten Benachrichtigungen, wenn jemand Ihnen eine Freundschaftsanfrage "
+"sendet, eine Nachricht schickt oder auf Ihren Beitrag antwortet."
+
+#: accounts/templates/accounts/profile.html:5
+msgid "Hồ Sơ Của Tôi"
+msgstr "Mein Profil"
+
+#: accounts/templates/accounts/profile.html:48
+msgid "Chỉnh Sửa"
+msgstr "Bearbeiten"
+
+#: accounts/templates/accounts/profile.html:70
+msgid "Thành viên từ"
+msgstr "Mitglied seit"
+
+#: accounts/templates/accounts/profile.html:84
+msgid "Thông Tin Học Tập"
+msgstr "Lerninformationen"
+
+#: accounts/templates/accounts/profile.html:88
+#: accounts/templates/accounts/profile_edit.html:162
+msgid "Đang học"
+msgstr "Aktuell lernend"
+
+#: accounts/templates/accounts/profile.html:93
+#: accounts/templates/accounts/profile.html:103
+#: accounts/templates/accounts/profile.html:113
+msgid "Not set"
+msgstr "Nicht festgelegt"
+
+#: accounts/templates/accounts/profile.html:98
+#: accounts/templates/accounts/profile_edit.html:172 partners/models.py:121
+#: partners/templates/partners/create_room.html:99
+msgid "Trình độ"
+msgstr "Niveau"
+
+#: accounts/templates/accounts/profile.html:108
+msgid "Tập trung"
+msgstr "Nachname eingeben"
+
+#: accounts/templates/accounts/profile.html:124
+msgid "Thống Kê"
+msgstr "Statistiken"
+
+#: accounts/templates/accounts/profile.html:129
+#: accounts/templates/accounts/saved_items.html:69 resources/models.py:20
+#: search/templates/search/results.html:27
+#: search/templates/search/results.html:57 templates/partials/navbar.html:88
+msgid "Tài liệu"
+msgstr "Dokument"
+
+#: accounts/templates/accounts/profile.html:133
+#: search/templates/search/results.html:28
+#: search/templates/search/results.html:93
+msgid "Bạn học"
+msgstr "Partner"
+
+#: accounts/templates/accounts/profile.html:137
+msgid "Bài viết"
+msgstr "Artikel"
+
+#: accounts/templates/accounts/profile.html:141
+#: accounts/templates/accounts/saved_items.html:5
+#: accounts/templates/accounts/saved_items.html:30
+#: accounts/templates/accounts/saved_items.html:42
+#: core/templates/core/video_detail.html:110
+#: core/templates/core/video_detail.html:199
+#: resources/templates/resources/detail.html:173
+#: resources/templates/resources/detail.html:264
+#: templates/partials/navbar.html:566
+msgid "Đã lưu"
+msgstr "Gespeichert"
+
+#: accounts/templates/accounts/profile.html:153
+msgid "Hoạt Động Gần Đây"
+msgstr "Letzte Aktivität"
+
+#: accounts/templates/accounts/profile.html:179
+msgid "Chưa có hoạt động gần đây."
+msgstr "Keine aktuelle Aktivität."
+
+#: accounts/templates/accounts/profile.html:189
+msgid "Tài Liệu Của Tôi"
+msgstr "Meine Materialien"
+
+#: accounts/templates/accounts/profile.html:192
+msgid "Xem tất cả"
+msgstr "Alle anzeigen"
+
+#: accounts/templates/accounts/profile.html:205
+msgid "lượt tải"
+msgstr "Downloads"
+
+#: accounts/templates/accounts/profile.html:213
+msgid "Bạn chưa tải lên tài liệu nào."
+msgstr "Keine Ressourcen gefunden"
+
+#: accounts/templates/accounts/profile.html:215
+msgid "Tải lên ngay"
+msgstr "Jetzt hochladen"
+
+#: accounts/templates/accounts/profile_edit.html:5
+#: accounts/templates/accounts/profile_edit.html:16
+msgid "Chỉnh Sửa Hồ Sơ"
+msgstr "Profil bearbeiten"
+
+# Resource detail page
+#: accounts/templates/accounts/profile_edit.html:14
+msgid "Quay lại Hồ sơ"
+msgstr "Zurück zum Profil"
+
+#: accounts/templates/accounts/profile_edit.html:17
+msgid "Cập nhật thông tin cá nhân của bạn"
+msgstr "Aktualisieren Sie Ihre persönlichen Daten"
+
+#: accounts/templates/accounts/profile_edit.html:38
+msgid "Đổi ảnh bìa"
+msgstr "Cover ändern"
+
+#: accounts/templates/accounts/profile_edit.html:71
+msgid "Định dạng JPG, PNG. Tối đa 5MB."
+msgstr "JPG, PNG Format. Max 5MB."
+
+#: accounts/templates/accounts/profile_edit.html:81
+msgid "Thông Tin Cơ Bản"
+msgstr "Grundinformationen"
+
+#: accounts/templates/accounts/profile_edit.html:87
+msgid "Họ và tên"
+msgstr "Vollständiger Name"
+
+#: accounts/templates/accounts/profile_edit.html:91
+msgid "Nhập họ và tên của bạn"
+msgstr "Geben Sie Ihren vollständigen Namen ein"
+
+#: accounts/templates/accounts/profile_edit.html:112
+msgid "Vị trí"
+msgstr "Standort"
+
+#: accounts/templates/accounts/profile_edit.html:116
+msgid "Thành phố, Quốc gia"
+msgstr "Stadt, Land"
+
+#: accounts/templates/accounts/profile_edit.html:121
+msgid "Ngày sinh"
+msgstr "Geburtsdatum"
+
+#: accounts/templates/accounts/profile_edit.html:129
+msgid "Giới thiệu"
+msgstr "Über mich"
+
+#: accounts/templates/accounts/profile_edit.html:132
+msgid "Viết vài dòng về bạn..."
+msgstr "Schreiben Sie ein paar Zeilen über sich..."
+
+#: accounts/templates/accounts/profile_edit.html:141
+msgid "Cài Đặt Học Tập"
+msgstr "Lerneinstellungen"
+
+#: accounts/templates/accounts/profile_edit.html:147
+msgid "Ngôn ngữ mẹ đẻ"
+msgstr "Muttersprache"
+
+#: accounts/templates/accounts/profile_edit.html:174
+msgid "Chọn trình độ"
+msgstr "Niveau wählen"
+
+#: accounts/templates/accounts/profile_edit.html:175
+msgid "Bắt đầu"
+msgstr "Anfänger"
+
+# Level translations
+#: accounts/templates/accounts/profile_edit.html:176
+msgid "Sơ cấp"
+msgstr "Grundstufe"
+
+#: accounts/templates/accounts/profile_edit.html:177
+msgid "Trung cấp"
+msgstr "Mittelstufe"
+
+#: accounts/templates/accounts/profile_edit.html:178
+msgid "Trung cấp cao"
+msgstr "Obere Mittelstufe"
+
+#: accounts/templates/accounts/profile_edit.html:179
+msgid "Nâng cao"
+msgstr "Fortgeschritten"
+
+#: accounts/templates/accounts/profile_edit.html:180
+msgid "Thành thạo"
+msgstr "Kompetent"
+
+#: accounts/templates/accounts/profile_edit.html:188
+msgid "Chọn kỹ năng"
+msgstr "Fähigkeit wählen"
+
+#: accounts/templates/accounts/profile_edit.html:200
+msgid "Mục tiêu học hàng ngày"
+msgstr "Tägliches Lernziel"
+
+#: accounts/templates/accounts/profile_edit.html:205
+msgid "phút"
+msgstr "Minuten"
+
+#: accounts/templates/accounts/profile_edit.html:215
+msgid "Liên Kết Mạng Xã Hội"
+msgstr "Soziale Links"
+
+#: accounts/templates/accounts/profile_edit.html:258
+msgid "Cài Đặt Quyền Riêng Tư"
+msgstr "Datenschutzeinstellungen"
+
+#: accounts/templates/accounts/profile_edit.html:267
+msgid "Hồ sơ công khai"
+msgstr "Öffentliches Profil"
+
+#: accounts/templates/accounts/profile_edit.html:268
+msgid "Cho phép người khác xem hồ sơ của bạn"
+msgstr "Erlauben Sie anderen, Ihr Profil anzusehen"
+
+#: accounts/templates/accounts/profile_edit.html:277
+msgid "Hiển thị trạng thái online"
+msgstr "Online-Status anzeigen"
+
+#: accounts/templates/accounts/profile_edit.html:278
+msgid "Cho phép người khác thấy khi bạn đang trực tuyến"
+msgstr "Erlauben Sie anderen zu sehen, wenn Sie online sind"
+
+#: accounts/templates/accounts/profile_edit.html:287
+msgid "Cho phép tin nhắn"
+msgstr "Nachrichten erlauben"
+
+#: accounts/templates/accounts/profile_edit.html:288
+msgid "Cho phép người khác gửi tin nhắn cho bạn"
+msgstr "Erlauben Sie anderen, Ihnen Nachrichten zu senden"
+
+#: accounts/templates/accounts/profile_edit.html:297
+#: forum/templates/forum/post_form.html:66
+#: partners/templates/partners/create_room.html:192
+msgid "Hủy"
+msgstr "Abbrechen"
+
+#: accounts/templates/accounts/profile_edit.html:300
+msgid "Lưu Thay Đổi"
+msgstr "Änderungen speichern"
+
+#: accounts/templates/accounts/public_profile.html:13
+msgid "Back to Search"
+msgstr "Zurück zur Suche"
+
+#: accounts/templates/accounts/public_profile.html:51
+msgid "Verified"
+msgstr "Verifiziert"
+
+#: accounts/templates/accounts/public_profile.html:66
+msgid "Partner"
+msgstr "Partner"
+
+#: accounts/templates/accounts/public_profile.html:71
+msgid "Request Sent"
+msgstr "Anfrage gesendet"
+
+#: accounts/templates/accounts/public_profile.html:82
+msgid "Sending..."
+msgstr "Wird gesendet..."
+
+#: accounts/templates/accounts/public_profile.html:82
+msgid "Add Partner"
+msgstr "Partner hinzufügen"
+
+#: accounts/templates/accounts/public_profile.html:94
+#: forum/templates/forum/post_detail.html:89
+#: forum/templates/forum/post_detail.html:91
+#: forum/templates/forum/post_detail.html:199
+msgid "Nhắn tin"
+msgstr "Nachricht"
+
+#: accounts/templates/accounts/public_profile.html:101
+msgid "Edit Profile"
+msgstr "Profil bearbeiten"
+
+#: accounts/templates/accounts/public_profile.html:125
+msgid "Member since"
+msgstr "Mitglied seit"
+
+#: accounts/templates/accounts/public_profile.html:163
+msgid "Learning Profile"
+msgstr "Lernprofil"
+
+#: accounts/templates/accounts/public_profile.html:168
+msgid "Native"
+msgstr "Muttersprache"
+
+#: accounts/templates/accounts/public_profile.html:176
+msgid "Learning"
+msgstr "Lernend"
+
+#: accounts/templates/accounts/public_profile.html:184
+msgid "Level"
+msgstr "Niveau"
+
+#: accounts/templates/accounts/public_profile.html:195
+msgid "Focus"
+msgstr "Fokus"
+
+#: accounts/templates/accounts/public_profile.html:208
+msgid "Statistics"
+msgstr "Statistiken"
+
+#: accounts/templates/accounts/public_profile.html:213
+msgid "Resources"
+msgstr "Materialien"
+
+#: accounts/templates/accounts/public_profile.html:217
+#: accounts/templates/accounts/public_profile.html:227
+msgid "Partners"
+msgstr "Partner"
+
+#: accounts/templates/accounts/public_profile.html:256
+msgid "Shared Resources"
+msgstr "Geteilte Materialien"
+
+#: accounts/templates/accounts/public_profile.html:299
+msgid "View more"
+msgstr "Mehr anzeigen"
+
+#: accounts/templates/accounts/public_profile.html:306
+msgid "No resources shared yet."
+msgstr "Noch keine Materialien geteilt."
+
+#: accounts/templates/accounts/register.html:5
+msgid "Đăng Ký"
+msgstr "Registrieren"
+
+#: accounts/templates/accounts/register.html:19
+#: accounts/templates/accounts/register.html:171
+msgid "Tạo Tài Khoản"
+msgstr "Neues Konto erstellen"
+
+#: accounts/templates/accounts/register.html:22
+msgid "Tham gia cộng đồng học ngôn ngữ ngay hôm nay!"
+msgstr "Treten Sie heute der Sprachlerngemeinschaft bei!"
+
+#: accounts/templates/accounts/register.html:35
+msgid "Vui lòng kiểm tra lại thông tin:"
+msgstr ""
+
+#: accounts/templates/accounts/register.html:42
+msgid "Mật khẩu quá giống với tên đăng nhập. Vui lòng chọn mật khẩu khác."
+msgstr ""
+
+#: accounts/templates/accounts/register.html:46
+msgid "Mật khẩu quá phổ biến, dễ đoán. Vui lòng chọn mật khẩu khác."
+msgstr ""
+
+#: accounts/templates/accounts/register.html:48
+msgid "Mật khẩu không được chỉ chứa số."
+msgstr ""
+
+#: accounts/templates/accounts/register.html:50
+msgid "Mật khẩu xác nhận không khớp."
+msgstr ""
+
+#: accounts/templates/accounts/register.html:52
+msgid "Tên đăng nhập này đã được sử dụng."
+msgstr ""
+
+#: accounts/templates/accounts/register.html:54
+#, fuzzy
+#| msgid "Địa chỉ Email"
+msgid "Địa chỉ email không hợp lệ."
+msgstr "E-Mail-Adresse eingeben"
+
+#: accounts/templates/accounts/register.html:56
+msgid "Trường này là bắt buộc."
+msgstr ""
+
+#: accounts/templates/accounts/register.html:82
+msgid "Ví dụ: nguyen_van_a"
+msgstr "Beispiel: max_mustermann"
+
+#: accounts/templates/accounts/register.html:84
+msgid "Chỉ cho phép chữ cái, số và dấu gạch dưới"
+msgstr "Nur Buchstaben, Zahlen und Unterstriche erlaubt"
+
+#: accounts/templates/accounts/register.html:90
+msgid "Địa chỉ Email"
+msgstr "E-Mail-Adresse eingeben"
+
+#: accounts/templates/accounts/register.html:99
+msgid "email@example.com"
+msgstr "email@beispiel.de"
+
+#: accounts/templates/accounts/register.html:114
+msgid "Ít nhất 8 ký tự"
+msgstr "Mindestens 8 Zeichen"
+
+#: accounts/templates/accounts/register.html:159
+msgid "Tôi đồng ý với"
+msgstr "Ich stimme den"
+
+#: accounts/templates/accounts/register.html:160
+msgid "Điều khoản dịch vụ"
+msgstr "Nutzungsbedingungen"
+
+#: accounts/templates/accounts/register.html:161
+msgid "và"
+msgstr "und"
+
+#: accounts/templates/accounts/register.html:162
+msgid "Chính sách bảo mật"
+msgstr "Datenschutz"
+
+#: accounts/templates/accounts/register.html:178
+msgid "Đã có tài khoản?"
+msgstr "Bereits ein Konto?"
+
+#: accounts/templates/accounts/register.html:180
+#: forum/templates/forum/post_detail.html:248 templates/admin/login.html:57
+#: templates/partials/navbar.html:583 templates/partials/navbar.html:658
+msgid "Đăng nhập"
+msgstr "Anmelden"
+
+#: accounts/templates/accounts/saved_items.html:23
+#, fuzzy
+#| msgid "Hồ sơ cá nhân"
+msgid "Hồ sơ"
+msgstr "Mein Profil"
+
+#: accounts/templates/accounts/saved_items.html:45
+#, python-format
+msgid "Bạn đã lưu %(count)s mục"
+msgstr ""
+
+# #-#-#-#-#  django.po (UnstressVN 1.0)  #-#-#-#-#
+# Navbar Menu
+#: accounts/templates/accounts/saved_items.html:79 resources/models.py:23
+#: templates/partials/navbar.html:39 templates/partials/navbar.html:89
+#: templates/partials/navbar.html:618
+msgid "Video"
+msgstr "Videos"
+
+#: accounts/templates/accounts/saved_items.html:89
+#, fuzzy
+#| msgid "Chưa có lời mời nào"
+msgid "Chưa có mục nào được lưu"
+msgstr "Noch keine Anfragen"
+
+#: accounts/templates/accounts/saved_items.html:91
+msgid ""
+"Lưu tài liệu và video để truy cập nhanh sau này. Nhấn vào nút bookmark trên "
+"các trang chi tiết để lưu."
+msgstr ""
+
+#: accounts/templates/accounts/saved_items.html:96
+msgid "Khám phá tài liệu"
+msgstr "Ressourcen erkunden"
+
+#: accounts/templates/accounts/saved_items.html:107
+#, fuzzy
+#| msgid "Tài liệu liên quan"
+msgid "Tài liệu đã lưu"
+msgstr "Verwandte Materialien"
+
+#: accounts/templates/accounts/saved_items.html:129
+#: accounts/templates/accounts/saved_items.html:202
+msgid "Bỏ lưu"
+msgstr ""
+
+#: accounts/templates/accounts/saved_items.html:179
+msgid "Video đã lưu"
+msgstr ""
+
+#: accounts/templates/accounts/saved_items.html:223
+msgid "views"
+msgstr ""
+
+#: chat/templates/chat/list.html:5 chat/templates/chat/list.html:13
+#: templates/partials/navbar.html:287
+msgid "Tin nhắn"
+msgstr "Nachrichten"
+
+#: chat/templates/chat/list.html:14
+msgid "Tất cả cuộc trò chuyện của bạn"
+msgstr "Alle Ihre Gespräche"
+
+#: chat/templates/chat/list.html:18
+msgid "Cuộc trò chuyện mới"
+msgstr "Neues Gespräch"
+
+#: chat/templates/chat/list.html:26
+msgid "Tìm kiếm cuộc trò chuyện..."
+msgstr "Gespräche suchen..."
+
+#: chat/templates/chat/list.html:67
+msgid "Bạn"
+msgstr "Partner"
+
+#: chat/templates/chat/list.html:71
+msgid "Chưa có tin nhắn"
+msgstr "Noch keine Nachrichten"
+
+#: chat/templates/chat/list.html:88
+msgid "Chưa có cuộc trò chuyện nào"
+msgstr "Keine Ressourcen gefunden"
+
+#: chat/templates/chat/list.html:89
+msgid "Bắt đầu kết nối với cộng đồng học tập!"
+msgstr "Verbinden Sie sich mit der Lerngemeinschaft!"
+
+#: chat/templates/chat/list.html:92 forum/models.py:28
+#: forum/templates/forum/post_list.html:56
+#: forum/templates/forum/post_list.html:58
+#: search/templates/search/results.html:134
+msgid "Tìm bạn học"
+msgstr "Lernpartner finden"
+
+#: chat/templates/chat/room.html:5
+msgid "Chat với"
+msgstr "Chat mit"
+
+#: chat/templates/chat/room.html:38 partners/models.py:159
+#: templates/partials/navbar.html:365
+msgid "Đang hoạt động"
+msgstr "Aktive Tage"
+
+#: chat/templates/chat/room.html:40
+msgid "Hoạt động trước"
+msgstr "Aktive Tage"
+
+#: chat/templates/chat/room.html:101 templates/partials/navbar.html:392
+msgid "Bắt đầu cuộc trò chuyện!"
+msgstr "Beginnen Sie das Gespräch!"
+
+#: chat/templates/chat/room.html:132 templates/partials/navbar.html:405
+msgid "Nhập tin nhắn..."
+msgstr "Nachricht eingeben..."
+
+# Video Model Choices
+#: core/models.py:21
+msgid "Mọi ngôn ngữ"
+msgstr "Alle Sprachen"
+
+#: core/models.py:26
+msgid "A2 - Sơ trung"
+msgstr "A2 - Grundkenntnisse"
+
+#: core/models.py:28
+msgid "B2 - Trung cao"
+msgstr "B2 - Obere Mittelstufe"
+
+#: core/models.py:30
+msgid "C2 - Thành thạo"
+msgstr "C2 - Muttersprachlich"
+
+#: core/models.py:31 partners/models.py:72
+msgid "Mọi trình độ"
+msgstr "Alle Niveaus"
+
+#: core/templates/core/home.html:11 templates/partials/navbar.html:23
+msgid "Kho Tri Thức"
+msgstr "Wissenszentrum"
+
+#: core/templates/core/home.html:14
+msgid "Khám Phá. Kết Nối. Thành Thạo."
+msgstr "Entdecken. Verbinden. Meistern."
+
+#: core/templates/core/home.html:17
+msgid ""
+"Không gian hiện đại dành cho tài liệu ngôn ngữ, bài giảng video chọn lọc và "
+"cộng đồng sôi động."
+msgstr ""
+"Ein moderner Raum für Sprachressourcen, ausgewählte Video-Lektionen und eine "
+"lebendige Community."
+
+# #-#-#-#-#  django.po (UnstressVN 1.0)  #-#-#-#-#
+# Homepage Filter Tabs - New
+#: core/templates/core/home.html:29 templates/partials/navbar.html:35
+#: templates/partials/navbar.html:615
+msgid "Thư Viện"
+msgstr "Bibliothek"
+
+#: core/templates/core/home.html:32
+msgid "Tài Liệu Đề Xuất"
+msgstr "Empfohlene Materialien"
+
+#: core/templates/core/home.html:42 core/templates/core/home.html:129
+msgid "Mới nhất"
+msgstr "Neueste"
+
+#: core/templates/core/home.html:48
+msgid "Phổ biến"
+msgstr "Beliebt"
+
+#: core/templates/core/home.html:54
+msgid "Yêu thích"
+msgstr "Favoriten"
+
+#: core/templates/core/home.html:67 core/templates/core/home.html:81
+#: core/templates/core/home.html:95
+msgid "Chưa có tài liệu nào."
+msgstr "Keine Ressourcen verfügbar."
+
+#: core/templates/core/home.html:103
+msgid "Xem Tất Cả Tài Liệu"
+msgstr "Alle Ressourcen anzeigen"
+
+#: core/templates/core/home.html:116
+msgid "Video Bài Giảng"
+msgstr "Video-Lektionen"
+
+#: core/templates/core/home.html:119
+msgid "Video Học Tập Chọn Lọc"
+msgstr "Neueste Lernvideos"
+
+#: core/templates/core/home.html:135
+msgid "Xem nhiều"
+msgstr "Meistgesehen"
+
+#: core/templates/core/home.html:141
+#: core/templates/core/partials/video_list.html:31
+#: core/templates/core/video_detail.html:73
+msgid "Nổi bật"
+msgstr "Empfohlen"
+
+#: core/templates/core/home.html:154 core/templates/core/home.html:168
+msgid "Chưa có video bài giảng."
+msgstr "Video-Lektionen"
+
+#: core/templates/core/home.html:182
+msgid "Chưa có video nổi bật."
+msgstr "Keine empfohlenen Videos."
+
+#: core/templates/core/home.html:190
+msgid "Xem Tất Cả Video"
+msgstr "Alle Videos anzeigen"
+
+#: core/templates/core/home.html:200
+msgid "Diễn Đàn"
+msgstr "Forum"
+
+#: core/templates/core/home.html:203
+msgid "Thảo Luận Cộng Đồng"
+msgstr "Community-Diskussion"
+
+#: core/templates/core/home.html:208 core/templates/core/home.html:261
+msgid "Tạo Bài Viết"
+msgstr "Beitrag erstellen"
+
+#: core/templates/core/home.html:225 forum/templates/forum/post_detail.html:62
+#: forum/templates/forum/post_list.html:192
+msgid "Ghim"
+msgstr "Angeheftet"
+
+#: core/templates/core/home.html:257
+msgid "Chưa có bài thảo luận"
+msgstr "Noch kein Konto?"
+
+#: core/templates/core/home.html:258
+msgid "Hãy là người đầu tiên bắt đầu cuộc trò chuyện!"
+msgstr "Seien Sie der Erste, der das Gespräch beginnt!"
+
+#: core/templates/core/home.html:271
+msgid "Tham Gia Thảo Luận"
+msgstr "Diskussion beitreten"
+
+#: core/templates/core/partials/video_list.html:43
+#: core/templates/core/video_detail.html:46
+#: core/templates/core/video_detail.html:152
+#: forum/templates/forum/post_detail.html:99
+msgid "lượt xem"
+msgstr "Aufrufe"
+
+#: core/templates/core/partials/video_list.html:97
+#: templates/partials/navbar.html:159
+msgid "Không tìm thấy video"
+msgstr "Keine Videos gefunden"
+
+#: core/templates/core/partials/video_list.html:98
+msgid "Không có video phù hợp với tiêu chí tìm kiếm."
+msgstr "Keine Videos entsprechen Ihren Suchkriterien."
+
+#: core/templates/core/partials/video_list.html:100
+msgid "Đặt Lại Bộ Lọc"
+msgstr "Filter zurücksetzen"
+
+#: core/templates/core/video_detail.html:29
+msgid "Video không hiển thị?"
+msgstr "Video wird nicht angezeigt?"
+
+#: core/templates/core/video_detail.html:31
+msgid "Xem trực tiếp trên YouTube"
+msgstr "Direkt auf YouTube ansehen"
+
+#: core/templates/core/video_detail.html:90
+#: resources/templates/resources/detail.html:138
+msgid "Xem trên YouTube"
+msgstr "Auf YouTube ansehen"
+
+# Resource detail page
+#: core/templates/core/video_detail.html:95
+#: forum/templates/forum/post_detail.html:156
+#: partners/templates/partners/create_room.html:14
+#: resources/templates/resources/detail.html:158
+msgid "Quay lại"
+msgstr "Zurück"
+
+#: core/templates/core/video_detail.html:110
+#: core/templates/core/video_detail.html:204
+#, fuzzy
+#| msgid "video"
+msgid "Lưu video"
+msgstr "Videos"
+
+#: core/templates/core/video_detail.html:116
+#: resources/templates/resources/detail.html:179
+#, fuzzy
+#| msgid "Đăng nhập"
+msgid "Đăng nhập để lưu"
+msgstr "Anmelden"
+
+#: core/templates/core/video_detail.html:128
+#, fuzzy
+#| msgid "Tài liệu liên quan"
+msgid "Video liên quan"
+msgstr "Verwandte Materialien"
+
+#: core/templates/core/video_detail.html:164
+#, fuzzy
+#| msgid "Chưa có video bài giảng."
+msgid "Chưa có video liên quan"
+msgstr "Video-Lektionen"
+
+# Video List Page
+#: core/templates/core/video_list.html:5 core/templates/core/video_list.html:14
+msgid "Video Học Tập"
+msgstr "Lernvideos"
+
+#: core/templates/core/video_list.html:16
+msgid ""
+"Bộ sưu tập video bài giảng chọn lọc để nâng cao kỹ năng ngôn ngữ của bạn."
+msgstr ""
+"Eine kuratierte Sammlung von Vorlesungsvideos zur Verbesserung Ihrer "
+"Sprachkenntnisse."
+
+#: core/templates/core/video_list.html:18
+msgid "video"
+msgstr "Videos"
+
+#: core/templates/core/video_list.html:29
+#: core/templates/core/video_list.html:37
+msgid "Bộ Lọc"
+msgstr "Filter"
+
+#: core/templates/core/video_list.html:52
+#: resources/templates/resources/list.html:49
+msgid "Ngôn Ngữ"
+msgstr "Sprache"
+
+#: core/templates/core/video_list.html:63
+#, fuzzy
+#| msgid "Trình độ"
+msgid "Trình Độ"
+msgstr "Niveau"
+
+#: core/templates/core/video_list.html:75
+#: partners/templates/partners/search.html:131
+#: resources/templates/resources/list.html:72
+msgid "Đặt Lại"
+msgstr "Zurücksetzen"
+
+#: core/templates/core/video_list.html:100
+msgid "Tìm kiếm video..."
+msgstr "Videos suchen..."
+
+#: forum/models.py:10
+msgid "Tiếng Đức - Deutsch"
+msgstr "Deutsch"
+
+#: forum/models.py:16
+msgid "Tiếng Anh - English"
+msgstr "Englisch"
+
+#: forum/models.py:22
+msgid "Chia sẻ kinh nghiệm"
+msgstr "Erfahrungen teilen"
+
+#: forum/models.py:34
+msgid "Hỏi đáp"
+msgstr "Fragen & Antworten"
+
+#: forum/models.py:81 forum/templates/forum/post_form.html:28
+msgid "Tiêu đề"
+msgstr "Titel"
+
+#: forum/models.py:83 forum/templates/forum/post_form.html:52
+msgid "Nội dung"
+msgstr "Inhalt"
+
+#: forum/models.py:96 forum/templates/forum/post_form.html:38
+#: forum/templates/forum/post_list.html:83
+msgid "Danh mục"
+msgstr "Kategorie"
+
+#: forum/templates/forum/post_detail.html:5
+#: forum/templates/forum/post_detail.html:17
+#: forum/templates/forum/post_form.html:5
+#: forum/templates/forum/post_list.html:5
+#: forum/templates/forum/post_list.html:25
+#: forum/templates/forum/post_list.html:27
+#: forum/templates/forum/post_list.html:73
+msgid "Cộng đồng"
+msgstr "Gemeinschaft"
+
+#: forum/templates/forum/post_detail.html:73
+msgid "Đã khóa"
+msgstr "Gesperrt"
+
+#: forum/templates/forum/post_detail.html:134
+msgid "trả lời"
+msgstr "Antworten"
+
+#: forum/templates/forum/post_detail.html:143
+#: forum/templates/forum/post_detail.html:149
+msgid "Lưu"
+msgstr "Speichern"
+
+#: forum/templates/forum/post_detail.html:165
+msgid "Trả lời"
+msgstr "Antworten"
+
+#: forum/templates/forum/post_detail.html:217
+msgid "Chưa có trả lời nào. Hãy là người đầu tiên!"
+msgstr "Noch keine Antworten. Seien Sie der Erste!"
+
+#: forum/templates/forum/post_detail.html:225
+msgid "Viết trả lời"
+msgstr "Eine Antwort schreiben"
+
+#: forum/templates/forum/post_detail.html:229
+msgid "Chia sẻ ý kiến của bạn..."
+msgstr "Teilen Sie Ihre Gedanken..."
+
+#: forum/templates/forum/post_detail.html:235
+msgid "Gửi trả lời"
+msgstr "Anfrage senden"
+
+#: forum/templates/forum/post_detail.html:243
+msgid "Bài viết đã bị khóa, không thể trả lời."
+msgstr "Dieser Beitrag ist gesperrt, keine Antwort möglich."
+
+#: forum/templates/forum/post_detail.html:249
+msgid "để tham gia thảo luận"
+msgstr "um an der Diskussion teilzunehmen"
+
+#: forum/templates/forum/post_form.html:5
+#: forum/templates/forum/post_form.html:17
+#: forum/templates/forum/post_list.html:63
+#: forum/templates/forum/post_list.html:110
+msgid "Đăng bài mới"
+msgstr "Neuer Beitrag"
+
+#: forum/templates/forum/post_form.html:15
+msgid "Quay lại cộng đồng"
+msgstr "Zurück zur Gemeinschaft"
+
+#: forum/templates/forum/post_form.html:18
+msgid "Chia sẻ câu hỏi, kinh nghiệm hoặc thảo luận với cộng đồng"
+msgstr "Teilen Sie Fragen, Erfahrungen oder Diskussionen mit der Gemeinschaft"
+
+#: forum/templates/forum/post_form.html:31
+msgid "Nhập tiêu đề bài viết..."
+msgstr "Beitragstitel eingeben..."
+
+#: forum/templates/forum/post_form.html:42
+msgid "Chọn danh mục..."
+msgstr "Kategorie"
+
+#: forum/templates/forum/post_form.html:55
+msgid "Viết nội dung bài viết của bạn..."
+msgstr "Schreiben Sie Ihren Beitragsinhalt..."
+
+#: forum/templates/forum/post_form.html:58
+msgid ""
+"Mẹo: Viết rõ ràng, chi tiết để nhận được phản hồi tốt nhất từ cộng đồng."
+msgstr ""
+"Tipp: Schreiben Sie klar und detailliert, um das beste Feedback von der "
+"Community zu erhalten."
+
+#: forum/templates/forum/post_form.html:71
+#: forum/templates/forum/post_list.html:65
+msgid "Đăng bài"
+msgstr "Veröffentlichen"
+
+#: forum/templates/forum/post_form.html:80
+msgid "Hướng dẫn đăng bài"
+msgstr "Beitragsrichtlinien"
+
+#: forum/templates/forum/post_form.html:83
+msgid "Đặt tiêu đề rõ ràng, súc tích"
+msgstr "Verwenden Sie einen klaren, prägnanten Titel"
+
+#: forum/templates/forum/post_form.html:84
+msgid "Mô tả chi tiết vấn đề hoặc nội dung chia sẻ"
+msgstr "Beschreiben Sie das Problem oder den Inhalt im Detail"
+
+#: forum/templates/forum/post_form.html:85
+msgid "Chọn đúng danh mục để mọi người dễ tìm kiếm"
+msgstr "Wählen Sie die richtige Kategorie für eine einfachere Suche"
+
+#: forum/templates/forum/post_form.html:86
+msgid "Tôn trọng và lịch sự với các thành viên khác"
+msgstr "Seien Sie respektvoll und höflich zu anderen Mitgliedern"
+
+#: forum/templates/forum/post_list.html:50
+#: forum/templates/forum/post_list.html:52
+#: resources/templates/resources/detail.html:23
+msgid "Thư viện"
+msgstr "Ressourcenbibliothek"
+
+#: forum/templates/forum/post_list.html:74
+msgid ""
+"Nơi chia sẻ kiến thức, hỏi đáp và kết nối với những người cùng học ngôn ngữ"
+msgstr ""
+"Ein Ort zum Wissen teilen, Fragen stellen und sich mit anderen "
+"Sprachlernenden zu vernetzen."
+
+#: forum/templates/forum/post_list.html:126
+msgid "Tìm kiếm bài viết..."
+msgstr "Beiträge suchen..."
+
+#: forum/templates/forum/post_list.html:186
+msgid "Đã xem"
+msgstr "Angesehen"
+
+#: forum/templates/forum/post_list.html:270
+msgid "Chưa có bài viết nào"
+msgstr "Keine Ressourcen gefunden"
+
+#: forum/templates/forum/post_list.html:271
+msgid "Hãy là người đầu tiên chia sẻ trong cộng đồng!"
+msgstr "Seien Sie der Erste, der in der Gemeinschaft teilt!"
+
+#: forum/templates/forum/post_list.html:276
+msgid "Đăng bài đầu tiên"
+msgstr "Ersten Beitrag erstellen"
+
+#: unstressvn/settings.py:174
+msgid "Tiếng Việt"
+msgstr "Vietnamesisch"
+
+#: unstressvn/settings.py:175
+msgid "English"
+msgstr "English"
+
+#: unstressvn/settings.py:176
+msgid "Deutsch"
+msgstr "Deutsch"
+
+#: partners/emails.py:27
+msgid "UnstressVN - Bạn có lời mời kết bạn mới!"
+msgstr "Verwalte deine Lernpartner-Anfragen"
+
+#: partners/emails.py:69
+msgid "UnstressVN - Lời mời kết bạn đã được chấp nhận!"
+msgstr "UnstressVN - Partneranfrage akzeptiert!"
+
+#: partners/models.py:23 partners/models.py:35
+#: partners/templates/partners/create_room.html:273
+#: partners/templates/partners/create_room.html:283
+msgid "Học chung"
+msgstr ""
+
+#: partners/models.py:24 partners/templates/partners/create_room.html:274
+msgid "Ôn thi IELTS"
+msgstr ""
+
+#: partners/models.py:25 partners/templates/partners/create_room.html:275
+msgid "Ôn thi TOEIC"
+msgstr ""
+
+#: partners/models.py:26 partners/templates/partners/create_room.html:276
+msgid "Ôn thi TOEFL"
+msgstr ""
+
+#: partners/models.py:27 partners/templates/partners/create_room.html:277
+msgid "Ôn thi Cambridge"
+msgstr ""
+
+#: partners/models.py:28 partners/models.py:40
+#: partners/templates/partners/create_room.html:278
+#: partners/templates/partners/create_room.html:288
+msgid "Luyện giao tiếp"
+msgstr ""
+
+#: partners/models.py:29 partners/templates/partners/create_room.html:279
+#, fuzzy
+#| msgid "Tiếng Anh - English"
+msgid "Tiếng Anh thương mại"
+msgstr "Englisch"
+
+#: partners/models.py:30 partners/templates/partners/create_room.html:280
+#, fuzzy
+#| msgid "Tiếng Anh"
+msgid "Tiếng Anh học thuật"
+msgstr "Englisch"
+
+#: partners/models.py:36 partners/models.py:47
+#: partners/templates/partners/create_room.html:284
+msgid "Ôn thi Goethe-Zertifikat"
+msgstr ""
+
+#: partners/models.py:37 partners/models.py:48
+#: partners/templates/partners/create_room.html:285
+msgid "Ôn thi TELC"
+msgstr ""
+
+#: partners/models.py:38 partners/models.py:49
+#: partners/templates/partners/create_room.html:286
+msgid "Ôn thi TestDaF"
+msgstr ""
+
+#: partners/models.py:39 partners/models.py:50
+#: partners/templates/partners/create_room.html:287
+msgid "Ôn thi DSH"
+msgstr ""
+
+#: partners/models.py:41 partners/templates/partners/create_room.html:289
+#, fuzzy
+#| msgid "Tiếng Đức"
+msgid "Tiếng Đức thương mại"
+msgstr "Deutsch"
+
+#: partners/models.py:42 partners/templates/partners/create_room.html:290
+#, fuzzy
+#| msgid "Tiếng Đức - Deutsch"
+msgid "Tiếng Đức học thuật"
+msgstr "Deutsch"
+
+#: partners/models.py:61
+#, fuzzy
+#| msgid "Tất cả ngôn ngữ"
+msgid "Tất cả kỹ năng"
+msgstr "Alle"
+
+#: partners/models.py:78 partners/templates/partners/create_room.html:31
+#: partners/templates/partners/create_room.html:169
+#: partners/templates/partners/create_room.html:317
+msgid "Tên phòng"
+msgstr ""
+
+#: partners/models.py:83 partners/templates/partners/create_room.html:41
+msgid "Mô tả"
+msgstr ""
+
+#: partners/models.py:91 partners/templates/partners/room_detail.html:292
+#: partners/templates/partners/room_detail.html:471
+msgid "Chủ phòng"
+msgstr ""
+
+#: partners/models.py:99
+#: partners/templates/partners/partials/house_card.html:56
+#: partners/templates/partners/room_detail.html:449
+#: partners/templates/partners/search.html:24
+#: templates/partials/navbar.html:553
+msgid "Thành viên"
+msgstr "Mitglieder"
+
+#: partners/models.py:105 partners/templates/partners/create_room.html:51
+#: partners/templates/partners/room_detail.html:514
+msgid "Số người tối đa"
+msgstr ""
+
+#: partners/models.py:129
+msgid "Mục đích"
+msgstr ""
+
+#: partners/models.py:137
+msgid "Kỹ năng"
+msgstr "Fähigkeit"
+
+#: partners/models.py:142
+msgid "Nâu vintage"
+msgstr ""
+
+#: partners/models.py:143
+msgid "Xanh olive"
+msgstr ""
+
+#: partners/models.py:144
+msgid "Màu rám nắng"
+msgstr ""
+
+#: partners/models.py:145
+msgid "Màu gỉ sắt"
+msgstr ""
+
+#: partners/models.py:146
+msgid "Xanh xô thơm"
+msgstr ""
+
+#: partners/models.py:147
+msgid "Đất nung"
+msgstr ""
+
+#: partners/models.py:153 partners/templates/partners/create_room.html:140
+msgid "Màu ngôi nhà"
+msgstr ""
+
+#: partners/models.py:169
+#, fuzzy
+#| msgid "Nâng cao"
+msgid "Phòng chat"
+msgstr "Fortgeschritten"
+
+#: partners/models.py:175
+msgid "Ngày tạo"
+msgstr ""
+
+#: partners/models.py:179
+#, fuzzy
+#| msgid "Chấp nhận"
+msgid "Cập nhật"
+msgstr "Akzeptieren"
+
+#: partners/models.py:183 partners/models.py:184
+#, fuzzy
+#| msgid "Đang học"
+msgid "Phòng học"
+msgstr "Aktuell lernend"
+
+#: partners/templates/partners/create_room.html:4
+#, fuzzy
+#| msgid "Tìm Bạn Học"
+msgid "Tạo Phòng Học"
+msgstr "Lernpartner finden"
+
+#: partners/templates/partners/create_room.html:18
+msgid "Tạo Phòng Học Mới"
+msgstr ""
+
+#: partners/templates/partners/create_room.html:20
+#, fuzzy
+#| msgid "Viết nội dung bài viết của bạn..."
+msgid "Thiết lập ngôi nhà học tập của bạn"
+msgstr "Schreiben Sie Ihren Beitragsinhalt..."
+
+#: partners/templates/partners/create_room.html:34
+msgid "VD: Học tiếng Anh cùng nhau"
+msgstr ""
+
+#: partners/templates/partners/create_room.html:44
+msgid "Giới thiệu về phòng học của bạn..."
+msgstr ""
+
+#: partners/templates/partners/create_room.html:57
+#: partners/templates/partners/room_detail.html:317
+msgid "người"
+msgstr ""
+
+#: partners/templates/partners/create_room.html:59
+msgid "Bao gồm cả bạn (chủ phòng)"
+msgstr ""
+
+#: partners/templates/partners/create_room.html:88
+msgid "Chọn ngôn ngữ để hiển thị các tùy chọn phù hợp"
+msgstr ""
+
+#: partners/templates/partners/create_room.html:113
+msgid "Mục đích học"
+msgstr ""
+
+#: partners/templates/partners/create_room.html:165
+msgid "Xem trước ngôi nhà của bạn"
+msgstr ""
+
+#: partners/templates/partners/create_room.html:198
+msgid "Tạo Phòng"
+msgstr ""
+
+#: partners/templates/partners/create_room.html:205
+msgid "Vui lòng chọn ngôn ngữ mục tiêu để tiếp tục"
+msgstr ""
+
+#: partners/templates/partners/emails/friend_request.html:7
+msgid "Lời mời kết bạn mới"
+msgstr "Freundschaftsanfragen"
+
+#: partners/templates/partners/emails/friend_request.html:82
+msgid "Nền tảng học ngoại ngữ"
+msgstr "Sprachlernplattform"
+
+#: partners/templates/partners/emails/friend_request.html:86
+#: partners/templates/partners/emails/request_accepted.html:95
+msgid "Xin chào"
+msgstr "Hallo"
+
+#: partners/templates/partners/emails/friend_request.html:88
+msgid "Bạn có một lời mời kết bạn học mới từ:"
+msgstr "Verwalte deine Lernpartner-Anfragen"
+
+#: partners/templates/partners/emails/friend_request.html:102
+msgid "Lời nhắn:"
+msgstr "Nachrichten"
+
+#: partners/templates/partners/emails/friend_request.html:107
+msgid "Hãy đăng nhập để xem và phản hồi lời mời này."
+msgstr ""
+"Bitte melden Sie sich an, um diese Einladung zu sehen und zu beantworten."
+
+#: partners/templates/partners/emails/friend_request.html:110
+msgid "Xem lời mời"
+msgstr "Anfrage senden"
+
+#: partners/templates/partners/emails/friend_request.html:115
+#: partners/templates/partners/emails/request_accepted.html:128
+msgid "Email này được gửi tự động từ UnstressVN."
+msgstr "Diese E-Mail wurde automatisch von UnstressVN gesendet."
+
+#: partners/templates/partners/emails/friend_request.html:116
+#: partners/templates/partners/emails/request_accepted.html:129
+msgid ""
+"Nếu bạn không muốn nhận email này, vui lòng điều chỉnh cài đặt thông báo."
+msgstr ""
+"Wenn Sie diese E-Mail nicht erhalten möchten, passen Sie bitte Ihre "
+"Benachrichtigungseinstellungen an."
+
+#: partners/templates/partners/emails/request_accepted.html:7
+msgid "Lời mời kết bạn được chấp nhận"
+msgstr "Freundschaftsanfragen"
+
+#: partners/templates/partners/emails/request_accepted.html:89
+msgid "Tin vui!"
+msgstr "Gute Nachrichten!"
+
+#: partners/templates/partners/emails/request_accepted.html:100
+msgid "đã chấp nhận lời mời kết bạn học của bạn!"
+msgstr "Verwalte deine Lernpartner-Anfragen"
+
+#: partners/templates/partners/emails/request_accepted.html:115
+msgid "Bây giờ các bạn có thể bắt đầu học tập cùng nhau!"
+msgstr "Ihr könnt jetzt zusammen lernen!"
+
+#: partners/templates/partners/emails/request_accepted.html:119
+msgid "Xem hồ sơ bạn học"
+msgstr "Öffentliches Profil ansehen"
+
+#: partners/templates/partners/emails/request_accepted.html:123
+msgid "Chúc bạn có những giờ học thú vị cùng bạn học mới!"
+msgstr "Viel Spaß beim Lernen mit Ihrem neuen Partner!"
+
+#: partners/templates/partners/partials/house_card.html:9
+msgid "Phòng của tôi"
+msgstr "Mein Raum"
+
+#: partners/templates/partners/partials/house_card.html:13
+msgid "Đã tham gia"
+msgstr "Beigetreten"
+
+#: partners/templates/partners/partials/house_card.html:18
+msgid "ĐẦY"
+msgstr "VOLL"
+
+#: partners/templates/partners/partials/house_card.html:58
+#: partners/templates/partners/room_detail.html:304
+msgid "Còn trống"
+msgstr "Verfügbar"
+
+#: partners/templates/partners/partials/house_card.html:69
+msgid "Tham gia"
+msgstr "Beitreten"
+
+#: partners/templates/partners/room_detail.html:255
+msgid "Quay lại danh sách phòng"
+msgstr "Zurück zur Raumliste"
+
+#: partners/templates/partners/room_detail.html:324
+msgid "slot trống"
+msgstr "freie Plätze"
+
+#: partners/templates/partners/room_detail.html:341
+msgid "Chủ phòng:"
+msgstr "Raumleiter:"
+
+#: partners/templates/partners/room_detail.html:350
+msgid "Phòng đầy"
+msgstr "Raum voll"
+
+#: partners/templates/partners/room_detail.html:354
+#: partners/templates/partners/room_list.html:392
+msgid "Còn chỗ"
+msgstr "Verfügbar"
+
+#: partners/templates/partners/room_detail.html:378
+msgid "Tạo:"
+msgstr "Erstellt:"
+
+#: partners/templates/partners/room_detail.html:387
+msgid "Thao tác"
+msgstr "Aktionen"
+
+#: partners/templates/partners/room_detail.html:396
+msgid "Phòng Đã Đầy"
+msgstr "Raum Voll"
+
+#: partners/templates/partners/room_detail.html:404
+msgid "Tham Gia Phòng"
+msgstr "Raum Beitreten"
+
+#: partners/templates/partners/room_detail.html:415
+msgid "Vào Chat Nhóm"
+msgstr "Gruppenchat"
+
+#: partners/templates/partners/room_detail.html:422
+msgid "Bạn có chắc muốn rời phòng?"
+msgstr "Möchten Sie den Raum wirklich verlassen?"
+
+#: partners/templates/partners/room_detail.html:426
+msgid "Rời Phòng"
+msgstr "Raum Verlassen"
+
+#: partners/templates/partners/room_detail.html:434
+msgid "Xóa phòng sẽ xóa cả chat nhóm. Bạn có chắc?"
+msgstr "Das Löschen des Raums entfernt auch den Gruppenchat. Sind Sie sicher?"
+
+#: partners/templates/partners/room_detail.html:438
+msgid "Xóa Phòng"
+msgstr "Raum Löschen"
+
+#: partners/templates/partners/room_detail.html:483
+msgid "Xóa thành viên này khỏi phòng?"
+msgstr "Dieses Mitglied aus dem Raum entfernen?"
+
+#: partners/templates/partners/room_detail.html:485
+msgid "Xóa khỏi phòng"
+msgstr "Aus Raum entfernen"
+
+#: partners/templates/partners/room_detail.html:496
+msgid "Còn"
+msgstr "Noch"
+
+#: partners/templates/partners/room_detail.html:496
+msgid "chỗ trống"
+msgstr "freie Plätze"
+
+#: partners/templates/partners/room_detail.html:507
+#, fuzzy
+#| msgid "Cài đặt"
+msgid "Cài đặt phòng"
+msgstr "Lerneinstellungen"
+
+#: partners/templates/partners/room_detail.html:521
+msgid "Không thể giảm dưới số thành viên hiện tại"
+msgstr ""
+
+#: partners/templates/partners/room_detail.html:525
+#, fuzzy
+#| msgid "Lưu Thay Đổi"
+msgid "Lưu thay đổi"
+msgstr "Änderungen speichern"
+
+#: partners/templates/partners/room_list.html:4
+#: templates/partials/navbar.html:47 templates/partials/navbar.html:624
+msgid "Tìm Bạn Học"
+msgstr "Lernpartner finden"
+
+#: partners/templates/partners/room_list.html:361
+msgid "Phòng Học Nhóm"
+msgstr "Lernräume"
+
+#: partners/templates/partners/room_list.html:364
+msgid ""
+"Tìm hoặc tạo phòng học để kết nối với bạn học cùng mục tiêu. Mỗi phòng là "
+"một ngôi nhà nhỏ nơi bạn có thể cùng nhau tiến bộ!"
+msgstr ""
+"Finden oder erstellen Sie Lernräume, um sich mit Lernpartnern zu verbinden. "
+"Jeder Raum ist ein kleines Haus, wo Sie gemeinsam Fortschritte machen können!"
+
+#: partners/templates/partners/room_list.html:375
+#: partners/templates/partners/search.html:50
+msgid "Tất cả ngôn ngữ"
+msgstr "Alle"
+
+#: partners/templates/partners/room_list.html:383
+msgid "Tất cả trình độ"
+msgstr "Alle Niveaus"
+
+#: partners/templates/partners/room_list.html:391
+msgid "Tất cả phòng"
+msgstr "Alle Räume"
+
+#: partners/templates/partners/room_list.html:393
+msgid "Đã đầy"
+msgstr "Voll"
+
+#: partners/templates/partners/room_list.html:403
+msgid "Tạo Phòng Mới"
+msgstr "Neuen Raum Erstellen"
+
+#: partners/templates/partners/room_list.html:409
+msgid "Đăng nhập để tạo phòng"
+msgstr "Anmelden um einen Raum zu erstellen"
+
+#: partners/templates/partners/room_list.html:418
+msgid "Tất Cả Phòng Học"
+msgstr "Alle Lernräume"
+
+#: partners/templates/partners/room_list.html:419
+msgid "phòng"
+msgstr "Räume"
+
+#: partners/templates/partners/room_list.html:431
+msgid "Chưa có phòng học nào"
+msgstr "Noch keine Lernräume vorhanden"
+
+#: partners/templates/partners/room_list.html:432
+msgid "Hãy là người đầu tiên tạo phòng học!"
+msgstr "Seien Sie der Erste, der einen Lernraum erstellt!"
+
+#: partners/templates/partners/room_list.html:436
+msgid "Tạo Phòng Đầu Tiên"
+msgstr "Ersten Raum Erstellen"
+
+#: partners/templates/partners/search.html:5
+#: partners/templates/partners/search.html:19
+msgid "Danh Sách Thành Viên"
+msgstr "Mitgliederliste"
+
+#: partners/templates/partners/search.html:21
+msgid "Kết nối với những người yêu thích ngôn ngữ khác."
+msgstr "Verbinden Sie sich mit anderen Sprachbegeisterten."
+
+#: partners/templates/partners/search.html:39
+msgid "Tìm theo tên, sở thích hoặc vị trí..."
+msgstr "Suchen nach Name, Interessen oder Standort..."
+
+#: partners/templates/partners/search.html:105
+msgid "Xem Hồ Sơ"
+msgstr "Profil ansehen"
+
+#: partners/templates/partners/search.html:118
+msgid "Tham gia:"
+msgstr "Beigetreten"
+
+#: partners/templates/partners/search.html:119
+msgid "Bài viết:"
+msgstr "Beiträge:"
+
+#: partners/templates/partners/search.html:128
+#: templates/partials/navbar.html:190
+msgid "Không tìm thấy thành viên"
+msgstr "Keine Mitglieder gefunden"
+
+#: partners/templates/partners/search.html:129
+msgid "Hãy thử điều chỉnh tiêu chí tìm kiếm."
+msgstr "Versuchen Sie, Ihre Suchkriterien anzupassen."
+
+#: partners/templates/partners/search.html:140
+msgid "Xem Thêm"
+msgstr "Mehr sehen"
+
+#: partners/templates/partners/search.html:146
+msgid "Đang tải..."
+msgstr "Wird geladen..."
+
+#: partners/templates/partners/search.html:223
+msgid "Gửi lời mời kết bạn?"
+msgstr "Freundschaftsanfrage senden"
+
+#: partners/templates/partners/search.html:240
+msgid "Đã gửi lời mời kết bạn!"
+msgstr "um Freundschaftsanfragen zu senden!"
+
+#: partners/templates/partners/search.html:242
+#: partners/templates/partners/search.html:246
+msgid "Có lỗi xảy ra. Vui lòng thử lại."
+msgstr "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+
+#: partners/views.py:104
+msgid "Vui lòng nhập tên phòng"
+msgstr ""
+
+#: partners/views.py:108
+msgid "Vui lòng chọn ngôn ngữ mục tiêu"
+msgstr ""
+
+#: partners/views.py:132
+msgid "Đã tạo phòng học thành công!"
+msgstr ""
+
+#: partners/views.py:163
+msgid "Phòng đã đầy! Không thể xem chi tiết phòng này."
+msgstr ""
+
+#: partners/views.py:189
+#, fuzzy
+#| msgid "Thành viên từ"
+msgid "Thành viên mới"
+msgstr "Mitglied seit"
+
+#: partners/views.py:194
+msgid "Đã tham gia phòng thành công!"
+msgstr ""
+
+#: partners/views.py:197
+msgid "Phòng đã đầy"
+msgstr ""
+
+#: partners/views.py:199
+msgid "Không thể tham gia phòng"
+msgstr ""
+
+#: partners/views.py:213
+msgid "Chủ phòng không thể rời phòng. Hãy xóa phòng nếu muốn."
+msgstr ""
+
+#: partners/views.py:215
+msgid "Đã rời khỏi phòng"
+msgstr ""
+
+#: partners/views.py:217
+msgid "Bạn không phải thành viên phòng này"
+msgstr ""
+
+#: partners/views.py:236
+msgid "Bị xóa khỏi phòng"
+msgstr ""
+
+#: partners/views.py:243
+msgid "Bạn không có quyền thực hiện thao tác này"
+msgstr ""
+
+#: partners/views.py:257
+msgid "Bạn không có quyền xóa phòng này"
+msgstr ""
+
+# Resource Type Choices
+#: resources/models.py:17
+msgid "Sách"
+msgstr "Buch"
+
+#: resources/models.py:18
+msgid "Sách/Ebook"
+msgstr "E-Book"
+
+#: resources/models.py:19
+msgid "Audio"
+msgstr "Audio"
+
+#: resources/models.py:21
+msgid "PDF"
+msgstr "PDF"
+
+#: resources/models.py:22
+msgid "Flashcard"
+msgstr "Karteikarten"
+
+#: resources/models.py:189
+#, fuzzy
+#| msgid "Loại Tài Liệu"
+msgid "Loại tài liệu"
+msgstr "Ressourcentyp"
+
+#: resources/templates/resources/detail.html:62
+msgid "Lượt xem"
+msgstr "Aufrufe"
+
+#: resources/templates/resources/detail.html:67
+msgid "Lượt tải"
+msgstr "Downloads"
+
+#: resources/templates/resources/detail.html:125
+#: resources/templates/resources/detail.html:146
+msgid "Tải xuống"
+msgstr "Herunterladen"
+
+#: resources/templates/resources/detail.html:130
+#: resources/templates/resources/detail.html:151
+msgid "Đăng ký để tải"
+msgstr "Registrieren zum Herunterladen"
+
+# Resource detail page
+#: resources/templates/resources/detail.html:173
+#: resources/templates/resources/detail.html:269
+#, fuzzy
+#| msgid "Quay lại"
+msgid "Lưu lại"
+msgstr "Zurück"
+
+#: resources/templates/resources/detail.html:189
+msgid "Thẻ tag"
+msgstr "Tags"
+
+#: resources/templates/resources/detail.html:211
+msgid "Tài liệu liên quan"
+msgstr "Verwandte Materialien"
+
+#: resources/templates/resources/list.html:5
+#: resources/templates/resources/list.html:14
+msgid "Thư Viện Tài Liệu"
+msgstr "Materialbibliothek"
+
+#: resources/templates/resources/list.html:16
+msgid ""
+"Khám phá bộ sưu tập tài liệu phong phú, giáo trình và đa phương tiện để nâng "
+"cao hành trình học ngôn ngữ của bạn."
+msgstr ""
+"Entdecken Sie unsere reichhaltige Sammlung von Materialien, Lehrbüchern und "
+"Multimedia, um Ihre Sprachlernreise zu verbessern."
+
+#: resources/templates/resources/list.html:26
+#: resources/templates/resources/list.html:34
+msgid "Catalog Filters"
+msgstr "Katalogfilter"
+
+#: resources/templates/resources/list.html:60
+msgid "Loại Tài Liệu"
+msgstr "Ressourcentyp"
+
+#: resources/templates/resources/list.html:97
+msgid "Tìm kiếm tài liệu..."
+msgstr "Ressourcen, Bücher, Videos suchen..."
+
+#: resources/templates/resources/list.html:195
+#: resources/templates/resources/partials/resource_list.html:105
+#: templates/partials/navbar.html:126
+msgid "Không tìm thấy tài liệu"
+msgstr "Keine Ressourcen gefunden"
+
+#: resources/templates/resources/list.html:196
+#: resources/templates/resources/partials/resource_list.html:106
+msgid "Không có tài liệu phù hợp với tiêu chí tìm kiếm."
+msgstr "Keine Materialien entsprechen den Suchkriterien."
+
+#: resources/templates/resources/list.html:198
+msgid "Reset Catalog"
+msgstr "Katalog zurücksetzen"
+
+#: resources/templates/resources/partials/resource_list.html:108
+msgid "Xóa bộ lọc"
+msgstr "Filter löschen"
+
+#: search/templates/search/results.html:5
+#: search/templates/search/results.html:11
+#: search/templates/search/results.html:32
+msgid "Tìm kiếm"
+msgstr "Suchen"
+
+#: search/templates/search/results.html:12
+#: search/templates/search/results.html:128
+msgid "Tìm kiếm tài liệu học tập hoặc bạn học cùng sở thích"
+msgstr "Suchen Sie nach Lernmaterialien oder Lernpartnern"
+
+#: search/templates/search/results.html:23
+msgid "Nhập từ khóa tìm kiếm..."
+msgstr "Suchbegriffe eingeben..."
+
+#: search/templates/search/results.html:39
+msgid "Kết quả cho"
+msgstr "Ergebnisse für"
+
+#: search/templates/search/results.html:43
+msgid "tài liệu"
+msgstr "Ressourcen"
+
+#: search/templates/search/results.html:47
+msgid "bạn học"
+msgstr "Partner"
+
+#: search/templates/search/results.html:83
+msgid "Không tìm thấy tài liệu nào."
+msgstr "Keine Ressourcen gefunden"
+
+#: search/templates/search/results.html:116
+msgid "Không tìm thấy bạn học nào."
+msgstr "Keine Ergebnisse gefunden"
+
+#: search/templates/search/results.html:127 templates/partials/navbar.html:131
+#: templates/partials/navbar.html:164 templates/partials/navbar.html:195
+msgid "Nhập từ khóa để tìm kiếm"
+msgstr "Suchbegriffe eingeben"
+
+#: search/templates/search/results.html:131
+msgid "Duyệt tài liệu"
+msgstr "Ressourcenbibliothek"
+
+# 404 Error Page
+#: templates/404.html:8
+msgid "Không tìm thấy trang"
+msgstr "Seite nicht gefunden"
+
+#: templates/404.html:106
+msgid "Oops! Trang không tồn tại"
+msgstr "Hoppla! Seite nicht gefunden"
+
+#: templates/404.html:111
+msgid ""
+"Trang bạn đang tìm kiếm có thể đã bị xóa, đổi tên hoặc tạm thời không khả "
+"dụng."
+msgstr ""
+"Die gesuchte Seite wurde möglicherweise entfernt, umbenannt oder ist "
+"vorübergehend nicht verfügbar."
+
+#: templates/404.html:125
+msgid "Bạn có thể thử:"
+msgstr "Sie können versuchen:"
+
+#: templates/404.html:130
+msgid "Kiểm tra lại địa chỉ URL"
+msgstr "Die URL erneut überprüfen"
+
+#: templates/404.html:134
+msgid "Quay lại trang trước đó"
+msgstr "Zur vorherigen Seite zurückkehren"
+
+#: templates/404.html:138
+msgid "Sử dụng tìm kiếm để tìm nội dung"
+msgstr "Suche verwenden, um Inhalte zu finden"
+
+#: templates/404.html:148
+msgid "Về Trang Chủ"
+msgstr "Zur Startseite"
+
+#: templates/404.html:153
+msgid "Quay Lại"
+msgstr "Zurück"
+
+#: templates/404.html:160
+msgid "Cần hỗ trợ?"
+msgstr ""
+
+#: templates/404.html:162
+#, fuzzy
+#| msgid "Liên hệ"
+msgid "Liên hệ chúng tôi"
+msgstr "Kontakt"
+
+#: templates/admin/login.html:23
+msgid "Please correct the error below."
+msgid_plural "Please correct the errors below."
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/admin/login.html:39
+#, python-format
+msgid ""
+"You are authenticated as %(username)s, but are not authorized to access this "
+"page. Would you like to login to a different account?"
+msgstr ""
+
+#: templates/partials/footer.html:15
+msgid "Kết nối tri thức qua nghệ thuật ngôn ngữ."
+msgstr "Wissen verbinden durch die Kunst der Sprache."
+
+#: templates/partials/footer.html:19
+msgid "Kho Tài Liệu"
+msgstr "Ressourcen"
+
+#: templates/partials/footer.html:20
+msgid "Hướng Dẫn"
+msgstr "Anleitung"
+
+#: templates/partials/footer.html:21
+msgid "Thành Viên"
+msgstr "Mitglieder"
+
+#: templates/partials/footer.html:25
+msgid "Đã đăng ký bản quyền."
+msgstr "Alle Rechte vorbehalten."
+
+#: templates/partials/navbar.html:31 templates/partials/navbar.html:612
+msgid "Khám Phá"
+msgstr "Entdecken"
+
+#: templates/partials/navbar.html:43 templates/partials/navbar.html:621
+msgid "Cộng Đồng"
+msgstr "Gemeinschaft"
+
+#: templates/partials/navbar.html:83
+msgid "Tìm kiếm trong kho tài liệu..."
+msgstr "In der Bibliothek suchen..."
+
+#: templates/partials/navbar.html:90
+msgid "Thảo luận"
+msgstr "Diskussionen"
+
+#: templates/partials/navbar.html:205
+msgid "Xem tất cả kết quả"
+msgstr "Alle Ergebnisse anzeigen"
+
+#: templates/partials/navbar.html:329
+msgid "Bắt đầu trò chuyện"
+msgstr "Gespräch starten"
+
+#: templates/partials/navbar.html:340
+msgid "Chưa có cuộc trò chuyện"
+msgstr "Keine Ressourcen gefunden"
+
+#: templates/partials/navbar.html:341
+msgid "Tìm bạn học và bắt đầu trò chuyện!"
+msgstr "Finden Sie Lernpartner und chatten Sie los!"
+
+#: templates/partials/navbar.html:452
+#, fuzzy
+#| msgid "Xem tất cả"
+msgid "Đọc tất cả"
+msgstr "Alle anzeigen"
+
+#: templates/partials/navbar.html:512
+msgid "Bạn sẽ nhận thông báo khi có hoạt động mới"
+msgstr ""
+
+#: templates/partials/navbar.html:520
+#, fuzzy
+#| msgid "Xem tất cả"
+msgid "Xem tất cả thông báo"
+msgstr "Alle anzeigen"
+
+#: templates/partials/navbar.html:551
+msgid "Quản trị viên"
+msgstr "Administrator"
+
+#: templates/partials/navbar.html:559
+msgid "Trang quản lý"
+msgstr "Verwaltungsbereich"
+
+#: templates/partials/navbar.html:563 templates/partials/navbar.html:645
+msgid "Hồ sơ của tôi"
+msgstr "Mein Profil"
+
+#: templates/partials/navbar.html:569 templates/partials/navbar.html:648
+msgid "Cài đặt"
+msgstr "Lerneinstellungen"
+
+#: templates/partials/navbar.html:574 templates/partials/navbar.html:651
+msgid "Đăng xuất"
+msgstr "Abmelden"
+
+#: templates/partials/navbar.html:586 templates/partials/navbar.html:661
+msgid "Đăng ký"
+msgstr "Registrieren"

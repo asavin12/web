@@ -1,0 +1,978 @@
+{
+  "app": {
+    "tagline": "Học Ngoại Ngữ Dễ Dàng"
+  },
+  "common": {
+    "loading": "Đang tải...",
+    "error": "Có lỗi xảy ra",
+    "save": "Lưu",
+    "saveChanges": "Lưu thay đổi",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "search": "Tìm kiếm",
+    "submit": "Gửi",
+    "back": "Quay lại",
+    "next": "Tiếp theo",
+    "previous": "Trước",
+    "close": "Đóng",
+    "confirm": "Xác nhận",
+    "yes": "Có",
+    "no": "Không",
+    "all": "Tất cả",
+    "noResults": "Không có kết quả",
+    "viewMore": "Xem thêm",
+    "showLess": "Ẩn bớt",
+    "viewAll": "Xem tất cả",
+    "select": "Chọn",
+    "selectLanguage": "Chọn ngôn ngữ",
+    "clearFilters": "Xóa bộ lọc",
+    "filters": "Bộ lọc",
+    "language": "Ngôn ngữ",
+    "home": "Trang chủ",
+    "sending": "Đang gửi...",
+    "soon": "Sắp ra mắt",
+    "unknown": "Không rõ",
+    "and": "và",
+    "featured": "Nổi bật",
+    "linkCopied": "Đã sao chép liên kết!",
+    "minRead": "phút đọc",
+    "notFoundHint": "Nội dung này có thể đã bị xóa hoặc URL không đúng",
+    "relatedArticles": "Bài viết liên quan",
+    "resultsCount": "{{count}} kết quả",
+    "retry": "Thử lại",
+    "searchPlaceholder": "Tìm kiếm...",
+    "serverError": "Đã xảy ra lỗi",
+    "share": "Chia sẻ",
+    "tryAgainLater": "Vui lòng thử lại sau",
+    "tryDifferentFilter": "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm",
+    "views": "lượt xem"
+  },
+  "user": {
+    "role": {
+      "admin": "Quản trị viên",
+      "staff": "Nhân viên",
+      "member": "Thành viên"
+    },
+    "memberLevel": "Học viên"
+  },
+  "nav": {
+    "home": "Trang chủ",
+    "resources": "Thư viện",
+    "videos": "Video",
+    "partners": "Cộng đồng",
+    "chat": "Tin nhắn",
+    "forum": "Diễn đàn",
+    "search": "Tìm kiếm",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt",
+    "requests": "Lời mời",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "logout": "Đăng xuất",
+    "adminPanel": "Quản trị website",
+    "tagline": "Kho tri thức",
+    "contact": "Liên hệ",
+    "about": "Về chúng tôi",
+    "terms": "Điều khoản",
+    "privacy": "Bảo mật",
+    "news": "Tin tức",
+    "allNews": "Tất cả tin tức",
+    "germanNews": "Học tiếng Đức",
+    "englishNews": "Học tiếng Anh",
+    "studyAbroad": "Du học",
+    "events": "Sự kiện",
+    "knowledge": "Kiến thức",
+    "allKnowledge": "Tất cả kiến thức",
+    "grammar": "Ngữ pháp",
+    "lectures": "Bài giảng",
+    "vocabulary": "Từ vựng",
+    "examPrep": "Luyện thi",
+    "culture": "Văn hóa",
+    "tips": "Mẹo học",
+    "tools": "Công cụ",
+    "allTools": "Tất cả công cụ",
+    "translation": "Dịch thuật",
+    "dictionary": "Từ điển",
+    "practice": "Luyện tập",
+    "software": "Phần mềm hỗ trợ",
+    "community": "Cộng đồng",
+    "language": "Chuyển ngôn ngữ",
+    "menu": "Menu",
+    "notifications": "Thông báo"
+  },
+  "home": {
+    "seo": {
+      "title": "UnstressVN - Học Ngoại Ngữ Dễ Dàng",
+      "description": "Tham gia cộng đồng để khám phá tài liệu học, video bài giảng và kết nối với người học trên toàn thế giới."
+    },
+    "hero": {
+      "badge": "Kho tri thức",
+      "title": "Khám phá. Kết nối. Thành thạo.",
+      "subtitle": "Nền tảng học ngoại ngữ trực tuyến với tài liệu phong phú, video bài giảng và cộng đồng sôi động.",
+      "cta": "Bắt đầu ngay",
+      "welcome": "Chào mừng, {{name}}!"
+    },
+    "stats": {
+      "label": "Thống kê nền tảng",
+      "title": "Thống kê",
+      "users": "Thành viên",
+      "resources": "Tài liệu",
+      "videos": "Video",
+      "posts": "Bài viết",
+      "languages": "Ngôn ngữ"
+    },
+    "books": {
+      "badge": "Mới cập nhật",
+      "viewAll": "Xem thư viện"
+    },
+    "videos": {
+      "badge": "Kho video",
+      "title": "Video bài giảng",
+      "viewAll": "Xem tất cả"
+    },
+    "forum": {
+      "badge": "Bản tin cộng đồng",
+      "viewAll": "Vào diễn đàn"
+    },
+    "features": {
+      "title": "Tại sao chọn UnstressVN?",
+      "resources": {
+        "title": "Thư viện phong phú",
+        "description": "Truy cập kho tài liệu học được tuyển chọn cho nhiều ngôn ngữ.",
+        "cta": "Khám phá thư viện"
+      },
+      "partners": {
+        "title": "Tìm bạn học",
+        "description": "Kết nối với các bạn học ngôn ngữ trên toàn thế giới.",
+        "cta": "Tìm bạn học"
+      },
+      "forum": {
+        "title": "Diễn đàn cộng đồng",
+        "description": "Tham gia thảo luận và chia sẻ hành trình học tập.",
+        "cta": "Tham gia diễn đàn"
+      },
+      "news": {
+        "title": "Tin tức & Kiến thức",
+        "description": "Cập nhật tin tức du học, cuộc sống và kiến thức ngôn ngữ.",
+        "cta": "Đọc tin tức"
+      },
+      "videos": {
+        "title": "Video học tập",
+        "description": "Video bài giảng, phim ngắn và nội dung học tập đa dạng.",
+        "cta": "Xem video"
+      }
+    },
+    "howItWorks": {
+      "badge": "Bắt đầu",
+      "title": "UnstressVN hoạt động như thế nào",
+      "subtitle": "Bắt đầu hành trình học ngôn ngữ chỉ với 3 bước đơn giản",
+      "step1": {
+        "title": "Đọc bài viết",
+        "description": "Khám phá kho kiến thức với các bài viết về ngữ pháp, từ vựng và kinh nghiệm học tập."
+      },
+      "step2": {
+        "title": "Tải tài liệu",
+        "description": "Tải sách, giáo trình và tài liệu học tiếng Đức, tiếng Anh miễn phí."
+      },
+      "step3": {
+        "title": "Sử dụng công cụ",
+        "description": "Học flashcard, luyện phát âm và tra cứu từ điển với các công cụ tiện ích."
+      }
+    },
+    "cta": {
+      "title": "Sẵn sàng bắt đầu hành trình học tập?",
+      "description": "Tham gia cùng hàng nghìn người học. Truy cập tài liệu miễn phí, tìm bạn học và kết nối với cộng đồng toàn cầu.",
+      "signup": "Tham gia miễn phí",
+      "learn": "Tìm hiểu thêm"
+    },
+    "topArticles": {
+      "label": "Top bài viết",
+      "badge": "Top Bài Viết",
+      "title": "Bài viết nổi bật",
+      "viewAll": "Xem tất cả",
+      "mostViewed": "Xem nhiều nhất",
+      "newest": "Mới nhất",
+      "featured": "Nổi bật",
+      "oldest": "Cũ nhất",
+      "noArticles": "Chưa có bài viết nào",
+      "columnTitle": "Tiêu đề",
+      "columnCategory": "Danh mục",
+      "columnLevel": "Trình độ",
+      "columnViews": "Lượt xem"
+    },
+    "latestResources": {
+      "title": "Tài liệu mới nhất"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Đăng nhập",
+      "username": "Tên đăng nhập",
+      "password": "Mật khẩu",
+      "remember": "Ghi nhớ đăng nhập",
+      "rememberMe": "Ghi nhớ đăng nhập",
+      "forgot": "Quên mật khẩu?",
+      "forgotPassword": "Quên mật khẩu?",
+      "submit": "Đăng nhập",
+      "noAccount": "Chưa có tài khoản?",
+      "register": "Đăng ký ngay",
+      "error": "Tên đăng nhập hoặc mật khẩu không đúng"
+    },
+    "register": {
+      "title": "Đăng ký",
+      "username": "Tên đăng nhập",
+      "email": "Email",
+      "password": "Mật khẩu",
+      "confirmPassword": "Xác nhận mật khẩu",
+      "firstName": "Họ",
+      "lastName": "Tên",
+      "targetLanguage": "Ngôn ngữ muốn học",
+      "selectLanguage": "Chọn ngôn ngữ muốn học",
+      "level": "Trình độ hiện tại",
+      "selectLevel": "Chọn trình độ",
+      "skillFocus": "Kỹ năng tập trung",
+      "selectSkill": "Chọn kỹ năng tập trung",
+      "agreeTerms": "Tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật",
+      "agreeToTerms": "Tôi đồng ý với",
+      "terms": "Điều khoản dịch vụ",
+      "privacy": "Chính sách bảo mật",
+      "submit": "Đăng ký",
+      "hasAccount": "Đã có tài khoản?",
+      "login": "Đăng nhập",
+      "error": "Không thể đăng ký. Vui lòng thử lại.",
+      "errors": {
+        "usernameRequired": "Tên đăng nhập là bắt buộc",
+        "emailRequired": "Email là bắt buộc",
+        "emailInvalid": "Email không hợp lệ",
+        "passwordRequired": "Mật khẩu là bắt buộc",
+        "passwordLength": "Mật khẩu phải có ít nhất 8 ký tự",
+        "passwordMismatch": "Mật khẩu xác nhận không khớp",
+        "targetLanguageRequired": "Vui lòng chọn ngôn ngữ muốn học",
+        "agreeTermsRequired": "Bạn phải đồng ý với điều khoản",
+        "termsRequired": "Bạn phải đồng ý với điều khoản dịch vụ"
+      }
+    },
+    "changePassword": "Đổi mật khẩu",
+    "currentPassword": "Mật khẩu hiện tại",
+    "newPassword": "Mật khẩu mới",
+    "confirmNewPassword": "Xác nhận mật khẩu mới",
+    "oldPasswordRequired": "Vui lòng nhập mật khẩu hiện tại",
+    "newPasswordRequired": "Vui lòng nhập mật khẩu mới",
+    "passwordTooShort": "Mật khẩu phải có ít nhất 8 ký tự",
+    "passwordMismatch": "Mật khẩu xác nhận không khớp",
+    "passwordChanged": "Đổi mật khẩu thành công"
+  },
+  "profile": {
+    "title": "Hồ sơ của tôi",
+    "editTitle": "Cập nhật hồ sơ",
+    "editSubtitle": "Cập nhật thông tin cá nhân của bạn",
+    "edit": "Chỉnh sửa hồ sơ",
+    "settings": "Cài đặt",
+    "bio": "Giới thiệu",
+    "bioPlaceholder": "Viết vài dòng về bạn...",
+    "firstName": "Họ",
+    "lastName": "Tên",
+    "username": "Tên đăng nhập",
+    "nativeLanguage": "Ngôn ngữ mẹ đẻ",
+    "learningLanguages": "Ngôn ngữ đang học",
+    "interests": "Sở thích",
+    "interestsPlaceholder": "Nhập sở thích, cách nhau bằng dấu phẩy",
+    "avatar": "Ảnh đại diện",
+    "avatarHint": "Định dạng JPG, PNG. Tối đa 5MB.",
+    "memberSince": "Thành viên từ",
+    "email": "Email",
+    "lastLogin": "Đăng nhập lần cuối",
+    "never": "Chưa bao giờ",
+    "accountInfo": "Thông tin tài khoản",
+    "addLanguage": "Thêm ngôn ngữ",
+    "notSet": "Chưa cài đặt",
+    "noLanguages": "Chưa có ngôn ngữ đang học",
+    "noInterests": "Chưa có sở thích",
+    "notFound": "Không tìm thấy người dùng",
+    "notFoundDescription": "Người dùng này không tồn tại hoặc đã bị xóa.",
+    "targetLanguage": "Ngôn ngữ muốn học",
+    "level": "Trình độ",
+    "skillFocus": "Kỹ năng tập trung",
+    "changeAvatar": "Đổi ảnh đại diện",
+    "isPublic": "Hiển thị hồ sơ công khai",
+    "updateSuccess": "Cập nhật hồ sơ thành công",
+    "viewPublic": "Xem hồ sơ công khai",
+    "backToProfile": "Quay lại Hồ sơ",
+    "basicInfo": "Thông tin cơ bản",
+    "learningSettings": "Cài đặt học tập",
+    "learningInfo": "Thông tin học tập",
+    "socialLinks": "Liên kết mạng xã hội",
+    "website": "Website",
+    "privacySettings": "Cài đặt quyền riêng tư",
+    "publicProfile": "Hồ sơ công khai",
+    "publicProfileDesc": "Cho phép người khác xem hồ sơ của bạn",
+    "showOnlineStatus": "Hiển thị trạng thái online",
+    "showOnlineStatusDesc": "Cho phép người khác thấy khi bạn đang trực tuyến",
+    "allowMessages": "Cho phép tin nhắn",
+    "allowMessagesDesc": "Cho phép người khác gửi tin nhắn cho bạn",
+    "location": "Vị trí",
+    "locationPlaceholder": "Thành phố, Quốc gia",
+    "stats": "Thống kê",
+    "resources": "Tài liệu",
+    "friends": "Bạn học",
+    "posts": "Bài viết",
+    "bookmarks": "Đã lưu",
+    "quickActions": "Truy cập nhanh"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "subtitle": "Quản lý tài khoản và tùy chọn của bạn",
+    "backToProfile": "Quay lại Hồ sơ",
+    "languageAndAppearance": "Ngôn ngữ & Giao diện",
+    "language": "Ngôn ngữ",
+    "theme": "Giao diện",
+    "lightTheme": "Sáng",
+    "darkTheme": "Tối",
+    "systemTheme": "Hệ thống",
+    "privacy": "Quyền riêng tư",
+    "notifications": "Thông báo",
+    "emailNotifications": "Thông báo email",
+    "emailNotificationsDesc": "Nhận thông báo qua email cho các cập nhật quan trọng",
+    "pushNotifications": "Thông báo đẩy",
+    "pushNotificationsDesc": "Nhận thông báo đẩy trong trình duyệt",
+    "friendRequestNotifications": "Thông báo lời mời kết bạn",
+    "friendRequestNotificationsDesc": "Nhận thông báo khi có người gửi lời mời kết bạn",
+    "messageNotifications": "Thông báo tin nhắn",
+    "messageNotificationsDesc": "Nhận thông báo khi có tin nhắn mới",
+    "account": "Tài khoản",
+    "changePassword": "Đổi mật khẩu",
+    "changePasswordDesc": "Cập nhật mật khẩu tài khoản",
+    "logout": "Đăng xuất",
+    "logoutDesc": "Đăng xuất khỏi tài khoản",
+    "deleteAccount": "Xóa tài khoản",
+    "deleteAccountDesc": "Xóa vĩnh viễn tài khoản và tất cả dữ liệu",
+    "deleteAccountConfirm": "Xóa tài khoản?",
+    "deleteAccountWarning": "Hành động này không thể hoàn tác. Tất cả dữ liệu, bài viết và tài liệu của bạn sẽ bị xóa vĩnh viễn.",
+    "confirmDelete": "Đồng ý, Xóa tài khoản"
+  },
+  "resources": {
+    "title": "Thư viện tài liệu",
+    "subtitle": "Tài liệu được tuyển chọn cho mọi trình độ",
+    "searchPlaceholder": "Tìm kiếm tài liệu...",
+    "allLanguages": "Tất cả ngôn ngữ",
+    "allLevels": "Tất cả trình độ",
+    "allTypes": "Tất cả loại",
+    "resultsCount": "{{count}} kết quả",
+    "resultUnit": "tài liệu",
+    "gridView": "Dạng lưới",
+    "listView": "Dạng danh sách",
+    "noResults": "Không có tài liệu nào phù hợp",
+    "notFound": "Không tìm thấy tài liệu",
+    "notFoundDescription": "Tài liệu này không tồn tại hoặc đã bị xóa.",
+    "backToList": "Quay lại danh sách",
+    "download": "Tải xuống",
+    "downloadNow": "Tải xuống ngay",
+    "loginToDownload": "Đăng nhập để tải xuống",
+    "visitLink": "Truy cập liên kết",
+    "noDownload": "Không có file tải xuống",
+    "stats": "Thống kê",
+    "views": "Lượt xem",
+    "downloads": "Lượt tải",
+    "created": "Ngày tạo",
+    "uploadedBy": "Đăng bởi",
+    "related": "Tài liệu liên quan",
+    "types": {
+      "book": "Sách",
+      "audio": "Audio",
+      "video": "Video",
+      "article": "Bài viết",
+      "other": "Khác"
+    },
+    "filters": {
+      "category": "Danh mục",
+      "language": "Ngôn ngữ",
+      "level": "Trình độ",
+      "type": "Loại"
+    },
+    "detail": {
+      "download": "Tải xuống",
+      "downloads": "lượt tải",
+      "views": "lượt xem",
+      "uploadedBy": "Đăng bởi",
+      "related": "Tài liệu liên quan"
+    },
+    "empty": "Không có tài liệu nào",
+    "library": "Thư viện",
+    "registerToDownload": "Đăng ký để tải",
+    "save": "Lưu lại",
+    "category": "Danh mục",
+    "unknownLevel": "Không rõ cấp độ",
+    "seo": {
+      "title": "Thư viện tài liệu - UnstressVN",
+      "description": "Duyệt qua thư viện tài liệu học ngôn ngữ phong phú bao gồm sách, audio, video và bài viết cho mọi trình độ."
+    },
+    "tryDifferent": "Thử thay đổi bộ lọc"
+  },
+  "videos": {
+    "title": "Video học tập",
+    "pageTitle": "Video bài giảng",
+    "subtitle": "Bộ sưu tập video bài giảng chọn lọc",
+    "seo": {
+      "title": "Video bài giảng - UnstressVN",
+      "description": "Bộ sưu tập video bài giảng chọn lọc để nâng cao kỹ năng ngôn ngữ của bạn."
+    },
+    "searchPlaceholder": "Tìm kiếm video...",
+    "allLanguages": "Tất cả ngôn ngữ",
+    "allLevels": "Tất cả trình độ",
+    "noResults": "Không tìm thấy video nào",
+    "noVideos": "Không tìm thấy video",
+    "noVideosDescription": "Hãy quay lại sau để xem các video mới!",
+    "noResultsFiltered": "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.",
+    "error": "Không thể tải video",
+    "errorDescription": "Vui lòng kiểm tra kết nối và thử lại.",
+    "videosCount": "video",
+    "notFound": "Video không tồn tại",
+    "notDisplaying": "Video không hiển thị?",
+    "watchOnYouTube": "Xem trực tiếp trên YouTube",
+    "save": "Lưu video",
+    "saved": "Đã lưu",
+    "loginToSave": "Đăng nhập để lưu",
+    "noRelated": "Không có video liên quan",
+    "viewAll": "Xem tất cả video",
+    "backToList": "Quay lại danh sách",
+    "watchNow": "Xem ngay",
+    "views": "lượt xem",
+    "related": "Video liên quan",
+    "resultsCount": "{{count}} video"
+  },
+  "partners": {
+    "title": "Tìm bạn học",
+    "pageTitle": "Phòng học nhóm",
+    "subtitle": "Tham gia phòng học nhóm để cùng nhau tiến bộ",
+    "seo": {
+      "title": "Phòng học nhóm - UnstressVN",
+      "description": "Tìm phòng học nhóm phù hợp với trình độ và mục tiêu của bạn."
+    },
+    "myRequests": "Lời mời của tôi",
+    "rooms": "Phòng học",
+    "createRoom": "Tạo phòng",
+    "searchPlaceholder": "Tìm phòng học...",
+    "nativeLanguage": "Ngôn ngữ bản địa",
+    "learningLanguage": "Ngôn ngữ đang học",
+    "allLanguages": "Tất cả ngôn ngữ",
+    "allLevels": "Tất cả trình độ",
+    "allPurposes": "Tất cả mục đích",
+    "allSkills": "Tất cả kỹ năng",
+    "level": "Trình độ",
+    "purpose": "Mục đích",
+    "skill": "Kỹ năng",
+    "resultsCount": "{{count}} kết quả",
+    "noResults": "Không tìm thấy bạn học nào phù hợp",
+    "native": "Bản địa",
+    "learning": "Đang học",
+    "viewProfile": "Xem hồ sơ",
+    "sendRequest": "Gửi lời mời",
+    "backToSearch": "Quay lại tìm kiếm",
+    "receivedRequests": "Lời mời đã nhận",
+    "sentRequests": "Lời mời đã gửi",
+    "noReceivedRequests": "Không có lời mời nào",
+    "noSentRequests": "Bạn chưa gửi lời mời nào",
+    "accept": "Chấp nhận",
+    "reject": "Từ chối",
+    "cancel": "Hủy",
+    "status": {
+      "pending": "Đang chờ",
+      "accepted": "Đã chấp nhận",
+      "rejected": "Đã từ chối"
+    },
+    "roomsDescription": "Danh sách các bạn học đã kết nối với bạn",
+    "noRooms": "Bạn chưa có bạn học nào",
+    "findPartners": "Tìm bạn học",
+    "partnersSince": "Kết nối từ",
+    "startChat": "Nhắn tin",
+    "search": {
+      "title": "Tìm bạn học",
+      "placeholder": "Tìm theo tên hoặc giới thiệu..."
+    },
+    "filters": {
+      "language": "Ngôn ngữ đang học",
+      "level": "Trình độ",
+      "skill": "Kỹ năng"
+    },
+    "request": {
+      "send": "Gửi lời mời",
+      "sent": "Đã gửi lời mời",
+      "accept": "Chấp nhận",
+      "reject": "Từ chối",
+      "cancel": "Hủy lời mời",
+      "message": "Lời nhắn",
+      "messagePlaceholder": "Xin chào! Mình muốn học cùng bạn..."
+    },
+    "empty": "Không tìm thấy bạn học nào",
+    "friendList": "Bạn bè",
+    "friendListDescription": "Xem và quản lý bạn học của bạn. Bắt đầu trò chuyện và luyện tập cùng nhau.",
+    "loginToViewFriends": "Vui lòng đăng nhập để xem danh sách bạn bè.",
+    "friendsCount": "bạn bè"
+  },
+  "studyRooms": {
+    "title": "Phòng học",
+    "create": "Tạo phòng",
+    "join": "Tham gia",
+    "leave": "Rời phòng",
+    "delete": "Xóa phòng",
+    "members": "Thành viên",
+    "owner": "Chủ phòng",
+    "roomName": "Tên phòng",
+    "description": "Mô tả",
+    "language": "Ngôn ngữ",
+    "level": "Trình độ",
+    "purpose": "Mục đích",
+    "skill": "Kỹ năng",
+    "maxMembers": "Số thành viên tối đa",
+    "noRooms": "Không có phòng học nào",
+    "createNew": "Tạo phòng mới",
+    "joinSuccess": "Đã tham gia phòng thành công",
+    "leaveSuccess": "Đã rời phòng thành công",
+    "deleteConfirm": "Bạn có chắc muốn xóa phòng này?",
+    "goToChat": "Vào chat"
+  },
+  "chat": {
+    "title": "Tin nhắn",
+    "you": "Bạn",
+    "noConversations": "Chưa có cuộc trò chuyện nào",
+    "noConversationsHint": "Kết nối với bạn học để bắt đầu trò chuyện",
+    "roomNotFound": "Không tìm thấy cuộc trò chuyện",
+    "backToList": "Quay lại danh sách",
+    "online": "Đang hoạt động",
+    "connecting": "Đang kết nối...",
+    "viewProfile": "Xem hồ sơ",
+    "noMessages": "Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện!",
+    "typePlaceholder": "Nhập tin nhắn...",
+    "send": "Gửi",
+    "conversations": "Cuộc trò chuyện",
+    "newMessage": "Tin nhắn mới",
+    "startChat": "Bắt đầu trò chuyện",
+    "viewAll": "Xem tất cả tin nhắn",
+    "newConversation": "Cuộc trò chuyện mới",
+    "subtitle": "Tất cả cuộc trò chuyện của bạn",
+    "searchPlaceholder": "Tìm kiếm cuộc trò chuyện..."
+  },
+  "notifications": {
+    "title": "Thông báo",
+    "pageTitle": "Thông báo",
+    "pageDescription": "Xem tất cả thông báo của bạn",
+    "subtitle": "Cập nhật hoạt động mới nhất",
+    "markAllRead": "Đọc tất cả",
+    "markAsRead": "Đánh dấu đã đọc",
+    "read": "Đã đọc",
+    "unread": "chưa đọc",
+    "total": "Tổng thông báo",
+    "allNotifications": "Tất cả thông báo",
+    "empty": "Không có thông báo",
+    "emptyHint": "Bạn sẽ nhận thông báo khi có hoạt động mới",
+    "viewAll": "Xem tất cả thông báo",
+    "type": {
+      "friend_request": "Lời mời kết bạn",
+      "like": "Thích",
+      "comment": "Bình luận",
+      "message": "Tin nhắn"
+    }
+  },
+  "forum": {
+    "title": "Cộng đồng",
+    "pageTitle": "Diễn đàn cộng đồng",
+    "subtitle": "Chia sẻ, học hỏi và cùng nhau phát triển",
+    "discussionCount": "cuộc thảo luận",
+    "createPost": "Viết bài mới",
+    "editPost": "Chỉnh sửa bài viết",
+    "searchPlaceholder": "Tìm kiếm bài viết...",
+    "allCategories": "Tất cả chủ đề",
+    "noPosts": "Chưa có bài viết nào",
+    "createFirst": "Viết bài đầu tiên",
+    "postNotFound": "Không tìm thấy bài viết",
+    "backToList": "Quay lại danh sách",
+    "views": "lượt xem",
+    "comments": "bình luận",
+    "writeComment": "Viết bình luận...",
+    "submitComment": "Gửi bình luận",
+    "toComment": "để bình luận",
+    "noComments": "Chưa có bình luận nào",
+    "postTitle": "Tiêu đề bài viết",
+    "category": "Chủ đề",
+    "selectCategory": "Chọn chủ đề",
+    "content": "Nội dung",
+    "contentPlaceholder": "Viết nội dung bài viết của bạn...",
+    "markdownSupported": "Hỗ trợ định dạng Markdown",
+    "publish": "Đăng bài",
+    "errors": {
+      "titleRequired": "Tiêu đề là bắt buộc",
+      "contentRequired": "Nội dung là bắt buộc"
+    },
+    "posts": "Bài viết",
+    "newPost": "Viết bài mới",
+    "postContent": "Nội dung",
+    "likes": "Thích",
+    "share": "Chia sẻ",
+    "reply": "Trả lời",
+    "deleteConfirm": "Bạn có chắc muốn xóa bài viết này?",
+    "sortBy": {
+      "latest": "Mới nhất",
+      "popular": "Phổ biến",
+      "trending": "Xu hướng"
+    }
+  },
+  "search": {
+    "title": "Tìm kiếm",
+    "placeholder": "Tìm kiếm tài liệu, người dùng, bài viết...",
+    "search": "Tìm kiếm",
+    "searching": "Đang tìm kiếm...",
+    "all": "Tất cả",
+    "resources": "Tài liệu",
+    "posts": "Bài viết",
+    "users": "Người dùng",
+    "viewMore": "Xem thêm",
+    "noResults": "Không tìm thấy kết quả cho \"{{query}}\"",
+    "enterQuery": "Nhập từ khóa để tìm kiếm",
+    "tabs": {
+      "all": "Tất cả",
+      "resources": "Tài liệu",
+      "users": "Người dùng",
+      "posts": "Bài viết"
+    },
+    "results": "kết quả",
+    "books": "Sách",
+    "videos": "Video",
+    "discussions": "Thảo luận"
+  },
+  "languages": {
+    "en": "Tiếng Anh",
+    "de": "Tiếng Đức",
+    "vi": "Tiếng Việt"
+  },
+  "nativeLanguages": {
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "de": "Deutsch",
+    "ja": "日本語",
+    "ko": "한국어",
+    "zh": "中文",
+    "fr": "Français"
+  },
+  "levels": {
+    "A1": "A1 - Sơ cấp",
+    "A2": "A2 - Sơ trung cấp",
+    "B1": "B1 - Trung cấp",
+    "B2": "B2 - Trung cao cấp",
+    "C1": "C1 - Cao cấp",
+    "C2": "C2 - Thành thạo",
+    "beginner": "Mới bắt đầu",
+    "elementary": "Cơ bản",
+    "intermediate": "Trung cấp",
+    "upperIntermediate": "Trung cấp cao",
+    "advanced": "Nâng cao",
+    "native": "Bản ngữ"
+  },
+  "skills": {
+    "reading": "Đọc",
+    "writing": "Viết",
+    "listening": "Nghe",
+    "speaking": "Nói",
+    "grammar": "Ngữ pháp",
+    "vocabulary": "Từ vựng",
+    "all": "Tất cả kỹ năng"
+  },
+  "purposes": {
+    "travel": "Du lịch",
+    "work": "Công việc",
+    "study": "Học tập",
+    "hobby": "Sở thích",
+    "exam": "Luyện thi",
+    "other": "Khác"
+  },
+  "footer": {
+    "explore": "Khám phá",
+    "support": "Hỗ trợ",
+    "about": "Về chúng tôi",
+    "contact": "Liên hệ",
+    "terms": "Điều khoản sử dụng",
+    "privacy": "Chính sách bảo mật",
+    "copyright": "© 2026 UnstressVN. Bản quyền thuộc về UnstressVN.",
+    "allRightsReserved": "Bản quyền thuộc về UnstressVN.",
+    "craftedWith": "Được tạo ra với ❤️ cho người học ngoại ngữ",
+    "knowledge": "Kiến thức",
+    "resources": "Tài liệu",
+    "tools": "Công cụ",
+    "news": "Tin tức",
+    "tagline": "Học ngoại ngữ dễ dàng"
+  },
+  "about": {
+    "seo": {
+      "title": "Về chúng tôi - UnstressVN",
+      "description": "Tìm hiểu về UnstressVN, sứ mệnh kết nối người học ngoại ngữ và cách chúng tôi giúp mọi người học ngôn ngữ thông qua cộng đồng."
+    },
+    "title": "Về UnstressVN",
+    "subtitle": "Kết nối người học ngôn ngữ và trao quyền giao tiếp toàn cầu",
+    "mission": {
+      "title": "Sứ mệnh của chúng tôi",
+      "description": "UnstressVN được thành lập với niềm tin đơn giản: việc học ngoại ngữ nên dễ tiếp cận, dựa trên cộng đồng và thú vị. Chúng tôi tạo ra không gian nơi người học từ mọi nền tảng có thể kết nối, chia sẻ tài liệu và cùng nhau phát triển."
+    },
+    "features": {
+      "title": "Chúng tôi cung cấp",
+      "resources": {
+        "title": "Tài liệu chất lượng",
+        "description": "Truy cập thư viện tài liệu học tập chất lượng bao gồm sách, video, khóa học audio và bài viết cho nhiều ngôn ngữ và mọi cấp độ."
+      },
+      "partners": {
+        "title": "Bạn học ngôn ngữ",
+        "description": "Tìm người bản xứ và người học khác để luyện tập cùng. Hệ thống ghép cặp giúp bạn kết nối với đối tác phù hợp với mục tiêu của bạn."
+      },
+      "community": {
+        "title": "Cộng đồng năng động",
+        "description": "Tham gia thảo luận, đặt câu hỏi và chia sẻ hành trình học tập với hàng nghìn người yêu ngôn ngữ từ khắp nơi trên thế giới."
+      }
+    },
+    "stats": {
+      "title": "Cộng đồng đang phát triển",
+      "members": "Thành viên",
+      "resources": "Tài liệu",
+      "languages": "Ngôn ngữ",
+      "connections": "Kết nối"
+    },
+    "values": {
+      "title": "Giá trị của chúng tôi",
+      "inclusivity": {
+        "title": "Hòa nhập",
+        "description": "Chúng tôi chào đón người học từ mọi nền tảng, văn hóa và cấp độ kỹ năng."
+      },
+      "community": {
+        "title": "Cộng đồng là trên hết",
+        "description": "Chúng tôi tin vào sức mạnh của việc học dựa trên cộng đồng và hỗ trợ lẫn nhau."
+      },
+      "quality": {
+        "title": "Nội dung chất lượng",
+        "description": "Chúng tôi tuyển chọn và chia sẻ chỉ những tài liệu và tài nguyên học tập tốt nhất."
+      },
+      "growth": {
+        "title": "Phát triển liên tục",
+        "description": "Chúng tôi khuyến khích học tập suốt đời và tôn vinh mỗi bước tiến bộ."
+      }
+    }
+  },
+  "contact": {
+    "seo": {
+      "title": "Liên hệ - UnstressVN",
+      "description": "Liên hệ với đội ngũ UnstressVN. Chúng tôi sẵn sàng hỗ trợ bạn với các câu hỏi, phản hồi hoặc yêu cầu hợp tác."
+    },
+    "title": "Liên hệ với chúng tôi",
+    "subtitle": "Có câu hỏi hoặc phản hồi? Chúng tôi rất muốn lắng nghe từ bạn.",
+    "email": {
+      "title": "Email cho chúng tôi",
+      "description": "Chúng tôi sẽ phản hồi trong vòng 24 giờ"
+    },
+    "chat": {
+      "title": "Diễn đàn cộng đồng",
+      "description": "Nhận sự trợ giúp từ cộng đồng",
+      "link": "Truy cập diễn đàn"
+    },
+    "location": {
+      "title": "Địa điểm",
+      "remote": "Đội ngũ làm việc từ xa",
+      "address": "Hà Nội, Việt Nam"
+    },
+    "success": {
+      "title": "Đã gửi tin nhắn!",
+      "description": "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm.",
+      "sendAnother": "Gửi tin nhắn khác"
+    },
+    "form": {
+      "name": "Tên của bạn",
+      "namePlaceholder": "Nguyễn Văn A",
+      "email": "Địa chỉ email",
+      "emailPlaceholder": "email@example.com",
+      "subject": "Tiêu đề",
+      "subjectPlaceholder": "Chúng tôi có thể giúp gì?",
+      "message": "Tin nhắn",
+      "messagePlaceholder": "Hãy cho chúng tôi biết thêm về câu hỏi hoặc phản hồi của bạn...",
+      "submit": "Gửi tin nhắn"
+    }
+  },
+  "terms": {
+    "seo": {
+      "title": "Điều khoản sử dụng - UnstressVN",
+      "description": "Đọc điều khoản sử dụng để hiểu quyền và trách nhiệm của bạn khi sử dụng UnstressVN."
+    },
+    "title": "Điều khoản sử dụng",
+    "lastUpdated": "Cập nhật lần cuối",
+    "acceptance": {
+      "title": "Chấp nhận điều khoản",
+      "content": "Bằng việc truy cập và sử dụng UnstressVN, bạn đồng ý tuân thủ và chịu ràng buộc bởi các điều khoản và điều kiện này. Nếu bạn không đồng ý với bất kỳ phần nào của các điều khoản này, vui lòng không sử dụng dịch vụ của chúng tôi."
+    },
+    "account": {
+      "title": "Tài khoản người dùng",
+      "item1": "Bạn phải cung cấp thông tin chính xác và đầy đủ khi đăng ký tài khoản.",
+      "item2": "Bạn chịu trách nhiệm bảo mật thông tin đăng nhập của mình.",
+      "item3": "Bạn phải từ 13 tuổi trở lên để sử dụng dịch vụ.",
+      "item4": "Mỗi người chỉ được phép sở hữu một tài khoản."
+    },
+    "content": {
+      "title": "Nội dung người dùng",
+      "intro": "Khi đăng tải nội dung lên UnstressVN, bạn cam kết:",
+      "item1": "Nội dung thuộc quyền sở hữu của bạn hoặc bạn có quyền sử dụng.",
+      "item2": "Nội dung không vi phạm bản quyền, thương hiệu hay quyền sở hữu trí tuệ của người khác.",
+      "item3": "Nội dung không chứa thông tin sai lệch, gây hiểu nhầm hoặc lừa đảo.",
+      "item4": "Nội dung không có tính chất khiêu dâm, bạo lực hoặc gây thù hận."
+    },
+    "prohibited": {
+      "title": "Hành vi bị cấm",
+      "intro": "Các hành vi sau đây bị nghiêm cấm trên nền tảng:",
+      "item1": "Spam, quảng cáo trái phép hoặc gửi tin nhắn hàng loạt.",
+      "item2": "Quấy rối, đe dọa hoặc bắt nạt người dùng khác.",
+      "item3": "Mạo danh người khác hoặc tạo tài khoản giả mạo.",
+      "item4": "Tấn công, phá hoại hoặc can thiệp vào hệ thống.",
+      "item5": "Thu thập dữ liệu người dùng mà không có sự đồng ý."
+    },
+    "intellectual": {
+      "title": "Quyền sở hữu trí tuệ",
+      "content": "Tất cả nội dung, thiết kế, logo, và thương hiệu UnstressVN thuộc quyền sở hữu của chúng tôi và được bảo hộ bởi luật sở hữu trí tuệ. Bạn không được sao chép, phân phối hoặc tạo các tác phẩm phái sinh mà không có sự cho phép bằng văn bản."
+    },
+    "disclaimer": {
+      "title": "Miễn trừ trách nhiệm",
+      "item1": "Dịch vụ được cung cấp \"nguyên trạng\" không có bảo đảm nào.",
+      "item2": "Chúng tôi không chịu trách nhiệm về nội dung do người dùng đăng tải.",
+      "item3": "Chúng tôi không đảm bảo dịch vụ sẽ hoạt động liên tục hoặc không có lỗi.",
+      "item4": "Bạn tự chịu rủi ro khi tải xuống tài liệu từ nền tảng."
+    },
+    "changes": {
+      "title": "Thay đổi điều khoản",
+      "content": "Chúng tôi có quyền cập nhật các điều khoản này bất cứ lúc nào. Các thay đổi sẽ có hiệu lực ngay khi được đăng tải. Việc tiếp tục sử dụng dịch vụ sau khi thay đổi đồng nghĩa với việc bạn chấp nhận các điều khoản mới."
+    },
+    "contact": {
+      "title": "Liên hệ",
+      "content": "Nếu bạn có câu hỏi về điều khoản sử dụng, vui lòng liên hệ chúng tôi qua trang"
+    }
+  },
+  "privacy": {
+    "seo": {
+      "title": "Chính sách bảo mật - UnstressVN",
+      "description": "Tìm hiểu cách UnstressVN thu thập, sử dụng và bảo vệ thông tin cá nhân của bạn."
+    },
+    "title": "Chính sách bảo mật",
+    "lastUpdated": "Cập nhật lần cuối",
+    "intro": "Tại UnstressVN, chúng tôi cam kết bảo vệ quyền riêng tư của bạn. Chính sách này giải thích cách chúng tôi thu thập, sử dụng và bảo vệ thông tin cá nhân của bạn khi bạn sử dụng nền tảng của chúng tôi.",
+    "collection": {
+      "title": "Thông tin chúng tôi thu thập",
+      "provided": "Thông tin bạn cung cấp:",
+      "item1": "Thông tin đăng ký: tên, email, mật khẩu",
+      "item2": "Thông tin hồ sơ: ảnh đại diện, tiểu sử, ngôn ngữ học",
+      "item3": "Nội dung bạn đăng tải: bài viết, bình luận, tin nhắn",
+      "automatic": "Thông tin tự động thu thập:",
+      "item4": "Địa chỉ IP và thông tin thiết bị",
+      "item5": "Cookies và dữ liệu phiên đăng nhập",
+      "item6": "Lịch sử truy cập và hoạt động trên nền tảng"
+    },
+    "usage": {
+      "title": "Cách chúng tôi sử dụng thông tin",
+      "item1": "Cung cấp và cải thiện dịch vụ",
+      "item2": "Cá nhân hóa trải nghiệm người dùng",
+      "item3": "Gửi thông báo về hoạt động tài khoản",
+      "item4": "Phân tích và nghiên cứu để phát triển sản phẩm",
+      "item5": "Đảm bảo an ninh và ngăn chặn gian lận",
+      "item6": "Tuân thủ các yêu cầu pháp lý"
+    },
+    "sharing": {
+      "title": "Chia sẻ thông tin",
+      "intro": "Chúng tôi KHÔNG bán thông tin cá nhân của bạn. Chúng tôi chỉ chia sẻ trong các trường hợp:",
+      "item1": "Với sự đồng ý rõ ràng của bạn",
+      "item2": "Với các đối tác dịch vụ đáng tin cậy (hosting, email, analytics)",
+      "item3": "Khi được yêu cầu bởi pháp luật",
+      "item4": "Để bảo vệ quyền lợi và an toàn của nền tảng"
+    },
+    "security": {
+      "title": "Bảo mật dữ liệu",
+      "intro": "Chúng tôi áp dụng các biện pháp bảo mật tiên tiến:",
+      "item1": "Mã hóa SSL/TLS cho mọi kết nối",
+      "item2": "Mã hóa mật khẩu bằng bcrypt",
+      "item3": "Kiểm tra bảo mật định kỳ",
+      "item4": "Hạn chế quyền truy cập dữ liệu nội bộ",
+      "item5": "Sao lưu dữ liệu thường xuyên"
+    },
+    "cookies": {
+      "title": "Cookies",
+      "intro": "Chúng tôi sử dụng cookies để:",
+      "item1": "Duy trì phiên đăng nhập của bạn",
+      "item2": "Lưu tùy chọn ngôn ngữ và giao diện",
+      "item3": "Phân tích lưu lượng truy cập (Google Analytics)",
+      "control": "Bạn có thể kiểm soát cookies thông qua cài đặt trình duyệt."
+    },
+    "rights": {
+      "title": "Quyền của bạn",
+      "intro": "Bạn có các quyền sau đối với dữ liệu cá nhân:",
+      "access": "Quyền truy cập:",
+      "accessDesc": "Xem dữ liệu chúng tôi lưu trữ về bạn",
+      "rectify": "Quyền chỉnh sửa:",
+      "rectifyDesc": "Cập nhật thông tin không chính xác",
+      "delete": "Quyền xóa:",
+      "deleteDesc": "Yêu cầu xóa tài khoản và dữ liệu",
+      "export": "Quyền xuất dữ liệu:",
+      "exportDesc": "Tải về bản sao dữ liệu của bạn",
+      "optout": "Quyền từ chối:",
+      "optoutDesc": "Hủy đăng ký nhận thông báo marketing"
+    },
+    "changes": {
+      "title": "Thay đổi chính sách",
+      "content": "Chúng tôi có thể cập nhật chính sách này theo thời gian. Mọi thay đổi quan trọng sẽ được thông báo qua email hoặc thông báo trên nền tảng. Ngày cập nhật sẽ được ghi ở đầu trang."
+    },
+    "contact": {
+      "title": "Liên hệ về quyền riêng tư",
+      "content": "Nếu bạn có câu hỏi hoặc yêu cầu về dữ liệu cá nhân, vui lòng liên hệ:",
+      "page": "Trang liên hệ:"
+    }
+  },
+  "errors": {
+    "notFound": {
+      "title": "Trang không tồn tại",
+      "description": "Xin lỗi, trang bạn tìm kiếm không tồn tại.",
+      "goHome": "Về trang chủ",
+      "search": "Tìm kiếm"
+    },
+    "serverError": "Lỗi máy chủ",
+    "networkError": "Lỗi kết nối mạng",
+    "unauthorized": "Bạn cần đăng nhập để tiếp tục",
+    "noPermission": "Không có quyền truy cập"
+  },
+  "errorBoundary": {
+    "title": "Đã xảy ra lỗi",
+    "description": "Có lỗi không mong muốn xảy ra. Vui lòng thử tải lại trang.",
+    "errorDetails": "Chi tiết lỗi",
+    "retry": "Thử lại",
+    "home": "Trang chủ"
+  },
+  "timeAgo": {
+    "yearsAgo": "{{count}} năm trước",
+    "monthsAgo": "{{count}} tháng trước",
+    "weeksAgo": "{{count}} tuần trước",
+    "daysAgo": "{{count}} ngày trước",
+    "hoursAgo": "{{count}} giờ trước",
+    "minutesAgo": "{{count}} phút trước",
+    "justNow": "Vừa xong"
+  },
+  "media": {
+    "loadError": "Không thể tải video. Vui lòng thử lại sau.",
+    "subtitle": "Phụ đề:",
+    "subtitleOff": "Tắt",
+    "views": "lượt xem",
+    "featured": "Nổi bật"
+  },
+  "knowledge": {
+    "allLanguages": "Tất cả ngôn ngữ",
+    "allLevels": "Tất cả cấp độ",
+    "levelProgress": "Lộ trình học theo cấp độ"
+  },
+  "articles": {
+    "featured": "Nổi bật",
+    "popular": "Phổ biến",
+    "latest": "Mới nhất",
+    "related": "Bài viết liên quan",
+    "noArticles": "Chưa có bài viết nào"
+  },
+  "seo": {
+    "defaultDescription": "Cộng đồng học ngoại ngữ UnstressVN - Chia sẻ tài liệu, video học tiếng Anh, tiếng Đức. Tin tức, kiến thức và công cụ học tập.",
+    "defaultKeywords": "học ngoại ngữ, tiếng anh, tiếng đức, tài liệu học, video học, cộng đồng"
+  }
+}

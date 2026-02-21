@@ -1,0 +1,382 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}File Manager{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .module {
+        background: #fff;
+        border: 1px solid #ccc;
+        margin-bottom: 15px;
+    }
+    .module h2, .module caption {
+        background: #79aec8;
+        color: #fff;
+        padding: 8px 10px;
+        margin: 0;
+        font-size: 13px;
+        font-weight: bold;
+    }
+    .module table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .module th {
+        background: #f8f8f8;
+        padding: 8px 10px;
+        text-align: left;
+        font-size: 12px;
+        border-bottom: 1px solid #ddd;
+    }
+    .module td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+    }
+    .module tr:hover {
+        background: #fffde7;
+    }
+    .stats-bar {
+        display: flex;
+        gap: 20px;
+        padding: 10px;
+        background: #f8f8f8;
+        border-bottom: 1px solid #ddd;
+        font-size: 12px;
+    }
+    .toolbar {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .toolbar .button {
+        display: inline-block;
+        padding: 6px 12px;
+        background: #417690;
+        color: #fff;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    .toolbar .button:hover {
+        background: #205067;
+    }
+    .toolbar .button.green { background: #28a745; }
+    .toolbar .button.blue { background: #007bff; }
+    .toolbar .button.gray { background: #6c757d; }
+    .toolbar .button.yellow { background: #ffc107; color: #000; }
+    .toolbar .button.red { background: #dc3545; }
+    
+    .breadcrumbs-bar {
+        padding: 8px 10px;
+        background: #5b7f95;
+        font-size: 12px;
+    }
+    .breadcrumbs-bar a {
+        color: #fff;
+        text-decoration: none;
+    }
+    .breadcrumbs-bar a:hover {
+        text-decoration: underline;
+    }
+    
+    .dialog {
+        display: none;
+        padding: 15px;
+        background: #f9f9f9;
+        border-bottom: 1px solid #ddd;
+    }
+    .dialog h3 {
+        margin: 0 0 10px;
+        font-size: 14px;
+    }
+    .dialog input[type="text"],
+    .dialog input[type="file"] {
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        font-size: 13px;
+    }
+    .dialog label {
+        font-size: 12px;
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    .action-btn {
+        display: inline-block;
+        padding: 4px 8px;
+        font-size: 11px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        margin-right: 3px;
+    }
+    .preview-cell {
+        width: 50px;
+        text-align: center;
+    }
+    .preview-cell img {
+        max-width: 40px;
+        max-height: 40px;
+        object-fit: cover;
+        border-radius: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h2>📁 File Manager</h2>
+    
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <span>💾 <strong>Dung lượng:</strong> <span id="size-display">Đang tải...</span></span>
+        <span>📄 <strong>Files:</strong> <span id="file-count">-</span></span>
+        <span>📁 <strong>Folders:</strong> <span id="folder-count">-</span></span>
+    </div>
+    
+    <!-- Breadcrumbs -->
+    <div class="breadcrumbs-bar">
+        <a href="?">📁 media</a>
+        {% for bc in breadcrumbs %}
+            / <a href="?path={{ bc.path }}">{{ bc.name }}</a>
+        {% endfor %}
+    </div>
+    
+    <!-- Toolbar -->
+    <div class="toolbar">
+        {% if parent_path is not None %}
+        <a href="?path={{ parent_path }}" class="button">⬆️ Lên</a>
+        {% endif %}
+        <button onclick="showCreateFolder()" class="button green">📁 Tạo thư mục</button>
+        <button onclick="showUploadDialog()" class="button blue">📤 Upload files</button>
+        <label style="display: flex; align-items: center; gap: 5px; font-size: 12px;">
+            <input type="checkbox" id="convert-webp-main" checked>
+            Chuyển đổi WebP
+        </label>
+    </div>
+    
+    <!-- Upload Dialog -->
+    <div id="upload-dialog" class="dialog">
+        <h3>📤 Upload Files</h3>
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="hidden" name="path" value="{{ current_path }}">
+            <div style="margin-bottom: 10px;">
+                <label>Chọn file:</label>
+                <input type="file" name="files" id="file-input" multiple>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label>Slug (tên file sẽ là: unstressvn-[slug].webp):</label>
+                <input type="text" name="slug" id="upload-slug" placeholder="vd: bai-hoc-tieng-anh-1" style="width: 300px;">
+            </div>
+            <label style="display: flex; align-items: center; gap: 5px; margin-bottom: 10px;">
+                <input type="checkbox" id="convert-webp" checked>
+                Chuyển đổi sang WebP
+            </label>
+            <button type="submit" class="button green">Upload</button>
+            <button type="button" onclick="hideUploadDialog()" class="button gray">Hủy</button>
+        </form>
+        <div id="upload-progress" style="display: none; margin-top: 10px;">
+            Đang upload... <span id="upload-status"></span>
+        </div>
+    </div>
+    
+    <!-- Create Folder Dialog -->
+    <div id="folder-dialog" class="dialog">
+        <h3>📁 Tạo thư mục mới</h3>
+        <form id="folder-form">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="hidden" name="path" value="{{ current_path }}">
+            <input type="text" name="name" id="folder-name" placeholder="Tên thư mục" style="width: 200px;">
+            <button type="submit" class="button green">Tạo</button>
+            <button type="button" onclick="hideFolderDialog()" class="button gray">Hủy</button>
+        </form>
+    </div>
+    
+    <!-- File List -->
+    <table>
+        <thead>
+            <tr>
+                <th class="preview-cell">Preview</th>
+                <th>Tên</th>
+                <th>Loại</th>
+                <th>Kích thước</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr data-path="{{ item.relative_path }}">
+                <td class="preview-cell">
+                    {% if item.is_dir %}
+                        📁
+                    {% elif item.is_image %}
+                        <img src="{{ item.url }}" alt="{{ item.name }}">
+                    {% else %}
+                        📄
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.is_dir %}
+                        <a href="?path={{ item.relative_path }}"><strong>{{ item.name }}</strong></a>
+                    {% else %}
+                        {{ item.name }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.is_dir %}Thư mục{% elif item.is_image %}Ảnh{% else %}File{% endif %}
+                </td>
+                <td>{{ item.size_display|default:"-" }}</td>
+                <td>
+                    {% if not item.is_dir %}
+                        <a href="{{ item.url }}" target="_blank" class="action-btn button">Xem</a>
+                        <button onclick="copyUrl('{{ item.url }}')" class="action-btn button gray">Copy</button>
+                    {% endif %}
+                    <button onclick="renameItem('{{ item.relative_path }}', '{{ item.name }}')" class="action-btn button yellow">✏️</button>
+                    <button onclick="deleteItem('{{ item.relative_path }}')" class="action-btn button red">🗑️</button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                    📭 Thư mục trống
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+const csrfToken = '{{ csrf_token }}';
+const currentPath = '{{ current_path }}';
+
+// Load disk stats
+fetch('/admin/filemanager/disk-usage/')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('size-display').textContent = data.size_display;
+        document.getElementById('file-count').textContent = data.file_count;
+        document.getElementById('folder-count').textContent = data.folder_count;
+    });
+
+function showUploadDialog() {
+    document.getElementById('upload-dialog').style.display = 'block';
+}
+function hideUploadDialog() {
+    document.getElementById('upload-dialog').style.display = 'none';
+}
+
+function showCreateFolder() {
+    document.getElementById('folder-dialog').style.display = 'block';
+    document.getElementById('folder-name').focus();
+}
+function hideFolderDialog() {
+    document.getElementById('folder-dialog').style.display = 'none';
+}
+
+// Upload form
+document.getElementById('upload-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    formData.append('convert_webp', document.getElementById('convert-webp').checked);
+    
+    document.getElementById('upload-progress').style.display = 'block';
+    
+    fetch('/admin/filemanager/upload/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Uploaded ' + data.count + ' file(s): ' + data.uploaded.join(', '));
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(err => alert('Upload failed: ' + err))
+    .finally(() => {
+        document.getElementById('upload-progress').style.display = 'none';
+    });
+});
+
+// Create folder form
+document.getElementById('folder-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch('/admin/filemanager/create-folder/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+});
+
+function deleteItem(path) {
+    if (!confirm('Bạn có chắc muốn xóa "' + path + '"?')) return;
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', csrfToken);
+    formData.append('path', path);
+    
+    fetch('/admin/filemanager/delete/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function renameItem(path, currentName) {
+    const newName = prompt('Nhập tên mới:', currentName);
+    if (!newName || newName === currentName) return;
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', csrfToken);
+    formData.append('path', path);
+    formData.append('name', newName);
+    
+    fetch('/admin/filemanager/rename/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function copyUrl(url) {
+    const fullUrl = window.location.origin + url;
+    navigator.clipboard.writeText(fullUrl).then(() => {
+        alert('Đã copy URL: ' + fullUrl);
+    });
+}
+</script>
+{% endblock %}

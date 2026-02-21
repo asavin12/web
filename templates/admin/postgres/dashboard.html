@@ -1,0 +1,113 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}PostgreSQL Dashboard{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; PostgreSQL Dashboard
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Connection Status -->
+<div class="module">
+    <h2>Trạng thái kết nối</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th scope="row">Status:</th>
+                <td>
+                    {% if connection_status == 'connected' %}
+                        <img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes"> Connected
+                    {% else %}
+                        <img src="{% static 'admin/img/icon-no.svg' %}" alt="No"> Error: {{ connection_error }}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Database:</th>
+                <td><code>{{ db_name }}</code></td>
+            </tr>
+            <tr>
+                <th scope="row">User:</th>
+                <td><code>{{ db_user }}</code></td>
+            </tr>
+            <tr>
+                <th scope="row">Host:</th>
+                <td><code>{{ db_host }}</code></td>
+            </tr>
+            <tr>
+                <th scope="row">Port:</th>
+                <td><code>{{ db_port }}</code></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Database Info -->
+{% if connection_status == 'connected' %}
+<div class="module">
+    <h2>Thông tin Database</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th scope="row">Version:</th>
+                <td>{{ db_version|truncatechars:80 }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Database Size:</th>
+                <td><strong>{{ db_size }}</strong></td>
+            </tr>
+            <tr>
+                <th scope="row">Tables:</th>
+                <td>{{ table_count }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Active Connections:</th>
+                <td>{{ active_connections }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Quick Actions -->
+<div class="module">
+    <h2>Công cụ</h2>
+    <ul class="object-tools" style="margin: 10px 0; padding: 0;">
+        <li><a href="/admin/postgres/tables/">📊 Browse Tables</a></li>
+        <li><a href="/admin/postgres/test-connection/">🔌 Test Connection</a></li>
+        <li><a href="/admin/postgres/generate-password/">🔐 Generate Password</a></li>
+    </ul>
+</div>
+
+<!-- Tables List -->
+{% if tables %}
+<div class="module">
+    <h2>Database Tables ({{ table_count }})</h2>
+    <table id="result_list">
+        <thead>
+            <tr>
+                <th scope="col">Table Name</th>
+                <th scope="col">Rows</th>
+                <th scope="col">Size</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for table in tables %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+                <td>
+                    <a href="/admin/postgres/table/{{ table.name }}/">{{ table.name }}</a>
+                </td>
+                <td>{{ table.row_count|default:"-" }}</td>
+                <td>{{ table.size|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

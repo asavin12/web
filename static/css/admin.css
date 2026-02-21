@@ -1,0 +1,382 @@
+/* UnstressVN Admin - Minimal Override */
+
+:root {
+    --primary: #5D5A2F;
+    --primary-fg: #fff;
+    --body-bg: #E6E0D4;
+    --body-fg: #2A241F;
+    --header-bg: #F2EBE3;
+    --breadcrumbs-bg: #5D5A2F;
+    --breadcrumbs-fg: #fff;
+    --link-fg: #5D5A2F;
+    --hairline-color: #9C7C58;
+    --border-color: #9C7C58;
+    --darkened-bg: #E6E0D4;
+    --selected-bg: #5D5A2F;
+    --selected-row: #f5f0e8;
+    --button-bg: #5D5A2F;
+    --button-fg: #fff;
+    --default-button-bg: #5D5A2F;
+    --default-button-fg: #fff;
+    --close-button-bg: #9C7C58;
+    --close-button-fg: #fff;
+    --delete-button-bg: #dc2626;
+    --delete-button-fg: #fff;
+    --object-tools-bg: #5D5A2F;
+    --object-tools-fg: #fff;
+    --font-family-primary: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+
+/* Base */
+body {
+    font-family: var(--font-family-primary);
+}
+
+/* Header */
+#header {
+    background: var(--header-bg);
+    color: var(--body-fg);
+}
+
+#branding h1, #branding h1 a {
+    color: var(--body-fg);
+}
+
+/* Custom branding */
+.brand a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--body-fg);
+}
+
+.brand-logo {
+    width: 32px;
+    height: 32px;
+    background: var(--primary);
+    color: var(--primary-fg);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.brand-name {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+/* User tools */
+#user-tools {
+    color: var(--body-fg);
+}
+
+#user-tools a {
+    color: var(--body-fg) !important;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    margin-left: 4px;
+    font-weight: 500;
+}
+
+#user-tools a:hover {
+    background: var(--primary);
+    color: var(--primary-fg) !important;
+    border-color: var(--primary);
+}
+
+/* Breadcrumbs */
+div.breadcrumbs {
+    background: var(--breadcrumbs-bg);
+    color: var(--breadcrumbs-fg);
+}
+
+div.breadcrumbs a {
+    color: var(--breadcrumbs-fg);
+}
+
+/* Sidebar */
+#nav-sidebar {
+    background: var(--header-bg);
+}
+
+#nav-sidebar .module caption a {
+    background: var(--primary);
+    color: var(--primary-fg);
+    padding: 8px 12px;
+    margin: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#nav-sidebar .module caption a::after {
+    display: none;
+}
+
+#nav-sidebar th a {
+    color: var(--body-fg);
+    padding: 6px 12px 6px 20px;
+}
+
+#nav-sidebar th a:hover {
+    background: var(--darkened-bg);
+    color: var(--primary);
+}
+
+/* Hide add links in sidebar */
+#nav-sidebar td {
+    display: none;
+}
+
+/* Module styling */
+.module {
+    background: var(--header-bg);
+    border: 1px solid var(--hairline-color);
+    border-radius: 6px;
+}
+
+.module h2, .module caption {
+    background: var(--primary);
+    color: var(--primary-fg);
+}
+
+/* Forms */
+fieldset {
+    background: var(--header-bg);
+    border: 1px solid var(--hairline-color);
+    border-radius: 6px;
+}
+
+fieldset h2 {
+    background: var(--primary);
+    color: var(--primary-fg);
+    padding: 10px 14px;
+    margin: 0;
+    font-size: 14px;
+}
+
+.form-row label {
+    color: var(--body-fg);
+}
+
+/* Form inputs */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+textarea,
+select {
+    background: #fff !important;
+    color: var(--body-fg) !important;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: inherit;
+    font-size: 14px;
+    min-height: 42px;
+}
+
+select {
+    min-height: 42px;
+    padding-right: 32px;
+    cursor: pointer;
+}
+
+select option {
+    background: #fff;
+    color: var(--body-fg);
+    padding: 10px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(93, 90, 47, 0.2);
+}
+
+/* Buttons */
+input[type="submit"],
+button,
+.button,
+a.button {
+    background: var(--button-bg);
+    color: var(--button-fg) !important;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 42px;
+}
+
+input[type="submit"]:hover,
+button:hover,
+.button:hover {
+    background: #4a4826;
+}
+
+.default {
+    background: var(--default-button-bg);
+    color: var(--default-button-fg) !important;
+}
+
+.deletelink {
+    background: var(--delete-button-bg);
+    color: var(--delete-button-fg) !important;
+}
+
+/* Object tools */
+.object-tools a {
+    background: var(--object-tools-bg);
+    color: var(--object-tools-fg) !important;
+    border-radius: 6px;
+    padding: 10px 18px;
+}
+
+.object-tools a:hover {
+    background: #4a4826;
+    color: var(--object-tools-fg) !important;
+}
+
+/* Changelist filter */
+#changelist-filter {
+    background: var(--header-bg);
+    border: 1px solid var(--hairline-color);
+    border-radius: 6px;
+}
+
+#changelist-filter h2 {
+    background: var(--primary);
+    color: var(--primary-fg);
+    padding: 10px 14px;
+    font-size: 13px;
+}
+
+#changelist-filter h3 {
+    color: var(--body-fg);
+    border-bottom: 1px solid var(--hairline-color);
+    padding-bottom: 6px;
+}
+
+#changelist-filter li a {
+    color: var(--body-fg);
+}
+
+#changelist-filter li.selected a {
+    background: var(--primary);
+    color: var(--primary-fg);
+    border-radius: 4px;
+}
+
+/* Result list */
+#changelist {
+    background: var(--header-bg);
+    border: 1px solid var(--hairline-color);
+    border-radius: 6px;
+}
+
+#result_list th {
+    background: var(--darkened-bg);
+    color: var(--body-fg);
+}
+
+#result_list th a {
+    color: var(--body-fg);
+}
+
+#result_list td {
+    color: var(--body-fg);
+}
+
+#result_list td a {
+    color: var(--primary);
+}
+
+#result_list tr:hover td {
+    background: var(--selected-row);
+}
+
+/* Messages */
+.messagelist .success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.messagelist .error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.messagelist .warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Calendar/Date widgets */
+.calendar td a,
+.timelist a {
+    color: var(--body-fg);
+}
+
+.calendar td a:hover,
+.timelist a:hover {
+    background: var(--primary);
+    color: var(--primary-fg);
+}
+
+/* Help text */
+.help {
+    color: #666;
+}
+
+/* Inline groups */
+.inline-group h2 {
+    background: var(--primary);
+    color: var(--primary-fg);
+}
+
+/* Related widget */
+.related-widget-wrapper-link {
+    color: var(--primary);
+}
+
+/* Action links */
+.addlink {
+    color: #059669;
+}
+
+.changelink {
+    color: var(--primary);
+}
+
+.deletelink-box a {
+    color: var(--delete-button-bg);
+}
+
+/* Pagination */
+.paginator a:hover,
+.paginator a:focus {
+    background: var(--primary);
+    color: var(--primary-fg);
+}
+
+/* Login page */
+#login-form {
+    background: var(--header-bg);
+    border: 1px solid var(--hairline-color);
+    border-radius: 6px;
+}

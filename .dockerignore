@@ -1,0 +1,55 @@
+# ===========================
+# UnstressVN Docker Ignore
+# ===========================
+
+# Virtual environment
+.venv/
+venv/
+
+# Node modules (rebuilt in Docker)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Git
+.git/
+.gitignore
+
+# Logs
+logs/
+*.log
+
+# Backups
+backups/*.sql
+backups/*.gz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (will be set via env vars)
+.secret_key
+.env
+.env.*
+
+# Static (rebuilt in Docker)
+staticfiles/
+
+# Dev scripts
+n8n_simulation.py
+create_*_data.py
+create_*_sample*.py
+
+# Documentation (not needed in image)
+docs/
+README.md

@@ -1,0 +1,71 @@
+# ========================================
+# UnstressVN .gitignore
+# ========================================
+
+# === Environment & Secrets ===
+.env
+.env.*
+.secret_key
+*.pem
+*.key
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# === Django ===
+staticfiles/
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# === Database Backups ===
+backups/*.sql
+*.sql
+*.dump
+
+# === Media uploads ===
+media/avatars/*
+media/resources/*
+media/covers/*
+!media/.gitkeep
+
+# === Node.js / Frontend ===
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# === IDE & Editor ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# === OS ===
+.DS_Store
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# === Dev scripts (exclude from prod) ===
+# create_*_data.py
+# n8n_simulation.py
+# standardize_content.py
+
+# === Temp files ===
+*.tmp
+*.temp
+*.bak

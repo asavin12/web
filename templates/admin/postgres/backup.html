@@ -1,0 +1,163 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}Database Backup{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="/admin/postgres/">PostgreSQL</a>
+    &rsaquo; Backup
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Create Backup -->
+<div class="module">
+    <h2>Tạo Backup mới</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th scope="row">Database:</th>
+                <td><code>{{ db_name }}</code></td>
+            </tr>
+            <tr>
+                <th scope="row">Size:</th>
+                <td>{{ db_size }}</td>
+            </tr>
+        </tbody>
+    </table>
+    <div style="padding: 15px 0;">
+        <form id="backupForm" method="post" style="display: inline;">
+            {% csrf_token %}
+            <input type="submit" value="💾 Tạo Backup ngay" class="default" id="createBackupBtn">
+        </form>
+        <span id="backupStatus" style="margin-left: 15px;"></span>
+    </div>
+</div>
+
+<!-- Existing Backups -->
+<div class="module">
+    <h2>Backups đã tạo ({{ backups|length }})</h2>
+    {% if backups %}
+    <table id="result_list">
+        <thead>
+            <tr>
+                <th scope="col">Filename</th>
+                <th scope="col">Size</th>
+                <th scope="col">Created</th>
+                <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for backup in backups %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+                <td><strong>{{ backup.filename }}</strong></td>
+                <td>{{ backup.size }}</td>
+                <td>{{ backup.created }}</td>
+                <td>
+                    <a href="?download={{ backup.filename }}" class="viewlink">Download</a>
+                    |
+                    <a href="#" onclick="deleteBackup('{{ backup.filename }}'); return false;" style="color: #ba2121;">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="padding: 20px; text-align: center; color: #666;">Chưa có backup nào. Click "Tạo Backup ngay" để tạo backup đầu tiên.</p>
+    {% endif %}
+</div>
+
+<!-- Info -->
+<div class="module">
+    <h2>Thông tin</h2>
+    <ul style="padding: 10px 20px; margin: 0;">
+        <li>Backups được lưu tại: <code>{{ backup_dir }}</code></li>
+        <li>Format: PostgreSQL SQL dump</li>
+        <li>Khuyến nghị backup định kỳ hàng ngày</li>
+    </ul>
+</div>
+
+<!-- Quick Links -->
+<div class="module">
+    <h2>Liên kết</h2>
+    <ul class="object-tools" style="margin: 10px 0; padding: 0;">
+        <li><a href="/admin/postgres/">← Back to Dashboard</a></li>
+        <li><a href="/admin/postgres/tables/">Browse Tables</a></li>
+    </ul>
+</div>
+
+<script>
+document.getElementById('backupForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('createBackupBtn');
+    const status = document.getElementById('backupStatus');
+    
+    btn.disabled = true;
+    btn.value = 'Đang tạo backup...';
+    status.textContent = '';
+    
+    fetch('/admin/postgres/backup/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Download the file
+            return response.blob().then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const disposition = response.headers.get('Content-Disposition');
+                const filename = disposition ? disposition.split('filename=')[1].replace(/"/g, '') : 'backup.sql';
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+                
+                status.innerHTML = '<span style="color: green;">✓ Backup đã tạo thành công!</span>';
+                setTimeout(() => location.reload(), 2000);
+            });
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.message || 'Backup failed');
+            });
+        }
+    })
+    .catch(err => {
+        status.innerHTML = '<span style="color: red;">✗ ' + err.message + '</span>';
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.value = '💾 Tạo Backup ngay';
+    });
+});
+
+function deleteBackup(filename) {
+    if (!confirm('Bạn có chắc muốn xóa backup "' + filename + '"?')) return;
+    
+    fetch('/admin/postgres/backup/delete/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({filename: filename})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(err => alert('Error: ' + err.message));
+}
+</script>
+{% endblock %}

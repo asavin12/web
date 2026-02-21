@@ -1,0 +1,436 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .upload-section {
+        background: #fff;
+        border: 1px solid #ccc;
+        margin-bottom: 20px;
+    }
+    
+    .upload-section h3 {
+        background: #79aec8;
+        color: #fff;
+        padding: 8px 10px;
+        margin: 0;
+        font-size: 13px;
+        font-weight: bold;
+    }
+    
+    .upload-content {
+        padding: 15px;
+    }
+    
+    .upload-area {
+        border: 2px dashed #ccc;
+        padding: 30px;
+        text-align: center;
+        background: #f9f9f9;
+        cursor: pointer;
+        margin-bottom: 15px;
+    }
+    
+    .upload-area:hover {
+        border-color: #417690;
+        background: #f0f6fa;
+    }
+    
+    .upload-area.dragover {
+        border-color: #417690;
+        background: #e8f4fc;
+    }
+    
+    .upload-area p {
+        margin: 5px 0;
+        color: #666;
+    }
+    
+    .upload-options {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    @media (max-width: 900px) {
+        .upload-options {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 600px) {
+        .upload-options {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .upload-options .field {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .upload-options label {
+        display: block;
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 3px;
+    }
+    
+    .upload-options input,
+    .upload-options select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        font-size: 13px;
+        box-sizing: border-box;
+    }
+    
+    .file-list {
+        margin: 10px 0;
+    }
+    
+    .file-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #f0f0f0;
+        padding: 5px 10px;
+        margin: 3px;
+        border-radius: 3px;
+        font-size: 12px;
+    }
+    
+    .file-item .remove {
+        background: none;
+        border: none;
+        color: #ba2121;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 0;
+    }
+    
+    .upload-btn {
+        background: #417690;
+        color: #fff;
+        border: none;
+        padding: 8px 15px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+    
+    .upload-btn:hover {
+        background: #205067;
+    }
+    
+    .upload-btn:disabled {
+        background: #999;
+        cursor: not-allowed;
+    }
+    
+    .upload-progress {
+        display: none;
+        margin: 10px 0;
+    }
+    
+    .upload-progress.active {
+        display: block;
+    }
+    
+    .progress-bar {
+        background: #ddd;
+        height: 20px;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        background: #417690;
+        height: 100%;
+        width: 0%;
+        transition: width 0.3s;
+    }
+    
+    .progress-text {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .upload-result {
+        padding: 10px;
+        margin-top: 10px;
+        display: none;
+        font-size: 13px;
+    }
+    
+    .upload-result.success {
+        background: #dfd;
+        border: 1px solid #4a4;
+        display: block;
+    }
+    
+    .upload-result.error {
+        background: #fdd;
+        border: 1px solid #a44;
+        display: block;
+    }
+    
+    .status-row {
+        display: flex;
+        gap: 20px;
+        padding: 10px 0;
+        border-top: 1px solid #eee;
+        margin-top: 10px;
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .status-item strong {
+        color: #333;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Upload Section -->
+<div class="upload-section">
+    <h3>📤 Upload Media</h3>
+    <p style="margin: 0 0 10px; padding: 10px; background: #fffbe6; border-left: 3px solid #ffc107; font-size: 12px;">
+        ⚠️ <strong>Lưu ý:</strong> Video chỉ được upload bởi Admin hoặc n8n automation. 
+        Link video chỉ hoạt động trên domain <code>unstressvn.com</code>.
+    </p>
+    <div class="upload-content">
+        <form id="mediaUploadForm" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="upload-area" id="uploadArea">
+                <p><strong>Kéo thả files vào đây hoặc click để chọn</strong></p>
+                <p style="font-size:12px;">Hỗ trợ: MP4, WebM, MP3, WAV, OGG</p>
+                <input type="file" id="fileInput" name="files" multiple accept="video/*,audio/*,image/*" style="display:none">
+            </div>
+            
+            <div class="file-list" id="filePreview"></div>
+            
+            <div class="upload-options">
+                <div class="field">
+                    <label>Tiêu đề</label>
+                    <input type="text" name="title" id="mediaTitle" placeholder="Tự động từ tên file">
+                </div>
+                <div class="field">
+                    <label>Loại</label>
+                    <select name="media_type" id="mediaType">
+                        <option value="video">Video</option>
+                        <option value="audio">Audio</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Ngôn ngữ</label>
+                    <select name="language" id="mediaLanguage">
+                        <option value="vi">Tiếng Việt</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                        <option value="all">Tất cả</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Cấp độ</label>
+                    <select name="level" id="mediaLevel">
+                        <option value="A1">A1 - Sơ cấp</option>
+                        <option value="A2">A2 - Cơ bản</option>
+                        <option value="B1">B1 - Trung cấp</option>
+                        <option value="B2">B2 - Trung cao</option>
+                        <option value="C1">C1 - Cao cấp</option>
+                        <option value="C2">C2 - Thành thạo</option>
+                        <option value="all" selected>Tất cả trình độ</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Storage</label>
+                    <select name="storage" id="storage">
+                        <option value="auto">Auto</option>
+                        <option value="local">Local</option>
+                        <option value="minio">MinIO</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Trạng thái</label>
+                    <select name="is_public" id="isPublic">
+                        <option value="true">Public</option>
+                        <option value="false">Private</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="upload-progress" id="uploadProgress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Uploading...</div>
+            </div>
+            
+            <div class="upload-result" id="uploadResult"></div>
+            
+            <button type="submit" class="upload-btn" id="uploadBtn" disabled>Upload</button>
+            
+            <div class="status-row">
+                <div class="status-item">
+                    <span>Tổng Media:</span>
+                    <strong>{{ total_media|default:0 }}</strong>
+                </div>
+                <div class="status-item">
+                    <span>MinIO:</span>
+                    <strong id="minioStatus">--</strong>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{ block.super }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadForm = document.getElementById('mediaUploadForm');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const uploadResult = document.getElementById('uploadResult');
+    const mediaTypeSelect = document.getElementById('mediaType');
+    
+    let selectedFiles = [];
+    
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+    
+    fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+    
+    function handleFiles(files) {
+        selectedFiles = Array.from(files);
+        updatePreview();
+        uploadBtn.disabled = selectedFiles.length === 0;
+        
+        if (selectedFiles.length > 0) {
+            const firstFile = selectedFiles[0];
+            if (firstFile.type.startsWith('video/')) mediaTypeSelect.value = 'video';
+            else if (firstFile.type.startsWith('audio/')) mediaTypeSelect.value = 'audio';
+        }
+    }
+    
+    function updatePreview() {
+        filePreview.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const item = document.createElement('span');
+            item.className = 'file-item';
+            const size = file.size < 1024*1024 ? (file.size/1024).toFixed(1) + ' KB' : (file.size/(1024*1024)).toFixed(1) + ' MB';
+            item.innerHTML = `${file.name} (${size}) <button type="button" class="remove" data-index="${index}">×</button>`;
+            filePreview.appendChild(item);
+        });
+        
+        filePreview.querySelectorAll('.remove').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                selectedFiles.splice(parseInt(e.target.dataset.index), 1);
+                updatePreview();
+                uploadBtn.disabled = selectedFiles.length === 0;
+            });
+        });
+    }
+    
+    uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (selectedFiles.length === 0) return;
+        
+        uploadBtn.disabled = true;
+        uploadProgress.classList.add('active');
+        uploadResult.className = 'upload-result';
+        uploadResult.style.display = 'none';
+        
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        formData.append('title', document.getElementById('mediaTitle').value);
+        formData.append('media_type', mediaTypeSelect.value);
+        formData.append('language', document.getElementById('mediaLanguage').value);
+        formData.append('level', document.getElementById('mediaLevel').value);
+        formData.append('storage', document.getElementById('storage').value);
+        formData.append('is_public', document.getElementById('isPublic').value);
+        
+        selectedFiles.forEach(file => formData.append('files', file));
+        
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressFill.style.width = percent + '%';
+                progressText.textContent = 'Uploading... ' + percent + '%';
+            }
+        };
+        
+        xhr.onload = function() {
+            uploadProgress.classList.remove('active');
+            if (xhr.status === 200) {
+                uploadResult.className = 'upload-result success';
+                uploadResult.textContent = '✓ Upload thành công!';
+                uploadResult.style.display = 'block';
+                selectedFiles = [];
+                filePreview.innerHTML = '';
+                document.getElementById('mediaTitle').value = '';
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                const result = JSON.parse(xhr.responseText);
+                uploadResult.className = 'upload-result error';
+                uploadResult.textContent = '✗ ' + (result.error || 'Upload failed');
+                uploadResult.style.display = 'block';
+                uploadBtn.disabled = false;
+            }
+        };
+        
+        xhr.onerror = function() {
+            uploadProgress.classList.remove('active');
+            uploadResult.className = 'upload-result error';
+            uploadResult.textContent = '✗ Network error';
+            uploadResult.style.display = 'block';
+            uploadBtn.disabled = false;
+        };
+        
+        xhr.open('POST', '{% url "mediastream:admin_upload_api" %}');
+        xhr.send(formData);
+    });
+    
+    fetch('{% url "filemanager:disk_usage" %}?format=json')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('minioStatus').textContent = 
+                (data.minio && data.minio.status === 'connected') ? '✓ Connected' : '✗ Not configured';
+        })
+        .catch(() => {
+            document.getElementById('minioStatus').textContent = '?';
+        });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}Disk Usage | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'filemanager:file_browser' %}">File Manager</a>
+    &rsaquo; Disk Usage
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <!-- Overview Section -->
+    <div class="module">
+        <h2>Tổng quan Storage</h2>
+        <table>
+            <tbody>
+                <tr>
+                    <th scope="row">Dung lượng Local:</th>
+                    <td><strong>{{ size_display }}</strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">Tổng số files:</th>
+                    <td>{{ file_count }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Số thư mục:</th>
+                    <td>{{ folder_count }}</td>
+                </tr>
+                {% if minio %}
+                <tr>
+                    <th scope="row">MinIO Status:</th>
+                    <td>
+                        {% if minio.status == 'connected' %}
+                            <img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes"> Connected
+                        {% else %}
+                            <img src="{% static 'admin/img/icon-no.svg' %}" alt="No"> {{ minio.error|default:"Not connected" }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if minio.status == 'connected' %}
+                <tr>
+                    <th scope="row">MinIO Endpoint:</th>
+                    <td>{{ minio.endpoint }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">MinIO Bucket:</th>
+                    <td>{{ minio.bucket }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">MinIO Storage:</th>
+                    <td><strong>{{ minio.size_display }}</strong> ({{ minio.count }} files)</td>
+                </tr>
+                {% endif %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Folder Breakdown -->
+    <div class="module">
+        <h2>Dung lượng theo thư mục</h2>
+        <table id="result_list">
+            <thead>
+                <tr>
+                    <th scope="col">Thư mục</th>
+                    <th scope="col">Số files</th>
+                    <th scope="col">Dung lượng</th>
+                    <th scope="col">Tỷ lệ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for folder in folders %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td>📁 {{ folder.name }}</td>
+                    <td>{{ folder.count }}</td>
+                    <td>{{ folder.size_display }}</td>
+                    <td>
+                        <div style="background:#eee;width:100px;height:14px;display:inline-block;vertical-align:middle;">
+                            <div style="background:#417690;height:100%;width:{{ folder.percentage|floatformat:0 }}%;"></div>
+                        </div>
+                        {{ folder.percentage|floatformat:1 }}%
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4">Chưa có dữ liệu</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- File Type Breakdown -->
+    <div class="module">
+        <h2>Phân loại theo định dạng</h2>
+        <table id="result_list">
+            <thead>
+                <tr>
+                    <th scope="col">Loại file</th>
+                    <th scope="col">Số files</th>
+                    <th scope="col">Dung lượng</th>
+                    <th scope="col">Tỷ lệ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for type in types %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td>{{ type.icon }} {{ type.name }}</td>
+                    <td>{{ type.count }}</td>
+                    <td>{{ type.size_display }}</td>
+                    <td>
+                        <div style="background:#eee;width:100px;height:14px;display:inline-block;vertical-align:middle;">
+                            <div style="background:{{ type.color }};height:100%;width:{{ type.percentage|floatformat:0 }}%;"></div>
+                        </div>
+                        {{ type.percentage|floatformat:1 }}%
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4">Chưa có dữ liệu</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="module">
+        <h2>Liên kết nhanh</h2>
+        <ul class="object-tools">
+            <li><a href="{% url 'filemanager:file_browser' %}">📁 File Browser</a></li>
+            <li><a href="{% url 'admin:mediastream_streammedia_changelist' %}">🎬 Media Stream</a></li>
+            {% if minio and minio.status == 'connected' %}
+            <li><a href="{{ minio.endpoint }}" target="_blank">📦 MinIO Console</a></li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

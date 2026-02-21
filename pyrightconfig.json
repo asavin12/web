@@ -1,0 +1,9 @@
+{
+    "include": ["LanguageHub"],
+    "exclude": ["**/__pycache__", "**/migrations"],
+    "venvPath": "/home/unstress/LanguageHub",
+    "venv": ".venv",
+    "pythonVersion": "3.12",
+    "reportMissingModuleSource": "none",
+    "reportMissingImports": "none"
+}

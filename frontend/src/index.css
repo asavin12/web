@@ -1,0 +1,780 @@
+/* Google Fonts - Be Vietnam Pro & Merriweather */
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400&display=swap');
+
+@import "tailwindcss";
+
+/* Vintage Theme CSS variables */
+:root {
+  /* Vintage color palette */
+  --vintage-olive: 93 90 47;       /* #5D5A2F - Deep Moss Green */
+  --vintage-blue: 74 122 157;      /* #4A7A9D - Slate Blue */
+  --vintage-tan: 156 124 88;       /* #9C7C58 - Leather/Cork */
+  --vintage-brown: 140 107 63;     /* #8C6B3F - Deep Bronze/Wood */
+  --vintage-cream: 242 235 227;    /* #F2EBE3 - Parchment */
+  --vintage-light: 230 224 212;    /* #E6E0D4 - Aged Paper */
+  --vintage-dark: 42 36 31;        /* #2A241F - Espresso/Ink */
+  
+  /* Map to theme system */
+  --background: var(--vintage-light);
+  --foreground: var(--vintage-dark);
+  --card: var(--vintage-cream);
+  --card-foreground: var(--vintage-dark);
+  --primary: var(--vintage-olive);
+  --primary-foreground: var(--vintage-cream);
+  --secondary: var(--vintage-tan);
+  --secondary-foreground: var(--vintage-dark);
+  --muted: var(--vintage-cream);
+  --muted-foreground: var(--vintage-tan);
+  --accent: var(--vintage-blue);
+  --accent-foreground: var(--vintage-cream);
+  --destructive: 239 68 68;
+  --destructive-foreground: 255 255 255;
+  --border: var(--vintage-tan);
+  --input: var(--vintage-cream);
+  --ring: var(--vintage-olive);
+}
+
+@theme {
+  /* Vintage Colors */
+  --color-vintage-olive: rgb(var(--vintage-olive));
+  --color-vintage-blue: rgb(var(--vintage-blue));
+  --color-vintage-tan: rgb(var(--vintage-tan));
+  --color-vintage-brown: rgb(var(--vintage-brown));
+  --color-vintage-cream: rgb(var(--vintage-cream));
+  --color-vintage-light: rgb(var(--vintage-light));
+  --color-vintage-dark: rgb(var(--vintage-dark));
+  
+  /* Theme colors using CSS variables */
+  --color-background: rgb(var(--background));
+  --color-foreground: rgb(var(--foreground));
+  --color-card: rgb(var(--card));
+  --color-card-foreground: rgb(var(--card-foreground));
+  --color-primary: rgb(var(--primary));
+  --color-primary-foreground: rgb(var(--primary-foreground));
+  --color-secondary: rgb(var(--secondary));
+  --color-secondary-foreground: rgb(var(--secondary-foreground));
+  --color-muted: rgb(var(--muted));
+  --color-muted-foreground: rgb(var(--muted-foreground));
+  --color-accent: rgb(var(--accent));
+  --color-accent-foreground: rgb(var(--accent-foreground));
+  --color-destructive: rgb(var(--destructive));
+  --color-destructive-foreground: rgb(var(--destructive-foreground));
+  --color-border: rgb(var(--border));
+  --color-input: rgb(var(--input));
+  --color-ring: rgb(var(--ring));
+  
+  /* Fonts */
+  --font-family-sans: 'Be Vietnam Pro', system-ui, sans-serif;
+  --font-family-serif: 'Merriweather', serif;
+  
+  /* Shadows */
+  --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Base styles */
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-vintage-light text-vintage-dark antialiased;
+  font-family: 'Be Vietnam Pro', var(--font-family-sans);
+  background-color: rgb(var(--vintage-light));
+  color: rgb(var(--vintage-dark));
+}
+
+/* Serif font for headings */
+h1, h2, h3, h4, h5, h6, .font-serif {
+  font-family: 'Merriweather', serif;
+}
+
+/* Custom Scrollbar - Vintage Style */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: rgb(var(--vintage-light));
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--vintage-tan));
+  border-radius: 5px;
+  border: 2px solid rgb(var(--vintage-light));
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--vintage-brown));
+}
+
+/* Custom utility classes */
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer;
+}
+
+.btn-primary {
+  @apply bg-vintage-olive text-vintage-cream hover:bg-vintage-brown hover:text-vintage-cream focus:ring-vintage-olive;
+}
+
+.btn-secondary {
+  @apply bg-vintage-cream text-vintage-dark hover:bg-vintage-tan/30 focus:ring-vintage-tan border border-vintage-tan;
+}
+
+.btn-success {
+  @apply bg-green-600 text-white hover:bg-green-700 focus:ring-green-500;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+}
+
+.card {
+  @apply bg-vintage-cream rounded-xl shadow-card p-6 border border-vintage-tan/30;
+}
+
+.input {
+  @apply w-full px-4 py-2 border border-vintage-tan rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-vintage-olive focus:border-transparent transition-colors text-vintage-dark placeholder-vintage-tan/70;
+}
+
+.input-error {
+  @apply border-red-500 focus:ring-red-500;
+}
+
+.label {
+  @apply block text-sm font-medium text-vintage-dark mb-1;
+}
+
+/* Link styles - exclude button-like elements */
+a:not(.btn):not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-danger):not([class*="bg-vintage-"]) {
+  @apply text-vintage-olive hover:text-vintage-brown transition-colors;
+}
+
+/* Container */
+.container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Page title */
+.page-title {
+  @apply text-2xl md:text-3xl font-bold text-vintage-dark mb-6;
+  font-family: 'Merriweather', serif;
+}
+
+/* Badge styles */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-primary {
+  @apply bg-vintage-olive/10 text-vintage-olive;
+}
+
+.badge-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-warning {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.badge-danger {
+  @apply bg-red-100 text-red-800;
+}
+
+/* Avatar */
+.avatar {
+  @apply rounded-full object-cover;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply animate-spin rounded-full border-4 border-gray-200 border-t-primary;
+}
+
+/* =====================================================
+   RESPONSIVE UTILITIES
+   Breakpoints:
+   - Mobile: < 640px (default)
+   - Tablet: >= 640px (sm) and >= 768px (md)
+   - Desktop: >= 1024px (lg) and >= 1280px (xl)
+   ===================================================== */
+
+/* Responsive Container - Wider for news content */
+.container-responsive {
+  @apply w-full mx-auto px-4;
+  max-width: 100%;
+}
+@media (min-width: 640px) {
+  .container-responsive {
+    @apply px-6;
+    max-width: 640px;
+  }
+}
+@media (min-width: 768px) {
+  .container-responsive {
+    max-width: 768px;
+  }
+}
+@media (min-width: 1024px) {
+  .container-responsive {
+    @apply px-8;
+    max-width: 1024px;
+  }
+}
+@media (min-width: 1280px) {
+  .container-responsive {
+    max-width: 1280px;
+  }
+}
+@media (min-width: 1536px) {
+  .container-responsive {
+    max-width: 1440px;
+  }
+}
+
+/* Wide container for news pages */
+.container-wide {
+  @apply w-full mx-auto px-4;
+  max-width: 100%;
+}
+@media (min-width: 640px) {
+  .container-wide {
+    @apply px-6;
+    max-width: 100%;
+  }
+}
+@media (min-width: 1024px) {
+  .container-wide {
+    @apply px-8;
+    max-width: 1280px;
+  }
+}
+@media (min-width: 1280px) {
+  .container-wide {
+    max-width: 1400px;
+  }
+}
+@media (min-width: 1536px) {
+  .container-wide {
+    max-width: 1600px;
+  }
+}
+
+/* Responsive Grid System */
+.grid-responsive {
+  @apply grid gap-4;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+  .grid-responsive {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+@media (min-width: 1024px) {
+  .grid-responsive {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+@media (min-width: 1280px) {
+  .grid-responsive {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Grid với 2-3 columns cho cards */
+.grid-cards {
+  @apply grid gap-4;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+  .grid-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+@media (min-width: 1024px) {
+  .grid-cards {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Responsive Text Sizes */
+.text-responsive-xl {
+  @apply text-2xl;
+}
+@media (min-width: 640px) {
+  .text-responsive-xl {
+    @apply text-3xl;
+  }
+}
+@media (min-width: 1024px) {
+  .text-responsive-xl {
+    @apply text-4xl;
+  }
+}
+
+.text-responsive-lg {
+  @apply text-xl;
+}
+@media (min-width: 640px) {
+  .text-responsive-lg {
+    @apply text-2xl;
+  }
+}
+@media (min-width: 1024px) {
+  .text-responsive-lg {
+    @apply text-3xl;
+  }
+}
+
+/* Section Spacing */
+.section-spacing {
+  @apply py-8;
+}
+@media (min-width: 640px) {
+  .section-spacing {
+    @apply py-12;
+  }
+}
+@media (min-width: 1024px) {
+  .section-spacing {
+    @apply py-16;
+  }
+}
+
+/* Mobile-only utilities */
+.mobile-only {
+  @apply block;
+}
+@media (min-width: 768px) {
+  .mobile-only {
+    @apply hidden;
+  }
+}
+
+/* Tablet and up */
+.tablet-up {
+  @apply hidden;
+}
+@media (min-width: 768px) {
+  .tablet-up {
+    @apply block;
+  }
+}
+
+/* Desktop only */
+.desktop-only {
+  @apply hidden;
+}
+@media (min-width: 1024px) {
+  .desktop-only {
+    @apply block;
+  }
+}
+
+/* Hide on mobile */
+.hide-mobile {
+  @apply hidden;
+}
+@media (min-width: 640px) {
+  .hide-mobile {
+    @apply block;
+  }
+}
+
+/* Touch-friendly tap targets */
+.touch-target {
+  @apply min-h-[44px] min-w-[44px];
+}
+
+/* Responsive padding */
+.pad-responsive {
+  @apply p-4;
+}
+@media (min-width: 640px) {
+  .pad-responsive {
+    @apply p-6;
+  }
+}
+@media (min-width: 1024px) {
+  .pad-responsive {
+    @apply p-8;
+  }
+}
+
+/* Hero section responsive */
+.hero-section {
+  @apply py-12 text-center;
+}
+@media (min-width: 640px) {
+  .hero-section {
+    @apply py-16;
+  }
+}
+@media (min-width: 1024px) {
+  .hero-section {
+    @apply py-24;
+  }
+}
+
+/* Card hover effects with touch support */
+.card-interactive {
+  @apply transition-all duration-300;
+}
+.card-interactive:hover {
+  @apply transform -translate-y-1 shadow-lg;
+}
+@media (hover: none) {
+  .card-interactive:hover {
+    @apply transform-none;
+  }
+}
+
+/* Aspect ratio utilities for media */
+.aspect-video-responsive {
+  aspect-ratio: 16 / 9;
+}
+
+.aspect-square-responsive {
+  aspect-ratio: 1 / 1;
+}
+
+/* Safe area padding for mobile devices */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Skeleton loading animation */
+.skeleton {
+  @apply bg-vintage-tan/20 rounded animate-pulse;
+}
+
+/* Line clamp for text truncation */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 3D Book Card Effects */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.rotate-y-2 {
+  transform: rotateY(2deg);
+}
+
+.group:hover .group-hover\:rotate-y-2 {
+  transform: rotateY(-3deg);
+}
+
+/* =====================================================
+   ARTICLE/CONTENT CONTAINERS
+   Chuẩn hóa chiều rộng cho bài viết trên tất cả pages
+   ===================================================== */
+
+/* Container cho nội dung bài viết - max 4xl (896px) */
+.container-article {
+  @apply w-full mx-auto px-4;
+  max-width: 100%;
+}
+@media (min-width: 640px) {
+  .container-article {
+    @apply px-6;
+    max-width: 640px;
+  }
+}
+@media (min-width: 768px) {
+  .container-article {
+    max-width: 768px;
+  }
+}
+@media (min-width: 1024px) {
+  .container-article {
+    @apply px-8;
+    max-width: 896px; /* max-w-4xl */
+  }
+}
+
+/* Container rộng hơn cho trang danh sách có sidebar */
+.container-with-sidebar {
+  @apply w-full mx-auto px-4;
+  max-width: 100%;
+}
+@media (min-width: 640px) {
+  .container-with-sidebar {
+    @apply px-6;
+  }
+}
+@media (min-width: 1024px) {
+  .container-with-sidebar {
+    @apply px-8;
+    max-width: 1280px;
+  }
+}
+@media (min-width: 1536px) {
+  .container-with-sidebar {
+    max-width: 1440px;
+  }
+}
+
+/* Prose styling cho nội dung bài viết */
+.prose-vintage {
+  @apply text-vintage-dark leading-relaxed;
+}
+
+.prose-vintage h1 {
+  @apply text-3xl md:text-4xl font-serif font-bold mb-6 mt-8 first:mt-0;
+}
+
+.prose-vintage h2 {
+  @apply text-2xl md:text-3xl font-serif font-bold mb-4 mt-8;
+}
+
+.prose-vintage h3 {
+  @apply text-xl md:text-2xl font-serif font-semibold mb-3 mt-6;
+}
+
+.prose-vintage p {
+  @apply mb-4 text-base md:text-lg;
+}
+
+.prose-vintage a {
+  @apply text-vintage-olive underline hover:text-vintage-brown transition-colors;
+}
+
+.prose-vintage ul, .prose-vintage ol {
+  @apply mb-4 pl-6;
+}
+
+.prose-vintage li {
+  @apply mb-2;
+}
+
+.prose-vintage ul li {
+  @apply list-disc;
+}
+
+.prose-vintage ol li {
+  @apply list-decimal;
+}
+
+.prose-vintage blockquote {
+  @apply border-l-4 border-vintage-olive pl-4 italic text-vintage-dark/80 my-6;
+}
+
+.prose-vintage pre {
+  @apply bg-vintage-dark text-vintage-cream p-4 rounded-lg overflow-x-auto my-6;
+}
+
+.prose-vintage code {
+  @apply bg-vintage-tan/20 px-2 py-0.5 rounded text-sm font-mono;
+}
+
+.prose-vintage pre code {
+  @apply bg-transparent p-0;
+}
+
+.prose-vintage img {
+  @apply rounded-lg my-6 w-full;
+}
+
+.prose-vintage table {
+  @apply w-full border-collapse my-6;
+}
+
+.prose-vintage th, .prose-vintage td {
+  @apply border border-vintage-tan/30 px-4 py-2 text-left;
+}
+
+.prose-vintage th {
+  @apply bg-vintage-tan/10 font-semibold;
+}
+
+/* ===== Article Body — Professional SEO-optimized Content Styles ===== */
+.article-body {
+  scroll-behavior: smooth;
+}
+
+/* Table of Contents (nav) styling */
+.article-body .prose nav {
+  background: linear-gradient(135deg, rgba(107, 122, 61, 0.06) 0%, rgba(139, 129, 107, 0.06) 100%);
+  border: 1px solid rgba(139, 129, 107, 0.15);
+  border-radius: 1rem;
+  padding: 1.5rem 2rem;
+  margin: 1.5rem 0 2rem;
+}
+
+.article-body .prose nav h2 {
+  font-size: 1.125rem !important;
+  margin-top: 0 !important;
+  margin-bottom: 0.75rem !important;
+  padding-bottom: 0 !important;
+  border-bottom: none !important;
+  color: var(--color-vintage-dark, #3d3929);
+}
+
+.article-body .prose nav ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  counter-reset: none;
+}
+
+.article-body .prose nav ul li {
+  padding: 0.25rem 0;
+  margin: 0;
+}
+
+.article-body .prose nav ul li::before {
+  content: none;
+}
+
+.article-body .prose nav a {
+  text-decoration: none;
+  color: var(--color-vintage-olive, #6b7a3d);
+  font-weight: 500;
+  transition: color 0.2s ease, padding-left 0.2s ease;
+}
+
+.article-body .prose nav a:hover {
+  color: var(--color-vintage-brown, #8b6914);
+  padding-left: 0.25rem;
+}
+
+/* Drop cap for first paragraph */
+.article-body .prose > p:first-of-type::first-letter {
+  float: left;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.8em;
+  line-height: 0.75;
+  padding-right: 0.08em;
+  padding-top: 0.05em;
+  color: var(--color-vintage-olive, #6b7a3d);
+  font-weight: 700;
+}
+
+/* Responsive images inside content */
+.article-body .prose img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Labeled blockquotes — tip/note/warning */
+.article-body .prose blockquote {
+  position: relative;
+}
+
+/* Content links accessibility — keyboard focus */
+.article-body .prose a:focus-visible {
+  outline: 2px solid var(--color-vintage-olive, #6b7a3d);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Smooth anchor links */
+.article-body .prose h2[id],
+.article-body .prose h3[id],
+.article-body .prose h4[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* Table responsive wrapper */
+.article-body .prose table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Striped table rows */
+.article-body .prose tbody tr:nth-child(even) {
+  background-color: rgba(139, 129, 107, 0.04);
+}
+
+.article-body .prose tbody tr:hover {
+  background-color: rgba(139, 129, 107, 0.08);
+  transition: background-color 0.2s ease;
+}
+
+/* List style enhancements */
+.article-body .prose ul > li::before {
+  content: none;
+}
+
+.article-body .prose ol > li {
+  padding-left: 0.25rem;
+}
+
+/* Code block styling */
+.article-body .prose pre {
+  position: relative;
+}
+
+.article-body .prose pre code {
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+/* Horizontal rule as section divider */
+.article-body .prose hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(139, 129, 107, 0.3), transparent);
+  margin: 3rem 0;
+}
+
+/* Iframe / embed responsive */
+.article-body .prose iframe {
+  width: 100%;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  margin: 2.5rem 0;
+  aspect-ratio: 16/9;
+}
+
+/* Print-friendly */
+@media print {
+  .article-body .prose {
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #000;
+  }
+  .article-body .prose img {
+    max-height: 400px;
+    page-break-inside: avoid;
+  }
+  .article-body .prose h2,
+  .article-body .prose h3 {
+    page-break-after: avoid;
+  }
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+

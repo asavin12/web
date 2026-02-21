@@ -1,0 +1,136 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}Table: {{ table_name }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="/admin/postgres/">PostgreSQL</a>
+    &rsaquo; <a href="/admin/postgres/tables/">Tables</a>
+    &rsaquo; {{ table_name }}
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Table Info -->
+<div class="module">
+    <h2>Thông tin Table</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th scope="row">Table Name:</th>
+                <td><code>{{ table_name }}</code></td>
+            </tr>
+            <tr>
+                <th scope="row">Row Count:</th>
+                <td>{{ row_count|default:"-" }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Size:</th>
+                <td>{{ table_size|default:"-" }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Columns -->
+<div class="module">
+    <h2>Columns ({{ columns|length }})</h2>
+    <table id="result_list">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Column Name</th>
+                <th scope="col">Data Type</th>
+                <th scope="col">Nullable</th>
+                <th scope="col">Default</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for col in columns %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+                <td>{{ forloop.counter }}</td>
+                <td><strong>{{ col.column_name }}</strong></td>
+                <td><code>{{ col.data_type }}</code></td>
+                <td>
+                    {% if col.is_nullable == 'YES' %}
+                        <img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes">
+                    {% else %}
+                        <img src="{% static 'admin/img/icon-no.svg' %}" alt="No">
+                    {% endif %}
+                </td>
+                <td>{{ col.column_default|default:"-"|truncatechars:30 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">Không có columns</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Primary Key & Indexes -->
+{% if indexes %}
+<div class="module">
+    <h2>Indexes</h2>
+    <table id="result_list">
+        <thead>
+            <tr>
+                <th scope="col">Index Name</th>
+                <th scope="col">Columns</th>
+                <th scope="col">Unique</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for idx in indexes %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+                <td>{{ idx.name }}</td>
+                <td><code>{{ idx.columns }}</code></td>
+                <td>
+                    {% if idx.is_unique %}
+                        <img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes">
+                    {% else %}
+                        <img src="{% static 'admin/img/icon-no.svg' %}" alt="No">
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Foreign Keys -->
+{% if foreign_keys %}
+<div class="module">
+    <h2>Foreign Keys</h2>
+    <table id="result_list">
+        <thead>
+            <tr>
+                <th scope="col">Column</th>
+                <th scope="col">References</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fk in foreign_keys %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+                <td>{{ fk.column }}</td>
+                <td><code>{{ fk.references }}</code></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Quick Links -->
+<div class="module">
+    <h2>Liên kết</h2>
+    <ul class="object-tools" style="margin: 10px 0; padding: 0;">
+        <li><a href="/admin/postgres/tables/">← Back to Tables</a></li>
+        <li><a href="/admin/postgres/">Dashboard</a></li>
+    </ul>
+</div>
+{% endblock %}

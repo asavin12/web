@@ -1,0 +1,721 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Upload Media - UnstressVN{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .upload-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .upload-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .upload-header h1 {
+        font-size: 28px;
+        color: #417690;
+        margin: 0;
+    }
+    
+    .upload-grid {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 30px;
+    }
+    
+    @media (max-width: 1024px) {
+        .upload-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .upload-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .upload-card-header {
+        background: linear-gradient(135deg, #417690, #5a9bb6);
+        color: white;
+        padding: 20px;
+    }
+    
+    .upload-card-header h2 {
+        margin: 0;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .upload-card-body {
+        padding: 25px;
+    }
+    
+    /* Dropzone */
+    .dropzone {
+        border: 3px dashed #ddd;
+        border-radius: 12px;
+        padding: 60px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #fafafa;
+        margin-bottom: 25px;
+    }
+    
+    .dropzone:hover, .dropzone.dragover {
+        border-color: #417690;
+        background: #f0f7fa;
+    }
+    
+    .dropzone-icon {
+        font-size: 64px;
+        margin-bottom: 15px;
+    }
+    
+    .dropzone-text {
+        font-size: 18px;
+        color: #666;
+        margin-bottom: 10px;
+    }
+    
+    .dropzone-hint {
+        font-size: 13px;
+        color: #999;
+    }
+    
+    /* Form */
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #417690;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+    
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+    }
+    
+    /* Buttons */
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #417690, #5a9bb6);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(65, 118, 144, 0.3);
+    }
+    
+    .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .btn-secondary {
+        background: #f5f5f5;
+        color: #666;
+        border: 1px solid #ddd;
+    }
+    
+    .btn-secondary:hover {
+        background: #e9e9e9;
+    }
+    
+    /* Progress */
+    .upload-progress {
+        display: none;
+        margin-top: 20px;
+    }
+    
+    .upload-progress.active {
+        display: block;
+    }
+    
+    .progress-bar-container {
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+    
+    .progress-bar {
+        height: 20px;
+        background: linear-gradient(135deg, #417690, #5a9bb6);
+        width: 0%;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .progress-text {
+        font-size: 13px;
+        color: #666;
+    }
+    
+    /* Results */
+    .upload-result {
+        display: none;
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 8px;
+    }
+    
+    .upload-result.success {
+        display: block;
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    
+    .upload-result.error {
+        display: block;
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    
+    .result-url {
+        background: white;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+        word-break: break-all;
+        font-family: monospace;
+    }
+    
+    /* Recent uploads */
+    .recent-uploads {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .recent-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+        transition: background 0.2s;
+    }
+    
+    .recent-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .recent-item:last-child {
+        border-bottom: none;
+    }
+    
+    .recent-thumb {
+        width: 60px;
+        height: 40px;
+        background: #e9ecef;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+    
+    .recent-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .recent-title {
+        font-weight: 600;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .recent-meta {
+        font-size: 12px;
+        color: #888;
+    }
+    
+    .recent-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .recent-actions a {
+        color: #417690;
+        font-size: 13px;
+        text-decoration: none;
+    }
+    
+    .recent-actions a:hover {
+        text-decoration: underline;
+    }
+    
+    /* File preview */
+    .file-preview {
+        display: none;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .file-preview.active {
+        display: block;
+    }
+    
+    .file-preview-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .file-preview-icon {
+        font-size: 48px;
+    }
+    
+    .file-preview-info h4 {
+        margin: 0 0 5px;
+        color: #333;
+    }
+    
+    .file-preview-info p {
+        margin: 0;
+        color: #666;
+        font-size: 13px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="upload-container">
+    <div class="upload-header">
+        <h1>📤 Upload Media</h1>
+        <a href="{% url 'mediastream:admin_manage' %}" class="btn btn-secondary">
+            📁 Quản lý Media
+        </a>
+    </div>
+    
+    <div class="upload-grid">
+        <!-- Upload Form -->
+        <div class="upload-card">
+            <div class="upload-card-header">
+                <h2>🎬 Upload Video / Audio</h2>
+            </div>
+            <div class="upload-card-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Dropzone -->
+                    <div class="dropzone" id="dropzone">
+                        <div class="dropzone-icon">📁</div>
+                        <div class="dropzone-text">Kéo thả file vào đây hoặc click để chọn</div>
+                        <div class="dropzone-hint">
+                            Video: MP4, WebM, MOV, FLV, AVI (tối đa 2GB)<br>
+                            Audio: MP3, WAV, M4A, AAC, FLAC (tối đa 500MB)
+                        </div>
+                        <input type="file" id="fileInput" name="file" 
+                               accept="video/*,audio/*,.mp4,.webm,.mov,.flv,.avi,.mp3,.wav,.m4a,.aac,.flac"
+                               style="display:none;">
+                    </div>
+                    
+                    <!-- File Preview -->
+                    <div class="file-preview" id="filePreview">
+                        <div class="file-preview-header">
+                            <span class="file-preview-icon" id="previewIcon">🎬</span>
+                            <div class="file-preview-info">
+                                <h4 id="previewName">-</h4>
+                                <p id="previewSize">-</p>
+                            </div>
+                            <button type="button" class="btn btn-secondary" id="clearFile">✕ Xóa</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Fields -->
+                    <div class="form-group">
+                        <label>Tiêu đề *</label>
+                        <input type="text" name="title" id="titleInput" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Loại media</label>
+                            <select name="media_type" id="mediaTypeSelect">
+                                {% for value, label in media_types %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Danh mục</label>
+                            <select name="category">
+                                <option value="">-- Không chọn --</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ngôn ngữ</label>
+                            <select name="language">
+                                {% for value, label in languages %}
+                                <option value="{{ value }}" {% if value == 'all' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Trình độ</label>
+                            <select name="level">
+                                {% for value, label in levels %}
+                                <option value="{{ value }}" {% if value == 'all' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Mô tả</label>
+                        <textarea name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" name="is_public" id="isPublic" checked>
+                            <label for="isPublic" style="margin:0;font-weight:normal;">Công khai</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress -->
+                    <div class="upload-progress" id="uploadProgress">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progressBar">0%</div>
+                        </div>
+                        <div class="progress-text" id="progressText">Đang tải lên...</div>
+                    </div>
+                    
+                    <!-- Result -->
+                    <div class="upload-result" id="uploadResult"></div>
+                    
+                    <!-- Submit -->
+                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                        📤 Upload Media
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Instructions -->
+        <div>
+            <div class="upload-card" style="margin-bottom:20px;">
+                <div class="upload-card-header">
+                    <h2>📋 Hướng dẫn</h2>
+                </div>
+                <div class="upload-card-body">
+                    <p><strong>Stream URL:</strong></p>
+                    <p style="font-size:13px;color:#666;margin-bottom:15px;">
+                        Sau khi upload, bạn sẽ nhận được URL dạng:<br>
+                        <code style="background:#f5f5f5;padding:2px 6px;border-radius:3px;">
+                            /media-stream/play/&lt;uid&gt;/
+                        </code>
+                    </p>
+                    
+                    <p><strong>Embed vào website:</strong></p>
+                    <pre style="background:#f5f5f5;padding:10px;border-radius:4px;font-size:12px;overflow-x:auto;">
+&lt;video controls src="/media-stream/play/xxx/"&gt;
+&lt;/video&gt;
+
+&lt;audio controls src="/media-stream/play/xxx/"&gt;
+&lt;/audio&gt;</pre>
+                    
+                    <p style="margin-top:15px;"><strong>Bảo vệ:</strong></p>
+                    <p style="font-size:13px;color:#666;">
+                        ⚠️ Media chỉ có thể truy cập từ domain <strong>unstressvn.com</strong>.<br>
+                        Truy cập từ domain khác sẽ trả về 404.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="upload-card">
+                <div class="upload-card-header">
+                    <h2>🕐 Upload gần đây</h2>
+                </div>
+                <div class="upload-card-body">
+                    <div class="recent-uploads" id="recentUploads">
+                        <p style="color:#888;text-align:center;padding:20px;">
+                            Chưa có upload nào
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const filePreview = document.getElementById('filePreview');
+const previewIcon = document.getElementById('previewIcon');
+const previewName = document.getElementById('previewName');
+const previewSize = document.getElementById('previewSize');
+const clearFile = document.getElementById('clearFile');
+const titleInput = document.getElementById('titleInput');
+const mediaTypeSelect = document.getElementById('mediaTypeSelect');
+const uploadForm = document.getElementById('uploadForm');
+const submitBtn = document.getElementById('submitBtn');
+const uploadProgress = document.getElementById('uploadProgress');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+const uploadResult = document.getElementById('uploadResult');
+
+// Recent uploads storage
+let recentUploads = JSON.parse(localStorage.getItem('recentUploads') || '[]');
+renderRecentUploads();
+
+// Dropzone events
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+});
+dropzone.addEventListener('dragleave', () => {
+    dropzone.classList.remove('dragover');
+});
+dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        handleFileSelect(e.dataTransfer.files[0]);
+    }
+});
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) {
+        handleFileSelect(fileInput.files[0]);
+    }
+});
+
+clearFile.addEventListener('click', () => {
+    fileInput.value = '';
+    filePreview.classList.remove('active');
+    submitBtn.disabled = true;
+    titleInput.value = '';
+});
+
+function handleFileSelect(file) {
+    // Show preview
+    filePreview.classList.add('active');
+    previewName.textContent = file.name;
+    previewSize.textContent = formatFileSize(file.size);
+    
+    // Set icon based on type
+    if (file.type.startsWith('video/')) {
+        previewIcon.textContent = '🎬';
+        mediaTypeSelect.value = 'video';
+    } else if (file.type.startsWith('audio/')) {
+        previewIcon.textContent = '🎵';
+        mediaTypeSelect.value = 'audio';
+    }
+    
+    // Set title from filename
+    const baseName = file.name.replace(/\.[^/.]+$/, '');
+    titleInput.value = baseName;
+    
+    // Enable submit
+    submitBtn.disabled = false;
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+}
+
+// Form submit
+uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    if (!fileInput.files.length) {
+        alert('Vui lòng chọn file để upload');
+        return;
+    }
+    
+    const formData = new FormData(uploadForm);
+    formData.set('is_public', document.getElementById('isPublic').checked ? 'true' : 'false');
+    
+    // Show progress
+    uploadProgress.classList.add('active');
+    uploadResult.className = 'upload-result';
+    submitBtn.disabled = true;
+    
+    try {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = percent + '%';
+                progressBar.textContent = percent + '%';
+                progressText.textContent = `Đang tải lên... ${formatFileSize(e.loaded)} / ${formatFileSize(e.total)}`;
+            }
+        });
+        
+        xhr.addEventListener('load', () => {
+            uploadProgress.classList.remove('active');
+            
+            if (xhr.status === 200) {
+                const data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    uploadResult.className = 'upload-result success';
+                    uploadResult.innerHTML = `
+                        <strong>✅ Upload thành công!</strong>
+                        <div class="result-url">
+                            <strong>Stream URL:</strong><br>
+                            <a href="${data.media.stream_url}" target="_blank">${data.media.stream_url}</a>
+                        </div>
+                        <div class="result-url">
+                            <strong>Embed Code:</strong><br>
+                            <code>${data.media.embed_code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
+                        </div>
+                    `;
+                    
+                    // Add to recent
+                    addToRecent(data.media);
+                    
+                    // Reset form
+                    setTimeout(() => {
+                        fileInput.value = '';
+                        filePreview.classList.remove('active');
+                        titleInput.value = '';
+                        progressBar.style.width = '0%';
+                        submitBtn.disabled = false;
+                    }, 1000);
+                } else {
+                    showError(data.error || 'Upload failed');
+                }
+            } else {
+                showError('Server error: ' + xhr.status);
+            }
+        });
+        
+        xhr.addEventListener('error', () => {
+            showError('Network error');
+        });
+        
+        xhr.open('POST', '{% url "mediastream:admin_upload_api" %}');
+        xhr.send(formData);
+        
+    } catch (err) {
+        showError(err.message);
+    }
+});
+
+function showError(message) {
+    uploadProgress.classList.remove('active');
+    uploadResult.className = 'upload-result error';
+    uploadResult.innerHTML = `<strong>❌ Lỗi:</strong> ${message}`;
+    submitBtn.disabled = false;
+}
+
+function addToRecent(media) {
+    recentUploads.unshift(media);
+    if (recentUploads.length > 10) recentUploads.pop();
+    localStorage.setItem('recentUploads', JSON.stringify(recentUploads));
+    renderRecentUploads();
+}
+
+function renderRecentUploads() {
+    const container = document.getElementById('recentUploads');
+    
+    if (!recentUploads.length) {
+        container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">Chưa có upload nào</p>';
+        return;
+    }
+    
+    container.innerHTML = recentUploads.map(media => `
+        <div class="recent-item">
+            <div class="recent-thumb">${media.stream_url.includes('video') ? '🎬' : '🎵'}</div>
+            <div class="recent-info">
+                <div class="recent-title">${media.title}</div>
+                <div class="recent-meta">${media.file_size}</div>
+            </div>
+            <div class="recent-actions">
+                <a href="${media.stream_url}" target="_blank">▶ Play</a>
+            </div>
+        </div>
+    `).join('');
+}
+</script>
+{% endblock %}

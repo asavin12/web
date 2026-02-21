@@ -1,0 +1,73 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block sidebar %}
+{{ block.super }}
+
+<div class="module" id="tools-module">
+    <table>
+        <caption>
+            <a href="#" class="section" title="Công cụ quản trị">
+                ⚡ Quick Tools
+            </a>
+        </caption>
+        <tbody>
+            <tr>
+                <th scope="row">
+                    <a href="{% url 'filemanager:file_browser' %}">📁 File Browser</a>
+                </th>
+                <td>
+                    <a href="{% url 'filemanager:file_browser' %}" class="viewlink">Open</a>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
+                    <a href="{% url 'filemanager:disk_usage' %}">💾 Disk Usage</a>
+                </th>
+                <td>
+                    <a href="{% url 'filemanager:disk_usage' %}" class="viewlink">View</a>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
+                    <a href="/admin/postgres/">🐘 PostgreSQL</a>
+                </th>
+                <td>
+                    <a href="/admin/postgres/" class="viewlink">Dashboard</a>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
+                    <a href="/admin/postgres/tables/">📊 DB Tables</a>
+                </th>
+                <td>
+                    <a href="/admin/postgres/tables/" class="viewlink">Browse</a>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
+                    <a href="/admin/postgres/backup/">💾 DB Backup</a>
+                </th>
+                <td>
+                    <a href="/admin/postgres/" class="addlink">Create</a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<style>
+#tools-module {
+    margin-top: 20px;
+}
+#tools-module caption a.section {
+    background: var(--bg, #f5f7fa) !important;
+    color: var(--text, #2d3748) !important;
+}
+#tools-module th a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+</style>
+{% endblock %}

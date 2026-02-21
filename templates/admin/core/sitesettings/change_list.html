@@ -1,0 +1,62 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static %}
+
+{% block content %}
+<!-- MinIO Status -->
+<div class="module" style="margin-bottom: 20px;">
+    <h2>Storage Status</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th scope="row">Loại Storage:</th>
+                <td>
+                    {% if minio_configured %}
+                        <img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes"> MinIO Cloud Storage
+                    {% else %}
+                        <img src="{% static 'admin/img/icon-alert.svg' %}" alt="Alert"> Local Server Storage
+                    {% endif %}
+                </td>
+            </tr>
+            {% if minio_configured %}
+            <tr>
+                <th scope="row">Trạng thái:</th>
+                <td>
+                    {% if minio_status == 'connected' %}
+                        <img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes"> Đã kết nối
+                    {% else %}
+                        <img src="{% static 'admin/img/icon-no.svg' %}" alt="No"> Lỗi: {{ minio_error|default:"Không thể kết nối" }}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Endpoint:</th>
+                <td><code>{{ minio_endpoint }}</code></td>
+            </tr>
+            <tr>
+                <th scope="row">Bucket:</th>
+                <td><strong>{{ minio_bucket }}</strong></td>
+            </tr>
+            {% else %}
+            <tr>
+                <th scope="row">Lưu ý:</th>
+                <td>Cấu hình MinIO để sử dụng cloud storage. <a href="?setting_type__exact=storage">Cấu hình ngay →</a></td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Quick Links -->
+<div class="module" style="margin-bottom: 20px;">
+    <h2>Cấu hình nhanh</h2>
+    <ul class="object-tools" style="padding: 10px;">
+        <li><a href="?setting_type__exact=general">⚙️ General</a></li>
+        <li><a href="?setting_type__exact=storage">📦 Storage (MinIO)</a></li>
+        <li><a href="?setting_type__exact=email">📧 Email</a></li>
+        <li><a href="?setting_type__exact=api">🔌 API</a></li>
+        <li><a href="?setting_type__exact=social">🔗 Social</a></li>
+    </ul>
+</div>
+
+{{ block.super }}
+{% endblock %}

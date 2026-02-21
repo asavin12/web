@@ -1,0 +1,72 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}Database Tables{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="/admin/postgres/">PostgreSQL</a>
+    &rsaquo; Tables
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Summary -->
+<div class="module">
+    <h2>Tổng quan</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th scope="row">Tổng số tables:</th>
+                <td><strong>{{ tables|length }}</strong></td>
+            </tr>
+            <tr>
+                <th scope="row">Database Size:</th>
+                <td><strong>{{ total_size|default:"-" }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Tables List -->
+<div class="module">
+    <h2>Danh sách Tables</h2>
+    <table id="result_list">
+        <thead>
+            <tr>
+                <th scope="col">Table Name</th>
+                <th scope="col">Rows</th>
+                <th scope="col">Size</th>
+                <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for table in tables %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+                <td>
+                    <strong>{{ table.name }}</strong>
+                </td>
+                <td>{{ table.row_count|default:"-" }}</td>
+                <td>{{ table.size|default:"-" }}</td>
+                <td>
+                    <a href="/admin/postgres/table/{{ table.name }}/" class="viewlink">View Schema</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">Không có tables</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Quick Links -->
+<div class="module">
+    <h2>Liên kết</h2>
+    <ul class="object-tools" style="margin: 10px 0; padding: 0;">
+        <li><a href="/admin/postgres/">← Back to Dashboard</a></li>
+    </ul>
+</div>
+{% endblock %}

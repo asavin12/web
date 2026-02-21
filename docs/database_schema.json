@@ -1,0 +1,4584 @@
+{
+  "exported_at": "2026-01-25T07:19:36.276210",
+  "database": {
+    "name": "unstressvn",
+    "user": "unstressvn",
+    "host": "localhost",
+    "port": "5433",
+    "version": "PostgreSQL 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0, 64-bit",
+    "size": "11 MB"
+  },
+  "tables": [
+    {
+      "name": "accounts_notification",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "notification_type",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "title",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "message",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "link",
+          "type": "character varying",
+          "max_length": 500,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "is_read",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "recipient_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "sender_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 9
+        }
+      ],
+      "indexes": [
+        {
+          "name": "accounts_notification_pkey",
+          "definition": "CREATE UNIQUE INDEX accounts_notification_pkey ON public.accounts_notification USING btree (id)"
+        },
+        {
+          "name": "accounts_notification_recipient_id_cb6b57f5",
+          "definition": "CREATE INDEX accounts_notification_recipient_id_cb6b57f5 ON public.accounts_notification USING btree (recipient_id)"
+        },
+        {
+          "name": "accounts_notification_sender_id_a2b8299c",
+          "definition": "CREATE INDEX accounts_notification_sender_id_a2b8299c ON public.accounts_notification USING btree (sender_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "accounts_notification_recipient_id_cb6b57f5_fk_auth_user_id",
+          "column": "recipient_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        },
+        {
+          "constraint": "accounts_notification_sender_id_a2b8299c_fk_auth_user_id",
+          "column": "sender_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 7
+    },
+    {
+      "name": "accounts_userprofile",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "avatar",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": true,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "bio",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "target_language",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "level",
+          "type": "character varying",
+          "max_length": 2,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "skill_focus",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "is_public",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "allow_messages",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        }
+      ],
+      "indexes": [
+        {
+          "name": "accounts_userprofile_pkey",
+          "definition": "CREATE UNIQUE INDEX accounts_userprofile_pkey ON public.accounts_userprofile USING btree (id)"
+        },
+        {
+          "name": "accounts_userprofile_user_id_key",
+          "definition": "CREATE UNIQUE INDEX accounts_userprofile_user_id_key ON public.accounts_userprofile USING btree (user_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "accounts_userprofile_user_id_92240672_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 7
+    },
+    {
+      "name": "auth_group",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 150,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        }
+      ],
+      "indexes": [
+        {
+          "name": "auth_group_pkey",
+          "definition": "CREATE UNIQUE INDEX auth_group_pkey ON public.auth_group USING btree (id)"
+        },
+        {
+          "name": "auth_group_name_key",
+          "definition": "CREATE UNIQUE INDEX auth_group_name_key ON public.auth_group USING btree (name)"
+        },
+        {
+          "name": "auth_group_name_a6ea08ec_like",
+          "definition": "CREATE INDEX auth_group_name_a6ea08ec_like ON public.auth_group USING btree (name varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "auth_group_permissions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "group_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "permission_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "auth_group_permissions_pkey",
+          "definition": "CREATE UNIQUE INDEX auth_group_permissions_pkey ON public.auth_group_permissions USING btree (id)"
+        },
+        {
+          "name": "auth_group_permissions_group_id_permission_id_0cd325b0_uniq",
+          "definition": "CREATE UNIQUE INDEX auth_group_permissions_group_id_permission_id_0cd325b0_uniq ON public.auth_group_permissions USING btree (group_id, permission_id)"
+        },
+        {
+          "name": "auth_group_permissions_group_id_b120cbf9",
+          "definition": "CREATE INDEX auth_group_permissions_group_id_b120cbf9 ON public.auth_group_permissions USING btree (group_id)"
+        },
+        {
+          "name": "auth_group_permissions_permission_id_84c5c92e",
+          "definition": "CREATE INDEX auth_group_permissions_permission_id_84c5c92e ON public.auth_group_permissions USING btree (permission_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "auth_group_permissions_group_id_b120cbf9_fk_auth_group_id",
+          "column": "group_id",
+          "references_table": "auth_group",
+          "references_column": "id"
+        },
+        {
+          "constraint": "auth_group_permissio_permission_id_84c5c92e_fk_auth_perm",
+          "column": "permission_id",
+          "references_table": "auth_permission",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "auth_permission",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "content_type_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "codename",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        }
+      ],
+      "indexes": [
+        {
+          "name": "auth_permission_pkey",
+          "definition": "CREATE UNIQUE INDEX auth_permission_pkey ON public.auth_permission USING btree (id)"
+        },
+        {
+          "name": "auth_permission_content_type_id_codename_01ab375a_uniq",
+          "definition": "CREATE UNIQUE INDEX auth_permission_content_type_id_codename_01ab375a_uniq ON public.auth_permission USING btree (content_type_id, codename)"
+        },
+        {
+          "name": "auth_permission_content_type_id_2f476e4b",
+          "definition": "CREATE INDEX auth_permission_content_type_id_2f476e4b ON public.auth_permission USING btree (content_type_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "auth_permission_content_type_id_2f476e4b_fk_django_co",
+          "column": "content_type_id",
+          "references_table": "django_content_type",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 140
+    },
+    {
+      "name": "auth_user",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "password",
+          "type": "character varying",
+          "max_length": 128,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "last_login",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "is_superuser",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "username",
+          "type": "character varying",
+          "max_length": 150,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "first_name",
+          "type": "character varying",
+          "max_length": 150,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "last_name",
+          "type": "character varying",
+          "max_length": 150,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "email",
+          "type": "character varying",
+          "max_length": 254,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "is_staff",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "date_joined",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        }
+      ],
+      "indexes": [
+        {
+          "name": "auth_user_pkey",
+          "definition": "CREATE UNIQUE INDEX auth_user_pkey ON public.auth_user USING btree (id)"
+        },
+        {
+          "name": "auth_user_username_key",
+          "definition": "CREATE UNIQUE INDEX auth_user_username_key ON public.auth_user USING btree (username)"
+        },
+        {
+          "name": "auth_user_username_6821ab7c_like",
+          "definition": "CREATE INDEX auth_user_username_6821ab7c_like ON public.auth_user USING btree (username varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 7
+    },
+    {
+      "name": "auth_user_groups",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "group_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "auth_user_groups_pkey",
+          "definition": "CREATE UNIQUE INDEX auth_user_groups_pkey ON public.auth_user_groups USING btree (id)"
+        },
+        {
+          "name": "auth_user_groups_user_id_group_id_94350c0c_uniq",
+          "definition": "CREATE UNIQUE INDEX auth_user_groups_user_id_group_id_94350c0c_uniq ON public.auth_user_groups USING btree (user_id, group_id)"
+        },
+        {
+          "name": "auth_user_groups_user_id_6a12ed8b",
+          "definition": "CREATE INDEX auth_user_groups_user_id_6a12ed8b ON public.auth_user_groups USING btree (user_id)"
+        },
+        {
+          "name": "auth_user_groups_group_id_97559544",
+          "definition": "CREATE INDEX auth_user_groups_group_id_97559544 ON public.auth_user_groups USING btree (group_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "auth_user_groups_user_id_6a12ed8b_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        },
+        {
+          "constraint": "auth_user_groups_group_id_97559544_fk_auth_group_id",
+          "column": "group_id",
+          "references_table": "auth_group",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "auth_user_user_permissions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "permission_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "auth_user_user_permissions_pkey",
+          "definition": "CREATE UNIQUE INDEX auth_user_user_permissions_pkey ON public.auth_user_user_permissions USING btree (id)"
+        },
+        {
+          "name": "auth_user_user_permissions_user_id_permission_id_14a6b632_uniq",
+          "definition": "CREATE UNIQUE INDEX auth_user_user_permissions_user_id_permission_id_14a6b632_uniq ON public.auth_user_user_permissions USING btree (user_id, permission_id)"
+        },
+        {
+          "name": "auth_user_user_permissions_user_id_a95ead1b",
+          "definition": "CREATE INDEX auth_user_user_permissions_user_id_a95ead1b ON public.auth_user_user_permissions USING btree (user_id)"
+        },
+        {
+          "name": "auth_user_user_permissions_permission_id_1fbb5f2c",
+          "definition": "CREATE INDEX auth_user_user_permissions_permission_id_1fbb5f2c ON public.auth_user_user_permissions USING btree (permission_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "auth_user_user_permissions_user_id_a95ead1b_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        },
+        {
+          "constraint": "auth_user_user_permi_permission_id_1fbb5f2c_fk_auth_perm",
+          "column": "permission_id",
+          "references_table": "auth_permission",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "authtoken_token",
+      "columns": [
+        {
+          "name": "key",
+          "type": "character varying",
+          "max_length": 40,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "created",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "authtoken_token_pkey",
+          "definition": "CREATE UNIQUE INDEX authtoken_token_pkey ON public.authtoken_token USING btree (key)"
+        },
+        {
+          "name": "authtoken_token_user_id_key",
+          "definition": "CREATE UNIQUE INDEX authtoken_token_user_id_key ON public.authtoken_token USING btree (user_id)"
+        },
+        {
+          "name": "authtoken_token_key_10f0b77e_like",
+          "definition": "CREATE INDEX authtoken_token_key_10f0b77e_like ON public.authtoken_token USING btree (key varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "authtoken_token_user_id_35299eff_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "key",
+      "row_count": 1
+    },
+    {
+      "name": "chat_chatroom",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "chat_chatroom_pkey",
+          "definition": "CREATE UNIQUE INDEX chat_chatroom_pkey ON public.chat_chatroom USING btree (id)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "chat_chatroom_participants",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "chatroom_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "chat_chatroom_participants_pkey",
+          "definition": "CREATE UNIQUE INDEX chat_chatroom_participants_pkey ON public.chat_chatroom_participants USING btree (id)"
+        },
+        {
+          "name": "chat_chatroom_participants_chatroom_id_user_id_a0328aed_uniq",
+          "definition": "CREATE UNIQUE INDEX chat_chatroom_participants_chatroom_id_user_id_a0328aed_uniq ON public.chat_chatroom_participants USING btree (chatroom_id, user_id)"
+        },
+        {
+          "name": "chat_chatroom_participants_chatroom_id_9c40ed95",
+          "definition": "CREATE INDEX chat_chatroom_participants_chatroom_id_9c40ed95 ON public.chat_chatroom_participants USING btree (chatroom_id)"
+        },
+        {
+          "name": "chat_chatroom_participants_user_id_9f2b6693",
+          "definition": "CREATE INDEX chat_chatroom_participants_user_id_9f2b6693 ON public.chat_chatroom_participants USING btree (user_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "chat_chatroom_partic_chatroom_id_9c40ed95_fk_chat_chat",
+          "column": "chatroom_id",
+          "references_table": "chat_chatroom",
+          "references_column": "id"
+        },
+        {
+          "constraint": "chat_chatroom_participants_user_id_9f2b6693_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "chat_message",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "is_read",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "room_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "sender_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        }
+      ],
+      "indexes": [
+        {
+          "name": "chat_message_pkey",
+          "definition": "CREATE UNIQUE INDEX chat_message_pkey ON public.chat_message USING btree (id)"
+        },
+        {
+          "name": "chat_message_room_id_5e7d8d78",
+          "definition": "CREATE INDEX chat_message_room_id_5e7d8d78 ON public.chat_message USING btree (room_id)"
+        },
+        {
+          "name": "chat_message_sender_id_991c686c",
+          "definition": "CREATE INDEX chat_message_sender_id_991c686c ON public.chat_message USING btree (sender_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "chat_message_room_id_5e7d8d78_fk_chat_chatroom_id",
+          "column": "room_id",
+          "references_table": "chat_chatroom",
+          "references_column": "id"
+        },
+        {
+          "constraint": "chat_message_sender_id_991c686c_fk_auth_user_id",
+          "column": "sender_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "core_apikey",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "key",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "key_type",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "last_used_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "usage_count",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        }
+      ],
+      "indexes": [
+        {
+          "name": "core_apikey_pkey",
+          "definition": "CREATE UNIQUE INDEX core_apikey_pkey ON public.core_apikey USING btree (id)"
+        },
+        {
+          "name": "core_apikey_name_key",
+          "definition": "CREATE UNIQUE INDEX core_apikey_name_key ON public.core_apikey USING btree (name)"
+        },
+        {
+          "name": "core_apikey_name_83d164df_like",
+          "definition": "CREATE INDEX core_apikey_name_83d164df_like ON public.core_apikey USING btree (name varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 2
+    },
+    {
+      "name": "core_navigationlink",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "url",
+          "type": "character varying",
+          "max_length": 500,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "icon",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "location",
+          "type": "character varying",
+          "max_length": 10,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "footer_section",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "open_in_new_tab",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "order",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        },
+        {
+          "name": "parent_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 12
+        }
+      ],
+      "indexes": [
+        {
+          "name": "core_navigationlink_pkey",
+          "definition": "CREATE UNIQUE INDEX core_navigationlink_pkey ON public.core_navigationlink USING btree (id)"
+        },
+        {
+          "name": "core_navigationlink_parent_id_5e27c3fd",
+          "definition": "CREATE INDEX core_navigationlink_parent_id_5e27c3fd ON public.core_navigationlink USING btree (parent_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "core_navigationlink_parent_id_5e27c3fd_fk_core_navi",
+          "column": "parent_id",
+          "references_table": "core_navigationlink",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 19
+    },
+    {
+      "name": "core_sitesettings",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "value",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "setting_type",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "is_secret",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        }
+      ],
+      "indexes": [
+        {
+          "name": "core_sitesettings_pkey",
+          "definition": "CREATE UNIQUE INDEX core_sitesettings_pkey ON public.core_sitesettings USING btree (id)"
+        },
+        {
+          "name": "core_sitesettings_name_key",
+          "definition": "CREATE UNIQUE INDEX core_sitesettings_name_key ON public.core_sitesettings USING btree (name)"
+        },
+        {
+          "name": "core_sitesettings_name_e716c2f0_like",
+          "definition": "CREATE INDEX core_sitesettings_name_e716c2f0_like ON public.core_sitesettings USING btree (name varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 7
+    },
+    {
+      "name": "core_video",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "title",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 300,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "youtube_id",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "thumbnail",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "duration",
+          "type": "character varying",
+          "max_length": 10,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "language",
+          "type": "character varying",
+          "max_length": 5,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "level",
+          "type": "character varying",
+          "max_length": 5,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "view_count",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "is_featured",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 12
+        },
+        {
+          "name": "order",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 13
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 14
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 15
+        },
+        {
+          "name": "ai_model",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 16
+        },
+        {
+          "name": "human_reviewed",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 17
+        },
+        {
+          "name": "is_ai_generated",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 18
+        },
+        {
+          "name": "n8n_created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 19
+        },
+        {
+          "name": "n8n_execution_id",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 20
+        },
+        {
+          "name": "n8n_workflow_id",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 21
+        },
+        {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 22
+        },
+        {
+          "name": "reviewed_by_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 23
+        },
+        {
+          "name": "source",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 24
+        },
+        {
+          "name": "source_id",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 25
+        },
+        {
+          "name": "source_url",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 26
+        }
+      ],
+      "indexes": [
+        {
+          "name": "core_video_pkey",
+          "definition": "CREATE UNIQUE INDEX core_video_pkey ON public.core_video USING btree (id)"
+        },
+        {
+          "name": "core_video_slug_key",
+          "definition": "CREATE UNIQUE INDEX core_video_slug_key ON public.core_video USING btree (slug)"
+        },
+        {
+          "name": "core_video_slug_7d268743_like",
+          "definition": "CREATE INDEX core_video_slug_7d268743_like ON public.core_video USING btree (slug varchar_pattern_ops)"
+        },
+        {
+          "name": "core_video_reviewed_by_id_1869a94e",
+          "definition": "CREATE INDEX core_video_reviewed_by_id_1869a94e ON public.core_video USING btree (reviewed_by_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "core_video_reviewed_by_id_1869a94e_fk_auth_user_id",
+          "column": "reviewed_by_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 5
+    },
+    {
+      "name": "core_video_bookmarks",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "video_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "core_video_bookmarks_pkey",
+          "definition": "CREATE UNIQUE INDEX core_video_bookmarks_pkey ON public.core_video_bookmarks USING btree (id)"
+        },
+        {
+          "name": "core_video_bookmarks_video_id_user_id_b086dbcf_uniq",
+          "definition": "CREATE UNIQUE INDEX core_video_bookmarks_video_id_user_id_b086dbcf_uniq ON public.core_video_bookmarks USING btree (video_id, user_id)"
+        },
+        {
+          "name": "core_video_bookmarks_video_id_a38bd651",
+          "definition": "CREATE INDEX core_video_bookmarks_video_id_a38bd651 ON public.core_video_bookmarks USING btree (video_id)"
+        },
+        {
+          "name": "core_video_bookmarks_user_id_e92c8e18",
+          "definition": "CREATE INDEX core_video_bookmarks_user_id_e92c8e18 ON public.core_video_bookmarks USING btree (user_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "core_video_bookmarks_video_id_a38bd651_fk_core_video_id",
+          "column": "video_id",
+          "references_table": "core_video",
+          "references_column": "id"
+        },
+        {
+          "constraint": "core_video_bookmarks_user_id_e92c8e18_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "django_admin_log",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "action_time",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "object_id",
+          "type": "text",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "object_repr",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "action_flag",
+          "type": "smallint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "change_message",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "content_type_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        }
+      ],
+      "indexes": [
+        {
+          "name": "django_admin_log_pkey",
+          "definition": "CREATE UNIQUE INDEX django_admin_log_pkey ON public.django_admin_log USING btree (id)"
+        },
+        {
+          "name": "django_admin_log_content_type_id_c4bce8eb",
+          "definition": "CREATE INDEX django_admin_log_content_type_id_c4bce8eb ON public.django_admin_log USING btree (content_type_id)"
+        },
+        {
+          "name": "django_admin_log_user_id_c564eba6",
+          "definition": "CREATE INDEX django_admin_log_user_id_c564eba6 ON public.django_admin_log USING btree (user_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "django_admin_log_content_type_id_c4bce8eb_fk_django_co",
+          "column": "content_type_id",
+          "references_table": "django_content_type",
+          "references_column": "id"
+        },
+        {
+          "constraint": "django_admin_log_user_id_c564eba6_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "django_content_type",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "app_label",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "model",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        }
+      ],
+      "indexes": [
+        {
+          "name": "django_content_type_pkey",
+          "definition": "CREATE UNIQUE INDEX django_content_type_pkey ON public.django_content_type USING btree (id)"
+        },
+        {
+          "name": "django_content_type_app_label_model_76bd3d3b_uniq",
+          "definition": "CREATE UNIQUE INDEX django_content_type_app_label_model_76bd3d3b_uniq ON public.django_content_type USING btree (app_label, model)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 35
+    },
+    {
+      "name": "django_migrations",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "app",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "applied",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        }
+      ],
+      "indexes": [
+        {
+          "name": "django_migrations_pkey",
+          "definition": "CREATE UNIQUE INDEX django_migrations_pkey ON public.django_migrations USING btree (id)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 57
+    },
+    {
+      "name": "django_session",
+      "columns": [
+        {
+          "name": "session_key",
+          "type": "character varying",
+          "max_length": 40,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "session_data",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "expire_date",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "django_session_pkey",
+          "definition": "CREATE UNIQUE INDEX django_session_pkey ON public.django_session USING btree (session_key)"
+        },
+        {
+          "name": "django_session_session_key_c0390e0f_like",
+          "definition": "CREATE INDEX django_session_session_key_c0390e0f_like ON public.django_session USING btree (session_key varchar_pattern_ops)"
+        },
+        {
+          "name": "django_session_expire_date_a5c62663",
+          "definition": "CREATE INDEX django_session_expire_date_a5c62663 ON public.django_session USING btree (expire_date)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "session_key",
+      "row_count": 12
+    },
+    {
+      "name": "filemanager_mediafile",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "file",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "folder",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "original_filename",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "file_size",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "mime_type",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "width",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "height",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "alt_text",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 12
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 13
+        },
+        {
+          "name": "uploaded_by_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 14
+        }
+      ],
+      "indexes": [
+        {
+          "name": "filemanager_mediafile_pkey",
+          "definition": "CREATE UNIQUE INDEX filemanager_mediafile_pkey ON public.filemanager_mediafile USING btree (id)"
+        },
+        {
+          "name": "filemanager_mediafile_uploaded_by_id_13a605c0",
+          "definition": "CREATE INDEX filemanager_mediafile_uploaded_by_id_13a605c0 ON public.filemanager_mediafile USING btree (uploaded_by_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "filemanager_mediafile_uploaded_by_id_13a605c0_fk_auth_user_id",
+          "column": "uploaded_by_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "filemanager_sitelogo",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "logo_type",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "svg_code",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "image",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "width",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "height",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        }
+      ],
+      "indexes": [
+        {
+          "name": "filemanager_sitelogo_pkey",
+          "definition": "CREATE UNIQUE INDEX filemanager_sitelogo_pkey ON public.filemanager_sitelogo USING btree (id)"
+        },
+        {
+          "name": "filemanager_sitelogo_logo_type_key",
+          "definition": "CREATE UNIQUE INDEX filemanager_sitelogo_logo_type_key ON public.filemanager_sitelogo USING btree (logo_type)"
+        },
+        {
+          "name": "filemanager_sitelogo_logo_type_6117ed08_like",
+          "definition": "CREATE INDEX filemanager_sitelogo_logo_type_6117ed08_like ON public.filemanager_sitelogo USING btree (logo_type varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 7
+    },
+    {
+      "name": "forum_forumbookmark",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "post_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        }
+      ],
+      "indexes": [
+        {
+          "name": "forum_forumbookmark_pkey",
+          "definition": "CREATE UNIQUE INDEX forum_forumbookmark_pkey ON public.forum_forumbookmark USING btree (id)"
+        },
+        {
+          "name": "forum_forumbookmark_user_id_post_id_06cbeeb9_uniq",
+          "definition": "CREATE UNIQUE INDEX forum_forumbookmark_user_id_post_id_06cbeeb9_uniq ON public.forum_forumbookmark USING btree (user_id, post_id)"
+        },
+        {
+          "name": "forum_forumbookmark_user_id_2c13d80a",
+          "definition": "CREATE INDEX forum_forumbookmark_user_id_2c13d80a ON public.forum_forumbookmark USING btree (user_id)"
+        },
+        {
+          "name": "forum_forumbookmark_post_id_8e042066",
+          "definition": "CREATE INDEX forum_forumbookmark_post_id_8e042066 ON public.forum_forumbookmark USING btree (post_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "forum_forumbookmark_user_id_2c13d80a_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        },
+        {
+          "constraint": "forum_forumbookmark_post_id_8e042066_fk_forum_forumpost_id",
+          "column": "post_id",
+          "references_table": "forum_forumpost",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "forum_forumlike",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "post_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "reply_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 5
+        }
+      ],
+      "indexes": [
+        {
+          "name": "forum_forumlike_pkey",
+          "definition": "CREATE UNIQUE INDEX forum_forumlike_pkey ON public.forum_forumlike USING btree (id)"
+        },
+        {
+          "name": "forum_forumlike_user_id_post_id_c67e1202_uniq",
+          "definition": "CREATE UNIQUE INDEX forum_forumlike_user_id_post_id_c67e1202_uniq ON public.forum_forumlike USING btree (user_id, post_id)"
+        },
+        {
+          "name": "forum_forumlike_user_id_reply_id_d5ffc7c6_uniq",
+          "definition": "CREATE UNIQUE INDEX forum_forumlike_user_id_reply_id_d5ffc7c6_uniq ON public.forum_forumlike USING btree (user_id, reply_id)"
+        },
+        {
+          "name": "forum_forumlike_user_id_9dcfdac2",
+          "definition": "CREATE INDEX forum_forumlike_user_id_9dcfdac2 ON public.forum_forumlike USING btree (user_id)"
+        },
+        {
+          "name": "forum_forumlike_post_id_c7db48c8",
+          "definition": "CREATE INDEX forum_forumlike_post_id_c7db48c8 ON public.forum_forumlike USING btree (post_id)"
+        },
+        {
+          "name": "forum_forumlike_reply_id_e4e936de",
+          "definition": "CREATE INDEX forum_forumlike_reply_id_e4e936de ON public.forum_forumlike USING btree (reply_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "forum_forumlike_user_id_9dcfdac2_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        },
+        {
+          "constraint": "forum_forumlike_post_id_c7db48c8_fk_forum_forumpost_id",
+          "column": "post_id",
+          "references_table": "forum_forumpost",
+          "references_column": "id"
+        },
+        {
+          "constraint": "forum_forumlike_reply_id_e4e936de_fk_forum_forumreply_id",
+          "column": "reply_id",
+          "references_table": "forum_forumreply",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "forum_forumpost",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "title",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 300,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "excerpt",
+          "type": "character varying",
+          "max_length": 300,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "is_pinned",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "is_locked",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "views",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        },
+        {
+          "name": "author_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 12
+        },
+        {
+          "name": "category",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 13
+        },
+        {
+          "name": "last_activity",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 15
+        }
+      ],
+      "indexes": [
+        {
+          "name": "forum_forumpost_pkey",
+          "definition": "CREATE UNIQUE INDEX forum_forumpost_pkey ON public.forum_forumpost USING btree (id)"
+        },
+        {
+          "name": "forum_forumpost_slug_key",
+          "definition": "CREATE UNIQUE INDEX forum_forumpost_slug_key ON public.forum_forumpost USING btree (slug)"
+        },
+        {
+          "name": "forum_forumpost_slug_6e71f161_like",
+          "definition": "CREATE INDEX forum_forumpost_slug_6e71f161_like ON public.forum_forumpost USING btree (slug varchar_pattern_ops)"
+        },
+        {
+          "name": "forum_forumpost_author_id_0af5ed03",
+          "definition": "CREATE INDEX forum_forumpost_author_id_0af5ed03 ON public.forum_forumpost USING btree (author_id)"
+        },
+        {
+          "name": "forum_forumpost_category_id_9647083a",
+          "definition": "CREATE INDEX forum_forumpost_category_id_9647083a ON public.forum_forumpost USING btree (category)"
+        },
+        {
+          "name": "forum_forumpost_last_activity_b41dd794",
+          "definition": "CREATE INDEX forum_forumpost_last_activity_b41dd794 ON public.forum_forumpost USING btree (last_activity)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "forum_forumpost_author_id_0af5ed03_fk_auth_user_id",
+          "column": "author_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "forum_forumreply",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "is_solution",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "author_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "parent_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "post_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        }
+      ],
+      "indexes": [
+        {
+          "name": "forum_forumreply_pkey",
+          "definition": "CREATE UNIQUE INDEX forum_forumreply_pkey ON public.forum_forumreply USING btree (id)"
+        },
+        {
+          "name": "forum_forumreply_author_id_c1e96e44",
+          "definition": "CREATE INDEX forum_forumreply_author_id_c1e96e44 ON public.forum_forumreply USING btree (author_id)"
+        },
+        {
+          "name": "forum_forumreply_parent_id_e10463b6",
+          "definition": "CREATE INDEX forum_forumreply_parent_id_e10463b6 ON public.forum_forumreply USING btree (parent_id)"
+        },
+        {
+          "name": "forum_forumreply_post_id_e11921f2",
+          "definition": "CREATE INDEX forum_forumreply_post_id_e11921f2 ON public.forum_forumreply USING btree (post_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "forum_forumreply_author_id_c1e96e44_fk_auth_user_id",
+          "column": "author_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        },
+        {
+          "constraint": "forum_forumreply_parent_id_e10463b6_fk_forum_forumreply_id",
+          "column": "parent_id",
+          "references_table": "forum_forumreply",
+          "references_column": "id"
+        },
+        {
+          "constraint": "forum_forumreply_post_id_e11921f2_fk_forum_forumpost_id",
+          "column": "post_id",
+          "references_table": "forum_forumpost",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "knowledge_category",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 120,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "icon",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "meta_title",
+          "type": "character varying",
+          "max_length": 70,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "meta_description",
+          "type": "character varying",
+          "max_length": 160,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "order",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        }
+      ],
+      "indexes": [
+        {
+          "name": "knowledge_category_pkey",
+          "definition": "CREATE UNIQUE INDEX knowledge_category_pkey ON public.knowledge_category USING btree (id)"
+        },
+        {
+          "name": "knowledge_category_slug_key",
+          "definition": "CREATE UNIQUE INDEX knowledge_category_slug_key ON public.knowledge_category USING btree (slug)"
+        },
+        {
+          "name": "knowledge_category_slug_9e482337_like",
+          "definition": "CREATE INDEX knowledge_category_slug_9e482337_like ON public.knowledge_category USING btree (slug varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 3
+    },
+    {
+      "name": "knowledge_knowledgearticle",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "title",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 280,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "excerpt",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "language",
+          "type": "character varying",
+          "max_length": 5,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "level",
+          "type": "character varying",
+          "max_length": 5,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "cover_image",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "thumbnail",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "meta_title",
+          "type": "character varying",
+          "max_length": 70,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "meta_description",
+          "type": "character varying",
+          "max_length": 160,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        },
+        {
+          "name": "meta_keywords",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 12
+        },
+        {
+          "name": "canonical_url",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 13
+        },
+        {
+          "name": "og_title",
+          "type": "character varying",
+          "max_length": 95,
+          "nullable": false,
+          "default": null,
+          "position": 14
+        },
+        {
+          "name": "og_description",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 15
+        },
+        {
+          "name": "og_image",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 16
+        },
+        {
+          "name": "schema_type",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 17
+        },
+        {
+          "name": "is_published",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 18
+        },
+        {
+          "name": "is_featured",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 19
+        },
+        {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 20
+        },
+        {
+          "name": "view_count",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 21
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 22
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 23
+        },
+        {
+          "name": "author_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 24
+        },
+        {
+          "name": "category_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 25
+        },
+        {
+          "name": "ai_model",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 26
+        },
+        {
+          "name": "human_reviewed",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 27
+        },
+        {
+          "name": "is_ai_generated",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 28
+        },
+        {
+          "name": "n8n_created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 29
+        },
+        {
+          "name": "n8n_execution_id",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 30
+        },
+        {
+          "name": "n8n_workflow_id",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 31
+        },
+        {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 32
+        },
+        {
+          "name": "reviewed_by_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 33
+        },
+        {
+          "name": "source",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 34
+        },
+        {
+          "name": "source_id",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 35
+        },
+        {
+          "name": "source_url",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 36
+        }
+      ],
+      "indexes": [
+        {
+          "name": "knowledge_knowledgearticle_pkey",
+          "definition": "CREATE UNIQUE INDEX knowledge_knowledgearticle_pkey ON public.knowledge_knowledgearticle USING btree (id)"
+        },
+        {
+          "name": "knowledge_knowledgearticle_slug_key",
+          "definition": "CREATE UNIQUE INDEX knowledge_knowledgearticle_slug_key ON public.knowledge_knowledgearticle USING btree (slug)"
+        },
+        {
+          "name": "knowledge_knowledgearticle_slug_023d0590_like",
+          "definition": "CREATE INDEX knowledge_knowledgearticle_slug_023d0590_like ON public.knowledge_knowledgearticle USING btree (slug varchar_pattern_ops)"
+        },
+        {
+          "name": "knowledge_knowledgearticle_author_id_29f5bde2",
+          "definition": "CREATE INDEX knowledge_knowledgearticle_author_id_29f5bde2 ON public.knowledge_knowledgearticle USING btree (author_id)"
+        },
+        {
+          "name": "knowledge_knowledgearticle_category_id_cde9c6bb",
+          "definition": "CREATE INDEX knowledge_knowledgearticle_category_id_cde9c6bb ON public.knowledge_knowledgearticle USING btree (category_id)"
+        },
+        {
+          "name": "knowledge_knowledgearticle_reviewed_by_id_4cf632ee",
+          "definition": "CREATE INDEX knowledge_knowledgearticle_reviewed_by_id_4cf632ee ON public.knowledge_knowledgearticle USING btree (reviewed_by_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "knowledge_knowledgearticle_author_id_29f5bde2_fk_auth_user_id",
+          "column": "author_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        },
+        {
+          "constraint": "knowledge_knowledgea_category_id_cde9c6bb_fk_knowledge",
+          "column": "category_id",
+          "references_table": "knowledge_category",
+          "references_column": "id"
+        },
+        {
+          "constraint": "knowledge_knowledgea_reviewed_by_id_4cf632ee_fk_auth_user",
+          "column": "reviewed_by_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 13
+    },
+    {
+      "name": "news_article",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "title",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 280,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "excerpt",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "cover_image",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "thumbnail",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "meta_title",
+          "type": "character varying",
+          "max_length": 70,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "meta_description",
+          "type": "character varying",
+          "max_length": 160,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "meta_keywords",
+          "type": "character varying",
+          "max_length": 255,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "canonical_url",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        },
+        {
+          "name": "og_title",
+          "type": "character varying",
+          "max_length": 95,
+          "nullable": false,
+          "default": null,
+          "position": 12
+        },
+        {
+          "name": "og_description",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 13
+        },
+        {
+          "name": "og_image",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 14
+        },
+        {
+          "name": "is_published",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 15
+        },
+        {
+          "name": "is_featured",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 16
+        },
+        {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 17
+        },
+        {
+          "name": "view_count",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 18
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 19
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 20
+        },
+        {
+          "name": "author_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 21
+        },
+        {
+          "name": "category_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 22
+        },
+        {
+          "name": "ai_model",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 23
+        },
+        {
+          "name": "human_reviewed",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 24
+        },
+        {
+          "name": "is_ai_generated",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 25
+        },
+        {
+          "name": "n8n_created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 26
+        },
+        {
+          "name": "n8n_execution_id",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 27
+        },
+        {
+          "name": "n8n_workflow_id",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 28
+        },
+        {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 29
+        },
+        {
+          "name": "reviewed_by_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 30
+        },
+        {
+          "name": "source",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 31
+        },
+        {
+          "name": "source_id",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 32
+        },
+        {
+          "name": "source_url",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 33
+        }
+      ],
+      "indexes": [
+        {
+          "name": "news_article_pkey",
+          "definition": "CREATE UNIQUE INDEX news_article_pkey ON public.news_article USING btree (id)"
+        },
+        {
+          "name": "news_article_slug_key",
+          "definition": "CREATE UNIQUE INDEX news_article_slug_key ON public.news_article USING btree (slug)"
+        },
+        {
+          "name": "news_article_slug_5328fdc5_like",
+          "definition": "CREATE INDEX news_article_slug_5328fdc5_like ON public.news_article USING btree (slug varchar_pattern_ops)"
+        },
+        {
+          "name": "news_article_author_id_11c60ced",
+          "definition": "CREATE INDEX news_article_author_id_11c60ced ON public.news_article USING btree (author_id)"
+        },
+        {
+          "name": "news_article_category_id_7ede7614",
+          "definition": "CREATE INDEX news_article_category_id_7ede7614 ON public.news_article USING btree (category_id)"
+        },
+        {
+          "name": "news_article_reviewed_by_id_267fa2d3",
+          "definition": "CREATE INDEX news_article_reviewed_by_id_267fa2d3 ON public.news_article USING btree (reviewed_by_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "news_article_author_id_11c60ced_fk_auth_user_id",
+          "column": "author_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        },
+        {
+          "constraint": "news_article_category_id_7ede7614_fk_news_category_id",
+          "column": "category_id",
+          "references_table": "news_category",
+          "references_column": "id"
+        },
+        {
+          "constraint": "news_article_reviewed_by_id_267fa2d3_fk_auth_user_id",
+          "column": "reviewed_by_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 10
+    },
+    {
+      "name": "news_category",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 120,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "icon",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "meta_title",
+          "type": "character varying",
+          "max_length": 70,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "meta_description",
+          "type": "character varying",
+          "max_length": 160,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "order",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        }
+      ],
+      "indexes": [
+        {
+          "name": "news_category_pkey",
+          "definition": "CREATE UNIQUE INDEX news_category_pkey ON public.news_category USING btree (id)"
+        },
+        {
+          "name": "news_category_slug_key",
+          "definition": "CREATE UNIQUE INDEX news_category_slug_key ON public.news_category USING btree (slug)"
+        },
+        {
+          "name": "news_category_slug_8bf24efd_like",
+          "definition": "CREATE INDEX news_category_slug_8bf24efd_like ON public.news_category USING btree (slug varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 4
+    },
+    {
+      "name": "partners_friendrequest",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "message",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "status",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "from_user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "to_user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        }
+      ],
+      "indexes": [
+        {
+          "name": "partners_friendrequest_pkey",
+          "definition": "CREATE UNIQUE INDEX partners_friendrequest_pkey ON public.partners_friendrequest USING btree (id)"
+        },
+        {
+          "name": "partners_friendrequest_from_user_id_to_user_id_19c723b6_uniq",
+          "definition": "CREATE UNIQUE INDEX partners_friendrequest_from_user_id_to_user_id_19c723b6_uniq ON public.partners_friendrequest USING btree (from_user_id, to_user_id)"
+        },
+        {
+          "name": "partners_friendrequest_from_user_id_465e55d0",
+          "definition": "CREATE INDEX partners_friendrequest_from_user_id_465e55d0 ON public.partners_friendrequest USING btree (from_user_id)"
+        },
+        {
+          "name": "partners_friendrequest_to_user_id_1048c22b",
+          "definition": "CREATE INDEX partners_friendrequest_to_user_id_1048c22b ON public.partners_friendrequest USING btree (to_user_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "partners_friendrequest_from_user_id_465e55d0_fk_auth_user_id",
+          "column": "from_user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        },
+        {
+          "constraint": "partners_friendrequest_to_user_id_1048c22b_fk_auth_user_id",
+          "column": "to_user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "partners_studyroom",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "max_members",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "target_language",
+          "type": "character varying",
+          "max_length": 10,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "level",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "house_color",
+          "type": "character varying",
+          "max_length": 30,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "chat_room_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 11
+        },
+        {
+          "name": "owner_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 12
+        },
+        {
+          "name": "purpose",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 13
+        },
+        {
+          "name": "skill_focus",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 14
+        }
+      ],
+      "indexes": [
+        {
+          "name": "partners_studyroom_pkey",
+          "definition": "CREATE UNIQUE INDEX partners_studyroom_pkey ON public.partners_studyroom USING btree (id)"
+        },
+        {
+          "name": "partners_studyroom_chat_room_id_key",
+          "definition": "CREATE UNIQUE INDEX partners_studyroom_chat_room_id_key ON public.partners_studyroom USING btree (chat_room_id)"
+        },
+        {
+          "name": "partners_studyroom_owner_id_4e96f519",
+          "definition": "CREATE INDEX partners_studyroom_owner_id_4e96f519 ON public.partners_studyroom USING btree (owner_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "partners_studyroom_chat_room_id_071cfad7_fk_chat_chatroom_id",
+          "column": "chat_room_id",
+          "references_table": "chat_chatroom",
+          "references_column": "id"
+        },
+        {
+          "constraint": "partners_studyroom_owner_id_4e96f519_fk_auth_user_id",
+          "column": "owner_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "partners_studyroom_members",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "studyroom_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "partners_studyroom_members_pkey",
+          "definition": "CREATE UNIQUE INDEX partners_studyroom_members_pkey ON public.partners_studyroom_members USING btree (id)"
+        },
+        {
+          "name": "partners_studyroom_members_studyroom_id_user_id_5ff11d63_uniq",
+          "definition": "CREATE UNIQUE INDEX partners_studyroom_members_studyroom_id_user_id_5ff11d63_uniq ON public.partners_studyroom_members USING btree (studyroom_id, user_id)"
+        },
+        {
+          "name": "partners_studyroom_members_studyroom_id_9feb083e",
+          "definition": "CREATE INDEX partners_studyroom_members_studyroom_id_9feb083e ON public.partners_studyroom_members USING btree (studyroom_id)"
+        },
+        {
+          "name": "partners_studyroom_members_user_id_db8140eb",
+          "definition": "CREATE INDEX partners_studyroom_members_user_id_db8140eb ON public.partners_studyroom_members USING btree (user_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "partners_studyroom_m_studyroom_id_9feb083e_fk_partners_",
+          "column": "studyroom_id",
+          "references_table": "partners_studyroom",
+          "references_column": "id"
+        },
+        {
+          "constraint": "partners_studyroom_members_user_id_db8140eb_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "resources_category",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "icon",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        }
+      ],
+      "indexes": [
+        {
+          "name": "resources_category_pkey",
+          "definition": "CREATE UNIQUE INDEX resources_category_pkey ON public.resources_category USING btree (id)"
+        },
+        {
+          "name": "resources_category_slug_key",
+          "definition": "CREATE UNIQUE INDEX resources_category_slug_key ON public.resources_category USING btree (slug)"
+        },
+        {
+          "name": "resources_category_slug_6b2b4140_like",
+          "definition": "CREATE INDEX resources_category_slug_6b2b4140_like ON public.resources_category USING btree (slug varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 5
+    },
+    {
+      "name": "resources_resource",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "title",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "file",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": true,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "youtube_url",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": true,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "cover_image",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": true,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "author",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "is_featured",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "view_count",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        },
+        {
+          "name": "download_count",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 12
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 13
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 14
+        },
+        {
+          "name": "category_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 15
+        },
+        {
+          "name": "resource_type",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 16
+        },
+        {
+          "name": "external_url",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": true,
+          "default": null,
+          "position": 17
+        },
+        {
+          "name": "ai_model",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 18
+        },
+        {
+          "name": "human_reviewed",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 19
+        },
+        {
+          "name": "is_ai_generated",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 20
+        },
+        {
+          "name": "n8n_created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 21
+        },
+        {
+          "name": "n8n_execution_id",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 22
+        },
+        {
+          "name": "n8n_workflow_id",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 23
+        },
+        {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 24
+        },
+        {
+          "name": "reviewed_by_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 25
+        },
+        {
+          "name": "source",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 26
+        },
+        {
+          "name": "source_id",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 27
+        },
+        {
+          "name": "source_url",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 28
+        }
+      ],
+      "indexes": [
+        {
+          "name": "resources_resource_pkey",
+          "definition": "CREATE UNIQUE INDEX resources_resource_pkey ON public.resources_resource USING btree (id)"
+        },
+        {
+          "name": "resources_resource_slug_key",
+          "definition": "CREATE UNIQUE INDEX resources_resource_slug_key ON public.resources_resource USING btree (slug)"
+        },
+        {
+          "name": "resources_resource_slug_8867b959_like",
+          "definition": "CREATE INDEX resources_resource_slug_8867b959_like ON public.resources_resource USING btree (slug varchar_pattern_ops)"
+        },
+        {
+          "name": "resources_resource_category_id_0cd2d52c",
+          "definition": "CREATE INDEX resources_resource_category_id_0cd2d52c ON public.resources_resource USING btree (category_id)"
+        },
+        {
+          "name": "resources_resource_reviewed_by_id_14080399",
+          "definition": "CREATE INDEX resources_resource_reviewed_by_id_14080399 ON public.resources_resource USING btree (reviewed_by_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "resources_resource_category_id_0cd2d52c_fk_resources",
+          "column": "category_id",
+          "references_table": "resources_category",
+          "references_column": "id"
+        },
+        {
+          "constraint": "resources_resource_reviewed_by_id_14080399_fk_auth_user_id",
+          "column": "reviewed_by_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 24
+    },
+    {
+      "name": "resources_resource_bookmarks",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "resource_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "resources_resource_bookmarks_pkey",
+          "definition": "CREATE UNIQUE INDEX resources_resource_bookmarks_pkey ON public.resources_resource_bookmarks USING btree (id)"
+        },
+        {
+          "name": "resources_resource_bookmarks_resource_id_user_id_e847e228_uniq",
+          "definition": "CREATE UNIQUE INDEX resources_resource_bookmarks_resource_id_user_id_e847e228_uniq ON public.resources_resource_bookmarks USING btree (resource_id, user_id)"
+        },
+        {
+          "name": "resources_resource_bookmarks_resource_id_d27763af",
+          "definition": "CREATE INDEX resources_resource_bookmarks_resource_id_d27763af ON public.resources_resource_bookmarks USING btree (resource_id)"
+        },
+        {
+          "name": "resources_resource_bookmarks_user_id_2068e4a6",
+          "definition": "CREATE INDEX resources_resource_bookmarks_user_id_2068e4a6 ON public.resources_resource_bookmarks USING btree (user_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "resources_resource_b_resource_id_d27763af_fk_resources",
+          "column": "resource_id",
+          "references_table": "resources_resource",
+          "references_column": "id"
+        },
+        {
+          "constraint": "resources_resource_bookmarks_user_id_2068e4a6_fk_auth_user_id",
+          "column": "user_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "resources_resource_tags",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "resource_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "tag_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "resources_resource_tags_pkey",
+          "definition": "CREATE UNIQUE INDEX resources_resource_tags_pkey ON public.resources_resource_tags USING btree (id)"
+        },
+        {
+          "name": "resources_resource_tags_resource_id_tag_id_4463847d_uniq",
+          "definition": "CREATE UNIQUE INDEX resources_resource_tags_resource_id_tag_id_4463847d_uniq ON public.resources_resource_tags USING btree (resource_id, tag_id)"
+        },
+        {
+          "name": "resources_resource_tags_resource_id_33e5c8e2",
+          "definition": "CREATE INDEX resources_resource_tags_resource_id_33e5c8e2 ON public.resources_resource_tags USING btree (resource_id)"
+        },
+        {
+          "name": "resources_resource_tags_tag_id_7ed3b40d",
+          "definition": "CREATE INDEX resources_resource_tags_tag_id_7ed3b40d ON public.resources_resource_tags USING btree (tag_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "resources_resource_t_resource_id_33e5c8e2_fk_resources",
+          "column": "resource_id",
+          "references_table": "resources_resource",
+          "references_column": "id"
+        },
+        {
+          "constraint": "resources_resource_tags_tag_id_7ed3b40d_fk_resources_tag_id",
+          "column": "tag_id",
+          "references_table": "resources_tag",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 0
+    },
+    {
+      "name": "resources_tag",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        }
+      ],
+      "indexes": [
+        {
+          "name": "resources_tag_pkey",
+          "definition": "CREATE UNIQUE INDEX resources_tag_pkey ON public.resources_tag USING btree (id)"
+        },
+        {
+          "name": "resources_tag_name_key",
+          "definition": "CREATE UNIQUE INDEX resources_tag_name_key ON public.resources_tag USING btree (name)"
+        },
+        {
+          "name": "resources_tag_slug_key",
+          "definition": "CREATE UNIQUE INDEX resources_tag_slug_key ON public.resources_tag USING btree (slug)"
+        },
+        {
+          "name": "resources_tag_name_0b3bfec4_like",
+          "definition": "CREATE INDEX resources_tag_name_0b3bfec4_like ON public.resources_tag USING btree (name varchar_pattern_ops)"
+        },
+        {
+          "name": "resources_tag_slug_eeaed1a6_like",
+          "definition": "CREATE INDEX resources_tag_slug_eeaed1a6_like ON public.resources_tag USING btree (slug varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 10
+    },
+    {
+      "name": "tools_flashcard",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "front",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "back",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "example",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "pronunciation",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "audio_url",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "image",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "order",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "deck_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        }
+      ],
+      "indexes": [
+        {
+          "name": "tools_flashcard_pkey",
+          "definition": "CREATE UNIQUE INDEX tools_flashcard_pkey ON public.tools_flashcard USING btree (id)"
+        },
+        {
+          "name": "tools_flashcard_deck_id_d8622df7",
+          "definition": "CREATE INDEX tools_flashcard_deck_id_d8622df7 ON public.tools_flashcard USING btree (deck_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "tools_flashcard_deck_id_d8622df7_fk_tools_flashcarddeck_id",
+          "column": "deck_id",
+          "references_table": "tools_flashcarddeck",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 25
+    },
+    {
+      "name": "tools_flashcarddeck",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 220,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "language",
+          "type": "character varying",
+          "max_length": 5,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "level",
+          "type": "character varying",
+          "max_length": 5,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "is_public",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "is_featured",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "view_count",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        },
+        {
+          "name": "author_id",
+          "type": "integer",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 12
+        }
+      ],
+      "indexes": [
+        {
+          "name": "tools_flashcarddeck_pkey",
+          "definition": "CREATE UNIQUE INDEX tools_flashcarddeck_pkey ON public.tools_flashcarddeck USING btree (id)"
+        },
+        {
+          "name": "tools_flashcarddeck_slug_key",
+          "definition": "CREATE UNIQUE INDEX tools_flashcarddeck_slug_key ON public.tools_flashcarddeck USING btree (slug)"
+        },
+        {
+          "name": "tools_flashcarddeck_slug_f07b1a6a_like",
+          "definition": "CREATE INDEX tools_flashcarddeck_slug_f07b1a6a_like ON public.tools_flashcarddeck USING btree (slug varchar_pattern_ops)"
+        },
+        {
+          "name": "tools_flashcarddeck_author_id_1908dec7",
+          "definition": "CREATE INDEX tools_flashcarddeck_author_id_1908dec7 ON public.tools_flashcarddeck USING btree (author_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "tools_flashcarddeck_author_id_1908dec7_fk_auth_user_id",
+          "column": "author_id",
+          "references_table": "auth_user",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 3
+    },
+    {
+      "name": "tools_tool",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 200,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 220,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "tool_type",
+          "type": "character varying",
+          "max_length": 20,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "url",
+          "type": "character varying",
+          "max_length": 500,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "embed_code",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "icon",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "cover_image",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        },
+        {
+          "name": "language",
+          "type": "character varying",
+          "max_length": 5,
+          "nullable": false,
+          "default": null,
+          "position": 10
+        },
+        {
+          "name": "is_featured",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 11
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 12
+        },
+        {
+          "name": "order",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 13
+        },
+        {
+          "name": "view_count",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 14
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 15
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 16
+        },
+        {
+          "name": "category_id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": true,
+          "default": null,
+          "position": 17
+        }
+      ],
+      "indexes": [
+        {
+          "name": "tools_tool_pkey",
+          "definition": "CREATE UNIQUE INDEX tools_tool_pkey ON public.tools_tool USING btree (id)"
+        },
+        {
+          "name": "tools_tool_slug_key",
+          "definition": "CREATE UNIQUE INDEX tools_tool_slug_key ON public.tools_tool USING btree (slug)"
+        },
+        {
+          "name": "tools_tool_slug_865259d9_like",
+          "definition": "CREATE INDEX tools_tool_slug_865259d9_like ON public.tools_tool USING btree (slug varchar_pattern_ops)"
+        },
+        {
+          "name": "tools_tool_category_id_75826aee",
+          "definition": "CREATE INDEX tools_tool_category_id_75826aee ON public.tools_tool USING btree (category_id)"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "constraint": "tools_tool_category_id_75826aee_fk_tools_toolcategory_id",
+          "column": "category_id",
+          "references_table": "tools_toolcategory",
+          "references_column": "id"
+        }
+      ],
+      "primary_key": "id",
+      "row_count": 8
+    },
+    {
+      "name": "tools_toolcategory",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 1
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "max_length": 100,
+          "nullable": false,
+          "default": null,
+          "position": 2
+        },
+        {
+          "name": "slug",
+          "type": "character varying",
+          "max_length": 120,
+          "nullable": false,
+          "default": null,
+          "position": 3
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 4
+        },
+        {
+          "name": "icon",
+          "type": "character varying",
+          "max_length": 50,
+          "nullable": false,
+          "default": null,
+          "position": 5
+        },
+        {
+          "name": "order",
+          "type": "integer",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 6
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 7
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 8
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "max_length": null,
+          "nullable": false,
+          "default": null,
+          "position": 9
+        }
+      ],
+      "indexes": [
+        {
+          "name": "tools_toolcategory_pkey",
+          "definition": "CREATE UNIQUE INDEX tools_toolcategory_pkey ON public.tools_toolcategory USING btree (id)"
+        },
+        {
+          "name": "tools_toolcategory_slug_key",
+          "definition": "CREATE UNIQUE INDEX tools_toolcategory_slug_key ON public.tools_toolcategory USING btree (slug)"
+        },
+        {
+          "name": "tools_toolcategory_slug_c4baec81_like",
+          "definition": "CREATE INDEX tools_toolcategory_slug_c4baec81_like ON public.tools_toolcategory USING btree (slug varchar_pattern_ops)"
+        }
+      ],
+      "foreign_keys": [],
+      "primary_key": "id",
+      "row_count": 5
+    }
+  ]
+}
