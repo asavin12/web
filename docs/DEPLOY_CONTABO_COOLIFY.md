@@ -396,8 +396,8 @@ wget -qO- http://localhost:8080/api/entrypoints 2>/dev/null | grep -o 'trustedIP
 
 #### Lưu ý
 
-- Trong Coolify Application settings, đảm bảo:
-  - **Force HTTPS**: ✅ ON
+- Trong Coolify Application → tab **Configuration** → sidebar **General**:
+  - **Force HTTPS**: ✅ ON (mục Network)
   - Domain format: `https://unstressvn.com` (không phải http)
 - Django nhận IP client đúng nhờ `SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` (tự bật khi `debug_mode=off` — xem `core/config.py`)
 
@@ -407,34 +407,44 @@ wget -qO- http://localhost:8080/api/entrypoints 2>/dev/null | grep -o 'trustedIP
 
 ### Bước 1: Tạo Database Resource
 
-1. Coolify Dashboard → **Projects** → chọn project (hoặc tạo mới)
-2. Trong project → **+ New** → **Database** → **PostgreSQL**
-3. Chọn version: **18**
+1. Coolify Dashboard → sidebar **Projects** → chọn project (hoặc tạo mới)
+2. Chọn **Environment** (ví dụ: `production`) → bấm **+ New**
+3. Chọn **Database** → **PostgreSQL** → version: **18**
+4. Coolify tạo resource với hostname ngẫu nhiên (ví dụ: `lwgggk0w0kowccws4wss8ko0`)
 
 ### Bước 2: Cấu hình Database
 
-Coolify tự tạo database với thông tin ngẫu nhiên. Sửa lại:
+Vào tab **Configuration** → sidebar **General**, Coolify tự tạo thông tin ngẫu nhiên. Sửa lại:
 
 | Field | Giá trị |
-|-------|---------|
+|-------|--------|
 | **Database Name** | `unstressvn` |
 | **Username** | `unstressvn` |
 | **Password** | `hs22JpKMFSOWmyfiJEmZ4RzZSeAg5ERAzR1CtWj2tQ8ThmluCrLTBGZTKwXZEPbS` |
 
+> **Lưu ý:** Sau khi sửa, bấm **Save** ở cuối form.
+
 ### Bước 3: Start Database
 
-Bấm **Deploy** / **Start** để khởi động PostgreSQL.
+Bấm nút **Start** (hoặc **Deploy**) ở góc trên phải trang để khởi động PostgreSQL.
 
 ### Bước 4: Lưu lại Connection String
 
-Coolify hiển thị **Internal URL** dạng:
+Trong tab **Configuration** → sidebar **General**, Coolify hiển thị **Internal URL** (phần Connection Info) dạng:
 ```
-postgresql://unstressvn:hs22JpKMFSOWmyfiJEmZ4RzZSeAg5ERAzR1CtWj2tQ8ThmluCrLTBGZTKwXZEPbS@PROJECT_UUID-db:5432/unstressvn
+postgresql://unstressvn:hs22JpKMFSOWmyfiJEmZ4RzZSeAg5ERAzR1CtWj2tQ8ThmluCrLTBGZTKwXZEPbS@lwgggk0w0kowccws4wss8ko0:5432/unstressvn
 ```
 
-**Ghi nhớ URL này** — dùng làm `DATABASE_URL` cho app ở bước 9. Thay `PROJECT_UUID-db` bằng hostname thực tế mà Coolify hiển thị.
+**Ghi nhớ URL này** — dùng làm `DATABASE_URL` cho app ở bước 9.
 
 > **Quan trọng:** Dùng **Internal URL** (không phải Public URL) vì app và DB cùng Docker network.
+
+### Các tab và menu Database trong Coolify
+
+| Loại | Mục |
+|------|-----|
+| **Top tabs** | Configuration, Logs, Terminal, Backups |
+| **Sidebar (Configuration)** | General, Environment Variables, Servers, Persistent Storage, Import Backup, Webhooks, Resource Limits, Resource Operations, Metrics, Tags, Danger Zone |
 
 ---
 
@@ -496,42 +506,57 @@ git push -u origin main
 
 ## 8. Tạo Application trên Coolify
 
-### Bước 1: Kết nối Git
+### Bước 1: Kết nối Git Source
 
-1. Coolify Dashboard → **Settings** → **Sources** → **+ New**
-2. Chọn **GitHub** (hoặc GitLab)
-3. Đăng nhập và authorize Coolify truy cập repo
+Coolify cần truy cập Git repo. Có 2 cách:
+
+**Cách A: Public Repository** (đơn giản) — paste URL trực tiếp khi tạo app.
+
+**Cách B: Private Repository** (cần GitHub App):
+1. Coolify Dashboard → sidebar **Sources** → **+ Add**
+2. Chọn **GitHub App**
+3. Theo hướng dẫn: đăng nhập GitHub, authorize, install GitHub App vào repo
 
 ### Bước 2: Tạo Application
 
-1. Vào **Project** → **+ New** → **Application**
-2. Chọn **Git** source → chọn repo `web`
+1. Sidebar **Projects** → chọn project → chọn **Environment** (ví dụ: `production`)
+2. Bấm **+ New** → chọn nguồn:
+   - **Public Repository**: paste `https://github.com/asavin12/web.git`
+   - **Private Repository (GitHub)**: chọn GitHub App đã cấu hình → chọn repo `web`
 3. Branch: `main`
+4. Coolify tự detect `Dockerfile` → xác nhận và tạo
 
 ### Bước 3: Cấu hình Build
 
-Coolify tự detect `Dockerfile`. Kiểm tra:
+Sau khi tạo app, vào tab **Configuration** → sidebar **General**. Kiểm tra:
 
-| Setting | Giá trị |
-|---------|---------|
-| **Build Pack** | `Dockerfile` |
-| **Dockerfile Location** | `/Dockerfile` |
-| **Port** | `8000` |
+| Setting | Giá trị | Vị trí trong General |
+|---------|---------|---------------------|
+| **Build Pack** | `Dockerfile` | Build Type |
+| **Dockerfile Location** | `/Dockerfile` | Mặc định, không cần sửa nếu file ở root |
+| **Ports Exposes** | `8000` | Network |
 
 > **CHƯA bấm Deploy** — cần cấu hình Environment Variables (bước 9) và Volumes (bước 10) trước.
+
+### Các tab và menu Application trong Coolify
+
+| Loại | Mục |
+|------|-----|
+| **Top tabs** | Configuration, Deployments, Logs, Terminal, Links |
+| **Sidebar (Configuration)** | General, Advanced, Environment Variables, Persistent Storage, Git Source, Servers, Scheduled Tasks, Webhooks, Healthcheck, Rollback, Resource Limits, Resource Operations, Metrics, Tags, Danger Zone |
 
 ---
 
 ## 9. Cấu hình Environment Variables
 
-Trong Coolify → Application → **Environment Variables**:
+Trong Coolify → Application → tab **Configuration** → sidebar **Environment Variables**:
 
 ### Bắt buộc
 
 | Variable | Giá trị | Mô tả |
 |----------|---------|--------|
-| `DATABASE_URL` | `postgresql://unstressvn:hs22JpKMFSOWmyfiJEmZ4RzZSeAg5ERAzR1CtWj2tQ8ThmluCrLTBGZTKwXZEPbS@HOSTNAME:5432/unstressvn` | Internal URL từ bước 6.4, thay `HOSTNAME` bằng hostname thực |
-| `DB_HOST` | *(hostname từ DATABASE_URL)* | Hostname PostgreSQL |
+| `DATABASE_URL` | `postgresql://unstressvn:hs22JpKMFSOWmyfiJEmZ4RzZSeAg5ERAzR1CtWj2tQ8ThmluCrLTBGZTKwXZEPbS@lwgggk0w0kowccws4wss8ko0:5432/unstressvn` | Internal URL từ bước 6.4 |
+| `DB_HOST` | `lwgggk0w0kowccws4wss8ko0` | Hostname PostgreSQL (resource ID trong Coolify) |
 | `DB_PORT` | `5432` | Port database |
 | `DB_NAME` | `unstressvn` | Tên database |
 | `DB_USER` | `unstressvn` | User database |
@@ -558,13 +583,15 @@ Container mặc định **mất data** khi redeploy. Cần mount volumes **trư�
 
 ### Cấu hình trong Coolify
 
-Coolify → Application → **Storages** → thêm:
+Coolify → Application → tab **Configuration** → sidebar **Persistent Storage** → **+ Add** → chọn **Volume Mount**:
 
-| Container Path | Mô tả |
-|----------------|--------|
-| `/home/unstress/unstressvn/media` | Ảnh upload, covers, avatars |
-| `/home/unstress/unstressvn/logs` | Log files |
-| `/home/unstress/unstressvn/backups` | Database backups |
+| Volume Name | Destination Path (trong container) | Mô tả |
+|-------------|-----------------------------------|--------|
+| `unstressvn-media` | `/home/unstress/unstressvn/media` | Ảnh upload, covers, avatars |
+| `unstressvn-logs` | `/home/unstress/unstressvn/logs` | Log files |
+| `unstressvn-backups` | `/home/unstress/unstressvn/backups` | Database backups |
+
+> **Chọn Volume Mount** (không phải File Mount hay Directory Mount). Volume Mount tạo Docker named volume, data được giữ lại giữa các lần redeploy.
 
 > **Quan trọng:** Phải thêm volumes **trước khi** deploy lần đầu. Nếu deploy trước rồi thêm volumes sau, data upload sẽ bị mất khi redeploy.
 
@@ -579,7 +606,7 @@ Sau khi đã hoàn thành:
 
 ### Bấm Deploy
 
-Coolify → Application → bấm **Deploy**. Coolify sẽ:
+Coolify → Application → bấm nút **Deploy** (góc trên phải trang). Coolify sẽ:
 1. Clone repo từ Git
 2. Build Docker image (multi-stage: frontend + backend)
 3. Start container
@@ -587,7 +614,7 @@ Coolify → Application → bấm **Deploy**. Coolify sẽ:
 5. Collect static files
 6. Start Gunicorn
 
-Theo dõi quá trình build trong tab **Deployments** → xem logs.
+Theo dõi quá trình build: bấm top tab **Deployments** → chọn deployment → xem build logs.
 
 ### Kiểm tra sau deploy
 
@@ -616,15 +643,16 @@ dig unstressvn.com +short
 
 ### Bước 2: Cấu hình domain trong Coolify
 
-1. Coolify → Application → **Settings**
-2. **Domains**: nhập `https://unstressvn.com,https://www.unstressvn.com`
-3. **SSL**: ✅ bật **Generate SSL** (Let's Encrypt)
+1. Coolify → Application → tab **Configuration** → sidebar **General**
+2. Mục **Domains**: nhập `https://unstressvn.com,https://www.unstressvn.com`
+3. Bấm **Save**
+4. Traefik tự động tạo SSL certificate (Let's Encrypt) khi domain dùng `https://`
 
 > **Với Cloudflare Full (Strict):** Traefik cần có cert hợp lệ. Let's Encrypt qua Coolify hoạt động tốt khi Cloudflare ở mode Full (Strict).
 
 ### Bước 3: Redeploy
 
-Bấm **Redeploy** để Traefik cập nhật routing.
+Bấm nút **Redeploy** (góc trên phải) để Traefik cập nhật routing.
 
 ### Bước 4: Kiểm tra
 
@@ -643,8 +671,8 @@ Nếu thấy `server: cloudflare` → Cloudflare proxy đang hoạt động.
 
 ### Cách 1: Qua Coolify Terminal (khuyến nghị)
 
-1. Coolify → Application → **Terminal** (Execute Command)
-2. Chạy:
+1. Coolify → Application → bấm top tab **Terminal**
+2. Chọn container → bấm **Connect**, rồi chạy:
 ```bash
 python manage.py createsuperuser
 ```
@@ -723,7 +751,7 @@ Vào **Core** → **Site Configuration** → sửa:
 
 ### Bước 3: Restart container
 
-Sau khi sửa SiteConfiguration → Coolify → Application → **Restart**
+Sau khi sửa SiteConfiguration → Coolify → Application → bấm nút **Restart** (góc trên phải, cạnh nút Deploy)
 
 *(Cần restart vì `apply_dynamic_settings()` chỉ chạy khi container khởi động)*
 
@@ -789,9 +817,10 @@ docker exec POSTGRES_CONTAINER_ID pg_dump -U unstressvn unstressvn > backup_$(da
 ### 16.2 Backup qua Coolify
 
 Coolify có tính năng **Backup** cho Database resources:
-1. Coolify → Database → **Backups**
-2. Cấu hình schedule (hàng ngày)
+1. Coolify → Database resource → bấm top tab **Backups**
+2. Cấu hình **Scheduled Backups** (frequency, retention)
 3. Lưu vào S3 hoặc local
+4. Có thể bấm **Backup Now** để backup thủ công
 
 ### 16.3 Backup qua app container
 
@@ -856,7 +885,7 @@ docker exec -i POSTGRES_CONTAINER_ID pg_restore -U unstressvn -d unstressvn --cl
 ### Xem logs
 
 **Qua Coolify:**
-- Application → **Logs** — xem Gunicorn/Django logs realtime
+- Application → top tab **Logs** — xem Gunicorn/Django logs realtime
 
 **Qua SSH:**
 ```bash
@@ -875,9 +904,10 @@ docker logs --tail 100 CONTAINER_ID
 ### Monitoring
 
 Coolify hiển thị:
-- **CPU / Memory usage** của container
-- **Deployment history**
-- **Health check status**
+- **Metrics** (sidebar) — CPU / Memory usage của container
+- **Deployments** (top tab) — Deployment history, build logs
+- **Healthcheck** (sidebar) — Cấu hình và xem health check status
+- **Resource Operations** (sidebar) — Start, Stop, Restart container
 
 ---
 
