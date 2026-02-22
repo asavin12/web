@@ -40,6 +40,7 @@ class StreamMediaAdmin(admin.ModelAdmin):
         'thumbnail_preview', 
         'title', 
         'media_type_badge',
+        'storage_type_badge',
         'language_badge',
         'level',
         'file_size_display', 
@@ -50,7 +51,7 @@ class StreamMediaAdmin(admin.ModelAdmin):
         'actions_column',
     ]
     list_display_links = ['title']
-    list_filter = ['media_type', 'language', 'level', 'is_active', 'is_public', 'category']
+    list_filter = ['media_type', 'storage_type', 'language', 'level', 'is_active', 'is_public', 'category']
     search_fields = ['title', 'description', 'tags']
     prepopulated_fields = {'slug': ('title',)}
     readonly_fields = [
@@ -62,7 +63,13 @@ class StreamMediaAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Thông tin cơ bản', {
-            'fields': ('title', 'slug', 'media_type', 'file', 'thumbnail')
+            'fields': ('title', 'slug', 'media_type', 'storage_type', 'file', 'thumbnail')
+        }),
+        ('Google Drive', {
+            'fields': ('gdrive_url', 'gdrive_file_id'),
+            'classes': ('collapse',),
+            'description': 'Dán link Google Drive vào "GDrive URL" → File ID sẽ tự động trích xuất khi lưu. '
+                           'File phải được chia sẻ "Anyone with the link".'
         }),
         ('Nội dung', {
             'fields': ('description', 'transcript', 'tags')
@@ -113,6 +120,18 @@ class StreamMediaAdmin(admin.ModelAdmin):
             obj.get_media_type_display()
         )
     media_type_badge.short_description = 'Loại'
+    
+    def storage_type_badge(self, obj):
+        colors = {'local': '#607D8B', 'gdrive': '#4285F4'}
+        icons = {'local': '💾', 'gdrive': '☁️'}
+        return format_html(
+            '<span style="background:{};color:white;padding:2px 8px;border-radius:4px;font-size:11px;">'
+            '{} {}</span>',
+            colors.get(obj.storage_type, '#999'),
+            icons.get(obj.storage_type, ''),
+            obj.get_storage_type_display()
+        )
+    storage_type_badge.short_description = 'Lưu trữ'
     
     def language_badge(self, obj):
         colors = {'vi': '#FF5722', 'en': '#2196F3', 'de': '#FFC107', 'all': '#9E9E9E'}

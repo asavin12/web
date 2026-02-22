@@ -80,6 +80,11 @@ class StreamMedia(models.Model):
         ('audio', 'Audio'),
     ]
     
+    STORAGE_TYPE_CHOICES = [
+        ('local', 'Local Storage'),
+        ('gdrive', 'Google Drive'),
+    ]
+    
     LANGUAGE_CHOICES = [
         ('vi', 'Tiếng Việt'),
         ('en', 'Tiếng Anh'),
@@ -102,18 +107,38 @@ class StreamMedia(models.Model):
     title = models.CharField(max_length=255, verbose_name='Tiêu đề')
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     
-    # File
+    # Storage type
+    storage_type = models.CharField(
+        max_length=10, choices=STORAGE_TYPE_CHOICES, default='local',
+        verbose_name='Loại lưu trữ',
+        help_text='local = file trên VPS, gdrive = stream từ Google Drive'
+    )
+    
+    # File (local storage)
     media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES, verbose_name='Loại media')
     file = models.FileField(
         upload_to=get_media_upload_path,
         storage=get_media_storage,
         verbose_name='File media',
+        blank=True,  # Không bắt buộc nếu dùng Google Drive
         validators=[
             FileExtensionValidator(
                 allowed_extensions=['mp4', 'webm', 'ogg', 'mov', 'flv', 'avi', 'm4v',
                                     'mp3', 'wav', 'm4a', 'aac', 'flac', 'wma']
             )
         ]
+    )
+    
+    # Google Drive storage
+    gdrive_file_id = models.CharField(
+        max_length=255, blank=True, default='',
+        verbose_name='Google Drive File ID',
+        help_text='ID file trên Google Drive (lấy từ URL chia sẻ). Để trống nếu dùng local.'
+    )
+    gdrive_url = models.URLField(
+        max_length=500, blank=True, default='',
+        verbose_name='Google Drive URL',
+        help_text='URL chia sẻ Google Drive (tự động trích xuất File ID)'
     )
     
     # File metadata
@@ -204,10 +229,24 @@ class StreamMedia(models.Model):
                 counter += 1
             self.slug = slug
         
+        # Auto-extract Google Drive file ID from URL
+        if self.gdrive_url and not self.gdrive_file_id:
+            self.gdrive_file_id = self._extract_gdrive_id(self.gdrive_url)
+        
+        # Auto-set storage_type
+        if self.gdrive_file_id and not self.file:
+            self.storage_type = 'gdrive'
+        elif self.file and not self.gdrive_file_id:
+            self.storage_type = 'local'
+        
         # Auto-detect mime type
         if self.file and not self.mime_type:
             mime_type, _ = mimetypes.guess_type(self.file.name)
             self.mime_type = mime_type or 'application/octet-stream'
+        
+        # Default mime type for Google Drive video
+        if self.storage_type == 'gdrive' and not self.mime_type:
+            self.mime_type = 'video/mp4' if self.media_type == 'video' else 'audio/mpeg'
         
         # Auto-set file size
         if self.file:
@@ -217,6 +256,26 @@ class StreamMedia(models.Model):
                 pass
         
         super().save(*args, **kwargs)
+    
+    @staticmethod
+    def _extract_gdrive_id(url):
+        """Extract Google Drive file ID from various URL formats"""
+        import re
+        patterns = [
+            # https://drive.google.com/file/d/FILE_ID/view
+            r'/file/d/([a-zA-Z0-9_-]+)',
+            # https://drive.google.com/open?id=FILE_ID
+            r'[?&]id=([a-zA-Z0-9_-]+)',
+            # https://docs.google.com/uc?id=FILE_ID
+            r'uc\?.*id=([a-zA-Z0-9_-]+)',
+            # Direct ID (no URL, just the ID string)
+            r'^([a-zA-Z0-9_-]{20,})$',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+        return ''
     
     def get_stream_url(self):
         """Get secure stream URL"""

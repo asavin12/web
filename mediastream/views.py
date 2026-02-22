@@ -159,7 +159,7 @@ class RangeFileWrapper:
 def stream_media(request, uid):
     """
     Stream media với hỗ trợ HTTP Range (cho seeking video/audio)
-    Hỗ trợ cả local storage và MinIO/S3
+    Hỗ trợ cả local storage, MinIO/S3 và Google Drive
     URL: /media-stream/play/<uid>/
     """
     try:
@@ -175,16 +175,21 @@ def stream_media(request, uid):
     if not media.is_public and not request.user.is_authenticated:
         return HttpResponseForbidden("This content is not public")
     
-    # Check if using MinIO/S3 storage
-    storage = media.file.storage
-    is_s3_storage = hasattr(storage, 'bucket_name')
+    # Google Drive storage
+    if media.storage_type == 'gdrive' and media.gdrive_file_id:
+        return stream_from_gdrive(request, media)
     
-    if is_s3_storage:
-        # MinIO/S3: Redirect to signed URL hoặc proxy stream
-        return stream_from_minio(request, media)
-    else:
-        # Local storage: Stream trực tiếp
-        return stream_from_local(request, media)
+    # Check if using MinIO/S3 storage
+    if media.file:
+        storage = media.file.storage
+        is_s3_storage = hasattr(storage, 'bucket_name')
+        
+        if is_s3_storage:
+            return stream_from_minio(request, media)
+        else:
+            return stream_from_local(request, media)
+    
+    return HttpResponseNotFound("No file available for this media")
 
 
 def stream_from_minio(request, media):
@@ -351,11 +356,88 @@ def stream_from_local(request, media):
     return response
 
 
+def stream_from_gdrive(request, media):
+    """
+    Stream media từ Google Drive qua local cache.
+    
+    Luồng:
+    1. Check cache → nếu có, stream từ cache (giống local)
+    2. Nếu chưa cache → download từ GDrive → cache → stream
+    
+    Hỗ trợ đầy đủ HTTP Range/206 cho video seeking.
+    """
+    from .gdrive import download_to_cache, get_cached_file_size, is_cached
+    
+    file_id = media.gdrive_file_id
+    if not file_id:
+        return HttpResponseNotFound("No Google Drive file ID")
+    
+    # Download to cache if not already cached
+    cache_path = download_to_cache(file_id)
+    if not cache_path:
+        return HttpResponse("Failed to fetch from Google Drive", status=502)
+    
+    try:
+        file_size = os.path.getsize(cache_path)
+    except OSError:
+        return HttpResponseNotFound("Cached file not found")
+    
+    # Get content type
+    content_type = media.mime_type or mimetypes.guess_type(cache_path)[0] or 'application/octet-stream'
+    
+    # Check for Range header (for streaming/seeking)
+    range_header = request.META.get('HTTP_RANGE', '')
+    
+    if range_header:
+        range_match = RANGE_RE.match(range_header)
+        if range_match:
+            first_byte = int(range_match.group(1))
+            last_byte = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+            
+            if first_byte >= file_size:
+                return HttpResponse(status=416)
+            
+            length = last_byte - first_byte + 1
+            
+            file_obj = open(cache_path, 'rb')
+            response = StreamingHttpResponse(
+                RangeFileWrapper(file_obj, offset=first_byte, length=length),
+                status=206,
+                content_type=content_type
+            )
+            response['Content-Length'] = length
+            response['Content-Range'] = f'bytes {first_byte}-{last_byte}/{file_size}'
+        else:
+            response = FileResponse(open(cache_path, 'rb'), content_type=content_type)
+            response['Content-Length'] = file_size
+    else:
+        response = FileResponse(open(cache_path, 'rb'), content_type=content_type)
+        response['Content-Length'] = file_size
+    
+    # Common headers
+    response['Accept-Ranges'] = 'bytes'
+    response['Cache-Control'] = 'public, max-age=86400'
+    
+    # CORS headers
+    origin = request.META.get('HTTP_ORIGIN', '')
+    if origin:
+        parsed_origin = urlparse(origin)
+        origin_domain = parsed_origin.netloc.split(':')[0] if ':' in parsed_origin.netloc else parsed_origin.netloc
+        if any(origin_domain == d or origin_domain.endswith('.' + d) for d in ALLOWED_DOMAINS):
+            response['Access-Control-Allow-Origin'] = origin
+    
+    # Increment view count (only for initial request)
+    if not range_header:
+        media.increment_view()
+    
+    return response
+
+
 @referrer_protected
 @require_GET
 def download_media(request, uid):
     """
-    Download media file
+    Download media file (supports local + Google Drive)
     URL: /media-stream/download/<uid>/
     """
     try:
@@ -370,6 +452,26 @@ def download_media(request, uid):
     if not media.is_public and not request.user.is_authenticated:
         return HttpResponseForbidden("This content is not public")
     
+    # Google Drive: download from cache
+    if media.storage_type == 'gdrive' and media.gdrive_file_id:
+        from .gdrive import download_to_cache
+        cache_path = download_to_cache(media.gdrive_file_id)
+        if not cache_path:
+            return HttpResponse("Failed to fetch from Google Drive", status=502)
+        
+        media.increment_download()
+        
+        ext = os.path.splitext(cache_path)[1] or '.mp4'
+        safe_filename = f"{media.slug}{ext}"
+        
+        response = FileResponse(
+            open(cache_path, 'rb'),
+            as_attachment=True,
+            filename=safe_filename
+        )
+        return response
+    
+    # Local storage
     try:
         file_path = media.file.path
     except (ValueError, FileNotFoundError):
