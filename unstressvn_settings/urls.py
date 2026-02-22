@@ -14,6 +14,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from django.contrib.sitemaps.views import sitemap
+from django.views.static import serve as static_serve
 
 from .spa_views import spa_view, admin_gateway
 from .seo import sitemaps, robots_txt
@@ -60,6 +61,12 @@ urlpatterns = [
     path('media-stream/', include('mediastream.urls')),
     
     # ============================================
+    # MEDIA FILES - Serve user uploads (cả development & production)
+    # Trong production không có nginx, Django tự serve media
+    # ============================================
+    re_path(r'^media/(?P<path>.*)$', static_serve, {'document_root': settings.MEDIA_ROOT}),
+    
+    # ============================================
     # REACT SPA - Frontend Application
     # ============================================
     # Root redirect to SPA
@@ -68,24 +75,4 @@ urlpatterns = [
     # Tất cả routes khác được handle bởi React Router
     re_path(r'^(?P<path>.*)$', spa_view, name='spa_catch_all'),
 ]
-
-# Phục vụ Media files trong development
-if settings.DEBUG:
-    urlpatterns = [
-        # Admin và API trước
-        path('favicon.ico', RedirectView.as_view(url='/static/favicon.svg', permanent=True)),
-        path('admin-gateway/', admin_gateway, name='admin_gateway'),
-        # FileManager phải đứng TRƯỚC admin/ để không bị override
-        path('admin/filemanager/', include('filemanager.urls')),
-        # PostgreSQL Dashboard
-        path('admin/', include('core.admin_urls')),
-        path('admin/', admin.site.urls),
-        path('api/v1/', include('api.urls')),
-        # Media Stream với referrer protection
-        path('media-stream/', include('mediastream.urls')),
-    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
-        # SPA routes cuối cùng
-        path('', spa_view, name='home'),
-        re_path(r'^(?P<path>.*)$', spa_view, name='spa_catch_all'),
-    ]
 
