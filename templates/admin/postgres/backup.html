@@ -96,8 +96,8 @@
             <form id="restoreUploadForm" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 12px;">
                 {% csrf_token %}
                 <div>
-                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Chọn file backup (.sql hoặc .dump):</label>
-                    <input type="file" name="backup_file" id="restoreFile" accept=".sql,.dump"
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Chọn file backup (.sql):</label>
+                    <input type="file" name="backup_file" id="restoreFile" accept=".sql"
                         style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;">
                 </div>
                 <div id="restoreFileInfo" style="display: none; padding: 8px 12px; background: #f0f0f0; border-radius: 4px; font-size: 13px;"></div>
@@ -146,6 +146,39 @@
             {% endif %}
             <div id="restoreServerStatus" style="margin-top: 12px;"></div>
         </div>
+    </div>
+</div>
+
+<!-- Media Files -->
+<div class="module">
+    <h2 style="background: #79aec8;">📁 Media Files</h2>
+    <div style="padding: 15px;">
+        <div style="display: flex; gap: 12px; margin-bottom: 15px; flex-wrap: wrap; align-items: center;">
+            <a href="/admin/postgres/media/download/" class="default"
+               style="display: inline-block; padding: 8px 16px; background: #417690; color: #fff; border-radius: 4px; text-decoration: none; font-size: 13px;">
+                📥 Download media (tar.gz)
+            </a>
+        </div>
+        <div style="padding: 10px 15px; background: #e8f4fd; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #417690;">
+            Upload file <strong>.tar.gz</strong> hoặc <strong>.zip</strong> chứa media files.
+            Cấu trúc bên trong: <code>avatars/</code>, <code>covers/</code>, <code>news/</code>, <code>knowledge/</code>, ...
+        </div>
+        <form id="mediaUploadForm" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 12px;">
+            {% csrf_token %}
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Chọn file media (.tar.gz hoặc .zip):</label>
+                <input type="file" name="media_file" id="mediaFile" accept=".tar.gz,.tgz,.zip"
+                    style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;">
+            </div>
+            <div id="mediaFileInfo" style="display: none; padding: 8px 12px; background: #f0f0f0; border-radius: 4px; font-size: 13px;"></div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button type="submit" id="mediaUploadBtn" class="default" disabled
+                    style="padding: 8px 20px; opacity: 0.5;">
+                    📤 Upload Media
+                </button>
+                <span id="mediaUploadStatus"></span>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -373,5 +406,60 @@ function restoreFromServer(filename) {
         document.querySelectorAll('#restoreServer button').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
     });
 }
+// ============ Media Upload ============
+
+document.getElementById('mediaFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const btn = document.getElementById('mediaUploadBtn');
+    const info = document.getElementById('mediaFileInfo');
+    if (file) {
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        info.style.display = 'block';
+        info.innerHTML = '📄 <strong>' + file.name + '</strong> — ' + sizeMB + ' MB';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    } else {
+        info.style.display = 'none';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+    }
+});
+
+document.getElementById('mediaUploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const fileInput = document.getElementById('mediaFile');
+    if (!fileInput.files[0]) { alert('Vui lòng chọn file media'); return; }
+    if (!confirm('Upload media files?\n\nFile: ' + fileInput.files[0].name + '\nCác file trùng tên sẽ được ghi đè.')) return;
+
+    const btn = document.getElementById('mediaUploadBtn');
+    const status = document.getElementById('mediaUploadStatus');
+    const formData = new FormData();
+    formData.append('media_file', fileInput.files[0]);
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Đang upload...';
+    status.innerHTML = '<span style="color: #856404;">⏳ Đang upload và giải nén media...</span>';
+
+    fetch('/admin/postgres/media/upload/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            status.innerHTML = '<span style="color: green;">✅ ' + data.message + '</span>';
+        } else {
+            status.innerHTML = '<span style="color: red;">❌ ' + data.message + '</span>';
+        }
+    })
+    .catch(err => {
+        status.innerHTML = '<span style="color: red;">❌ Lỗi: ' + err.message + '</span>';
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = '📤 Upload Media';
+    });
+});
 </script>
 {% endblock %}

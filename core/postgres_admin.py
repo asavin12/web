@@ -577,31 +577,33 @@ def delete_backup(request):
 @staff_member_required
 @require_http_methods(["POST"])
 def restore_database(request):
-    """Restore database từ file upload hoặc file trên server"""
-    import subprocess
+    """Restore database từ file SQL upload hoặc file trên server.
+    Sử dụng Django database connection (psycopg2) — không cần psql/pg_restore binary.
+    Hỗ trợ file .sql (plain text SQL dump, data-only hoặc full).
+    """
     import os
+    import io
     import tempfile
+    from django.db import connection
     
     try:
-        # Check if file upload (multipart form)
+        # ── 1. Đọc file ──────────────────────────────────────────────
         if request.FILES.get('backup_file'):
             uploaded_file = request.FILES['backup_file']
             
-            # Validate file extension
-            if not uploaded_file.name.endswith(('.sql', '.dump')):
+            if not uploaded_file.name.endswith('.sql'):
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'Chỉ chấp nhận file .sql hoặc .dump',
+                    'message': 'Chỉ chấp nhận file .sql (plain text SQL dump)',
                 }, status=400)
             
-            # Validate file size (max 500MB)
             if uploaded_file.size > 500 * 1024 * 1024:
                 return JsonResponse({
                     'status': 'error',
                     'message': 'File quá lớn (tối đa 500MB)',
                 }, status=400)
             
-            # Save uploaded file to temp
+            # Save to temp then read
             with tempfile.NamedTemporaryFile(mode='wb', suffix='.sql', delete=False) as tmp:
                 for chunk in uploaded_file.chunks():
                     tmp.write(chunk)
@@ -610,11 +612,10 @@ def restore_database(request):
             filename = uploaded_file.name
             cleanup_after = True
         else:
-            # Restore từ file trên server
             try:
                 data = json.loads(request.body)
                 filename = data.get('filename')
-            except:
+            except Exception:
                 filename = request.POST.get('filename')
             
             if not filename:
@@ -623,10 +624,15 @@ def restore_database(request):
                     'message': 'Thiếu file backup. Vui lòng upload file hoặc chọn file từ server.',
                 }, status=400)
             
+            if not filename.endswith('.sql'):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Chỉ chấp nhận file .sql (plain text SQL dump)',
+                }, status=400)
+            
             backup_dir = os.path.join(settings.BASE_DIR, 'backups')
             filepath = os.path.join(backup_dir, filename)
             
-            # Kiểm tra path traversal
             if not os.path.abspath(filepath).startswith(os.path.abspath(backup_dir)):
                 return JsonResponse({
                     'status': 'error',
@@ -641,74 +647,256 @@ def restore_database(request):
             
             cleanup_after = False
         
-        db_config = settings.DATABASES['default']
+        # ── 2. Đọc nội dung SQL ──────────────────────────────────────
+        with open(filepath, 'r', encoding='utf-8') as f:
+            sql_content = f.read()
         
-        # Set PGPASSWORD
-        env = os.environ.copy()
-        env['PGPASSWORD'] = db_config.get('PASSWORD', '')
-        
-        # Choose restore command based on file extension
-        if filepath.endswith('.dump'):
-            # Custom format → pg_restore
-            cmd = [
-                'pg_restore',
-                '-h', db_config.get('HOST', 'localhost'),
-                '-p', str(db_config.get('PORT', '5432')),
-                '-U', db_config.get('USER', 'postgres'),
-                '-d', db_config.get('NAME', 'unstressvn'),
-                '--clean', '--no-owner', '--no-privileges',
-                '--no-password',
-                filepath,
-            ]
-        else:
-            # SQL plain text → psql
-            cmd = [
-                'psql',
-                '-h', db_config.get('HOST', 'localhost'),
-                '-p', str(db_config.get('PORT', '5432')),
-                '-U', db_config.get('USER', 'postgres'),
-                '-d', db_config.get('NAME', 'unstressvn'),
-                '-f', filepath,
-                '--no-password',
-            ]
-        
-        result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=600)
-        
-        # Cleanup temp file if uploaded
         if cleanup_after and os.path.exists(filepath):
             os.unlink(filepath)
         
-        if result.returncode == 0:
-            warning_msg = ''
-            if result.stderr and ('ERROR' not in result.stderr):
-                warning_msg = ' (có một số notice/warning, điều này bình thường)'
-            return JsonResponse({
-                'status': 'success',
-                'message': f'Restore thành công từ {filename}!{warning_msg} Hãy restart container để load lại cấu hình.',
-            })
-        else:
-            # psql often returns 0 even with some errors; pg_restore returns non-zero
-            # Check if stderr contains actual errors vs just notices
-            stderr = result.stderr or ''
-            error_lines = [l for l in stderr.split('\n') if 'ERROR' in l]
-            if not error_lines and result.returncode <= 1:
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f'Restore hoàn tất từ {filename} (có warnings nhưng không ảnh hưởng). Hãy restart container.',
-                })
+        # ── 3. Thực thi SQL qua Django connection (psycopg2) ─────────
+        lines = sql_content.split('\n')
+        errors = []
+        warnings = []
+        success_count = 0
+        copy_count = 0
+        skipped_count = 0
+        
+        # Các lệnh DDL cần bỏ qua (khi restore data-only vào DB đã có schema từ migrations)
+        skip_prefixes = (
+            'CREATE TABLE ', 'CREATE INDEX ', 'CREATE UNIQUE INDEX ',
+            'CREATE SEQUENCE ', 'ALTER TABLE ', 'ALTER SEQUENCE ',
+            'DROP TABLE ', 'DROP INDEX ', 'DROP SEQUENCE ',
+            'CREATE TRIGGER ', 'CREATE EXTENSION ', 'CREATE TYPE ',
+            'SELECT pg_catalog.', 'REVOKE ', 'GRANT ',
+        )
+        
+        # psql meta-commands cần bỏ qua
+        meta_commands = ('\\connect', '\\restrict', '\\.')
+        
+        with connection.cursor() as cursor:
+            # Tắt triggers/FK constraints trong quá trình import
+            cursor.execute("SET session_replication_role = 'replica';")
+            
+            i = 0
+            while i < len(lines):
+                line = lines[i]
+                stripped = line.strip()
+                
+                # Bỏ qua dòng trống, comment, meta-commands
+                if not stripped or stripped.startswith('--') or stripped.startswith('\\'):
+                    i += 1
+                    continue
+                
+                # Bỏ qua các lệnh DDL
+                upper = stripped.upper()
+                if any(upper.startswith(prefix) for prefix in skip_prefixes):
+                    # Đọc hết lệnh multi-line (kết thúc bằng ;)
+                    while i < len(lines) and not lines[i].rstrip().endswith(';'):
+                        i += 1
+                    i += 1
+                    skipped_count += 1
+                    continue
+                
+                # ── Xử lý COPY block ──
+                if upper.startswith('COPY ') and 'FROM stdin' in stripped:
+                    copy_header = stripped
+                    i += 1
+                    
+                    # Thu thập data lines cho đến \.
+                    data_lines = []
+                    while i < len(lines):
+                        if lines[i].strip() == '\\.':
+                            i += 1
+                            break
+                        data_lines.append(lines[i])
+                        i += 1
+                    
+                    if data_lines:
+                        data_text = '\n'.join(data_lines) + '\n'
+                        try:
+                            cursor.copy_expert(copy_header, io.StringIO(data_text))
+                            copy_count += 1
+                            success_count += len(data_lines)
+                        except Exception as e:
+                            err_msg = str(e)
+                            # Nếu lỗi duplicate key → bỏ qua, thêm warning
+                            if 'duplicate key' in err_msg.lower():
+                                # Reset connection state after error
+                                connection.connection.rollback()
+                                cursor.execute("SET session_replication_role = 'replica';")
+                                table_name = copy_header.split('(')[0].replace('COPY ', '').strip()
+                                warnings.append(f'Bảng {table_name}: dữ liệu đã tồn tại, bỏ qua')
+                            else:
+                                connection.connection.rollback()
+                                cursor.execute("SET session_replication_role = 'replica';")
+                                errors.append(f'COPY error: {err_msg[:200]}')
+                    continue
+                
+                # ── Xử lý SET, SELECT setval, và các lệnh thông thường ──
+                if upper.startswith('SET ') or upper.startswith('SELECT '):
+                    # Gom lệnh multi-line
+                    stmt = stripped
+                    while not stmt.rstrip().endswith(';') and i + 1 < len(lines):
+                        i += 1
+                        stmt += ' ' + lines[i].strip()
+                    
+                    try:
+                        cursor.execute(stmt)
+                        success_count += 1
+                    except Exception as e:
+                        err_msg = str(e)
+                        if 'does not exist' not in err_msg:
+                            warnings.append(f'SQL warning: {err_msg[:150]}')
+                        connection.connection.rollback()
+                        cursor.execute("SET session_replication_role = 'replica';")
+                    i += 1
+                    continue
+                
+                # Các lệnh khác → bỏ qua
+                i += 1
+                skipped_count += 1
+            
+            # Bật lại triggers/FK
+            try:
+                cursor.execute("SET session_replication_role = 'origin';")
+            except Exception:
+                pass
+            
+            # Update sequences cho tất cả bảng có id
+            try:
+                cursor.execute("""
+                    DO $$
+                    DECLARE r RECORD;
+                    BEGIN
+                        FOR r IN (
+                            SELECT c.relname AS table_name, a.attname AS column_name
+                            FROM pg_class c
+                            JOIN pg_attribute a ON a.attrelid = c.oid
+                            JOIN pg_attrdef d ON d.adrelid = c.oid AND d.adnum = a.attnum
+                            WHERE c.relkind = 'r'
+                              AND pg_get_expr(d.adbin, d.adrelid) LIKE 'nextval%%'
+                              AND c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+                        ) LOOP
+                            EXECUTE format(
+                                'SELECT setval(pg_get_serial_sequence(%%L, %%L), COALESCE(MAX(%I), 1)) FROM %I',
+                                r.table_name, r.column_name, r.column_name, r.table_name
+                            );
+                        END LOOP;
+                    END $$;
+                """)
+            except Exception as e:
+                warnings.append(f'Sequence update warning: {str(e)[:150]}')
+        
+        # ── 4. Kết quả ───────────────────────────────────────────────
+        summary_parts = []
+        if copy_count:
+            summary_parts.append(f'{copy_count} bảng')
+        if success_count:
+            summary_parts.append(f'{success_count} dòng dữ liệu')
+        if skipped_count:
+            summary_parts.append(f'{skipped_count} lệnh DDL bỏ qua')
+        
+        summary = ', '.join(summary_parts) if summary_parts else 'không có dữ liệu'
+        
+        if errors:
             return JsonResponse({
                 'status': 'error',
-                'message': f'Lỗi restore: {stderr[:500]}',
+                'message': f'Restore có lỗi ({summary}): {"; ".join(errors[:5])}',
             }, status=500)
-            
-    except subprocess.TimeoutExpired:
+        
+        warning_text = ''
+        if warnings:
+            warning_text = f' Warnings: {"; ".join(warnings[:5])}'
+        
         return JsonResponse({
-            'status': 'error',
-            'message': 'Restore timeout (> 10 phút)',
-        }, status=500)
+            'status': 'success',
+            'message': f'Restore thành công từ {filename}! ({summary}){warning_text} Hãy restart container để load lại cấu hình.',
+        })
+        
     except Exception as e:
         return JsonResponse({
             'status': 'error',
             'message': f'Lỗi: {str(e)}',
         }, status=500)
+
+
+@staff_member_required
+@require_http_methods(["GET"])
+def download_media(request):
+    """Tải xuống toàn bộ media dưới dạng tar.gz"""
+    import tarfile
+    import io
+    import os
+    
+    media_root = settings.MEDIA_ROOT
+    if not os.path.exists(media_root):
+        return JsonResponse({'status': 'error', 'message': 'MEDIA_ROOT không tồn tại'}, status=404)
+    
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode='w:gz') as tar:
+        for root, dirs, files in os.walk(media_root):
+            for f in files:
+                full_path = os.path.join(root, f)
+                arcname = os.path.relpath(full_path, media_root)
+                tar.add(full_path, arcname=arcname)
+    
+    buf.seek(0)
+    response = HttpResponse(buf.read(), content_type='application/gzip')
+    response['Content-Disposition'] = 'attachment; filename="media_backup.tar.gz"'
+    return response
+
+
+@staff_member_required
+@require_http_methods(["POST"])
+def upload_media(request):
+    """Upload media tar.gz/zip và giải nén vào MEDIA_ROOT"""
+    import tarfile
+    import zipfile
+    import io
+    import os
+    import tempfile
+    
+    uploaded_file = request.FILES.get('media_file')
+    if not uploaded_file:
+        return JsonResponse({'status': 'error', 'message': 'Thiếu file media'}, status=400)
+    
+    if uploaded_file.size > 500 * 1024 * 1024:
+        return JsonResponse({'status': 'error', 'message': 'File quá lớn (tối đa 500MB)'}, status=400)
+    
+    media_root = settings.MEDIA_ROOT
+    os.makedirs(media_root, exist_ok=True)
+    
+    file_count = 0
+    name = uploaded_file.name.lower()
+    
+    try:
+        if name.endswith('.tar.gz') or name.endswith('.tgz'):
+            data = io.BytesIO(uploaded_file.read())
+            with tarfile.open(fileobj=data, mode='r:gz') as tar:
+                # Kiểm tra path traversal
+                for member in tar.getmembers():
+                    target = os.path.join(media_root, member.name)
+                    if not os.path.abspath(target).startswith(os.path.abspath(media_root)):
+                        return JsonResponse({'status': 'error', 'message': f'Path traversal detected: {member.name}'}, status=400)
+                tar.extractall(path=media_root)
+                file_count = sum(1 for m in tar.getmembers() if m.isfile())
+        elif name.endswith('.zip'):
+            data = io.BytesIO(uploaded_file.read())
+            with zipfile.ZipFile(data) as zf:
+                for zi in zf.infolist():
+                    target = os.path.join(media_root, zi.filename)
+                    if not os.path.abspath(target).startswith(os.path.abspath(media_root)):
+                        return JsonResponse({'status': 'error', 'message': f'Path traversal detected: {zi.filename}'}, status=400)
+                zf.extractall(path=media_root)
+                file_count = sum(1 for zi in zf.infolist() if not zi.is_dir())
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Chỉ chấp nhận file .tar.gz, .tgz hoặc .zip'}, status=400)
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Upload media thành công! {file_count} files đã được giải nén vào {media_root}',
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Lỗi giải nén: {str(e)}'}, status=500)
 

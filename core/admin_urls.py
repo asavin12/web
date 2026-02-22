@@ -19,4 +19,6 @@ urlpatterns = [
     path('postgres/backup/', postgres_admin.backup_database, name='postgres_backup'),
     path('postgres/backup/delete/', postgres_admin.delete_backup, name='postgres_delete_backup'),
     path('postgres/restore/', postgres_admin.restore_database, name='postgres_restore'),
+    path('postgres/media/download/', postgres_admin.download_media, name='postgres_media_download'),
+    path('postgres/media/upload/', postgres_admin.upload_media, name='postgres_media_upload'),
 ]
