@@ -12,6 +12,54 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 
 
+class PublicMediaMiddleware:
+    """
+    Strip security headers từ /media/ responses để media files public và SEO-friendly.
+    
+    Phải đặt ĐẦU TIÊN trong MIDDLEWARE list để xử lý response CUỐI CÙNG,
+    sau khi tất cả middleware khác đã thêm headers.
+    
+    Giải quyết các vấn đề:
+    - X-Frame-Options: DENY → chặn OG image / social media embed
+    - Set-Cookie → Cloudflare không cache (cf-cache-status: BYPASS)
+    - Cross-Origin-Opener-Policy → chặn cross-origin access
+    - Vary: Accept-Language → cache fragmentation
+    - Content-Language → không cần cho media files
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        # Chỉ xử lý cho /media/ path và response thành công
+        if not request.path.startswith('/media/') or response.status_code != 200:
+            return response
+
+        # Xóa security headers không phù hợp cho public media
+        headers_to_remove = [
+            'X-Frame-Options',
+            'Content-Security-Policy',
+            'Cross-Origin-Opener-Policy',
+            'Cross-Origin-Embedder-Policy',
+            'Cross-Origin-Resource-Policy',
+            'Content-Disposition',
+            'Content-Language',
+            'Vary',
+            'Set-Cookie',
+        ]
+        for header in headers_to_remove:
+            if header in response:
+                del response[header]
+
+        # Thêm headers cho public caching và CDN
+        response['Cache-Control'] = 'public, max-age=31536000, immutable'
+        response['Access-Control-Allow-Origin'] = '*'
+
+        return response
+
+
 class Custom404Middleware:
     """
     Middleware để hiển thị trang 404 custom cho toàn bộ website.

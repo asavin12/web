@@ -118,6 +118,7 @@ INSTALLED_APPS = [
 # MIDDLEWARE
 # =============================================
 MIDDLEWARE = [
+    'unstressvn_settings.middleware.PublicMediaMiddleware',  # Public media headers — must be FIRST
     'corsheaders.middleware.CorsMiddleware',  # CORS — must be before CommonMiddleware
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Serve static files in production
