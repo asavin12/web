@@ -11,7 +11,20 @@ KIẾN TRÚC CẤU HÌNH:
 """
 
 import os
+import mimetypes
 from pathlib import Path
+
+# =============================================
+# MIME TYPES — Đảm bảo đúng trong Docker slim
+# python:3.12-slim thiếu /etc/mime.types
+# Cần đăng ký trước khi Django serve media files
+# =============================================
+mimetypes.add_type('image/webp', '.webp')
+mimetypes.add_type('image/svg+xml', '.svg')
+mimetypes.add_type('image/avif', '.avif')
+mimetypes.add_type('font/woff', '.woff')
+mimetypes.add_type('font/woff2', '.woff2')
+mimetypes.add_type('application/javascript', '.mjs')
 
 # Đường dẫn gốc của project
 BASE_DIR = Path(__file__).resolve().parent.parent
