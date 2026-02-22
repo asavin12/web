@@ -107,6 +107,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # CORS — must be before CommonMiddleware
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Serve static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',  # Đa ngôn ngữ
     'unstressvn_settings.middleware.AdminVietnameseMiddleware',
@@ -216,6 +217,7 @@ STATICFILES_DIRS = [
     BASE_DIR / 'frontend' / 'dist',  # React SPA build output
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 FRONTEND_DIR = BASE_DIR / 'frontend' / 'dist'
 
 MEDIA_URL = '/media/'
