@@ -9,16 +9,17 @@
 5. [Tích hợp Cloudflare](#5-tích-hợp-cloudflare)
 6. [Tạo PostgreSQL trên Coolify](#6-tạo-postgresql-trên-coolify)
 7. [Push project lên Git](#7-push-project-lên-git)
-8. [Deploy ứng dụng trên Coolify](#8-deploy-ứng-dụng-trên-coolify)
+8. [Tạo Application trên Coolify](#8-tạo-application-trên-coolify)
 9. [Cấu hình Environment Variables](#9-cấu-hình-environment-variables)
-10. [Cấu hình Domain & SSL qua Cloudflare](#10-cấu-hình-domain--ssl-qua-cloudflare)
-11. [Cấu hình SiteConfiguration](#11-cấu-hình-siteconfiguration)
-12. [Persistent Storage (Volumes)](#12-persistent-storage-volumes)
+10. [Persistent Storage (Volumes)](#10-persistent-storage-volumes)
+11. [Deploy lần đầu](#11-deploy-lần-đầu)
+12. [Cấu hình Domain & SSL](#12-cấu-hình-domain--ssl)
 13. [Tạo Superuser](#13-tạo-superuser)
-14. [Auto Deploy (CI/CD)](#14-auto-deploy-cicd)
-15. [Backup Database](#15-backup-database)
-16. [Monitoring & Logs](#16-monitoring--logs)
-17. [Troubleshooting](#17-troubleshooting)
+14. [Cấu hình SiteConfiguration](#14-cấu-hình-siteconfiguration)
+15. [Auto Deploy (CI/CD)](#15-auto-deploy-cicd)
+16. [Backup & Restore Database](#16-backup--restore-database)
+17. [Monitoring & Logs](#17-monitoring--logs)
+18. [Troubleshooting](#18-troubleshooting)
 
 ---
 
@@ -356,16 +357,49 @@ Cloudflare → **Rules** → **Page Rules**:
 | `unstressvn.com/media/*` | Cache Level: **Cache Everything**, Edge Cache TTL: **7 days** |
 | `unstressvn.com/api/*` | Cache Level: **Bypass** |
 
-### 5.8 Cấu hình Coolify cho Cloudflare
+### 5.8 Cấu hình Traefik trusted IPs cho Cloudflare
 
-Trong Coolify, khi dùng Cloudflare Proxy, cần cấu hình Traefik tin tưởng Cloudflare IP:
+Khi Cloudflare Proxy bật, IP client thực sẽ nằm trong header `X-Forwarded-For` / `CF-Connecting-IP`. Traefik cần được cấu hình **trusted IPs** để nhận đúng IP client thay vì IP Cloudflare.
 
-1. Coolify Dashboard → **Settings** → **Configuration**
-2. Trong **Proxy Settings**, thêm trusted IPs của Cloudflare
+#### Bước 1: Sửa docker-compose của proxy
 
-Hoặc trong application settings, đảm bảo:
-- **Force HTTPS**: ✅ ON
-- Domain format: `https://unstressvn.com` (không phải http)
+```bash
+ssh -p 1992 root@45.88.223.89
+nano /data/coolify/proxy/docker-compose.yml
+```
+
+Trong phần `command:` của service `traefik`, thêm 2 dòng sau (cuối danh sách command):
+
+```yaml
+      - '--entrypoints.http.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22'
+      - '--entrypoints.https.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22'
+```
+
+> **Danh sách IP Cloudflare:** lấy từ [cloudflare.com/ips-v4](https://www.cloudflare.com/ips-v4/). Kiểm tra định kỳ xem có thay đổi không.
+
+#### Bước 2: Restart Traefik
+
+```bash
+cd /data/coolify/proxy
+docker compose down && docker compose up -d
+```
+
+#### Bước 3: Kiểm tra
+
+```bash
+# Exec vào proxy container
+docker exec -it coolify-proxy sh
+
+# Kiểm tra config đã load
+wget -qO- http://localhost:8080/api/entrypoints 2>/dev/null | grep -o 'trustedIPs' && echo "OK"
+```
+
+#### Lưu ý
+
+- Trong Coolify Application settings, đảm bảo:
+  - **Force HTTPS**: ✅ ON
+  - Domain format: `https://unstressvn.com` (không phải http)
+- Django nhận IP client đúng nhờ `SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` (tự bật khi `debug_mode=off` — xem `core/config.py`)
 
 ---
 
@@ -385,22 +419,22 @@ Coolify tự tạo database với thông tin ngẫu nhiên. Sửa lại:
 |-------|---------|
 | **Database Name** | `unstressvn` |
 | **Username** | `unstressvn` |
-| **Password** | *(để Coolify tự generate hoặc nhập mật khẩu mạnh)* |
+| **Password** | `hs22JpKMFSOWmyfiJEmZ4RzZSeAg5ERAzR1CtWj2tQ8ThmluCrLTBGZTKwXZEPbS` |
 
-### Bước 3: Lưu lại Connection String
+### Bước 3: Start Database
+
+Bấm **Deploy** / **Start** để khởi động PostgreSQL.
+
+### Bước 4: Lưu lại Connection String
 
 Coolify hiển thị **Internal URL** dạng:
 ```
-postgresql://unstressvn:PASSWORD@PROJECT_UUID-db:5432/unstressvn
+postgresql://unstressvn:hs22JpKMFSOWmyfiJEmZ4RzZSeAg5ERAzR1CtWj2tQ8ThmluCrLTBGZTKwXZEPbS@PROJECT_UUID-db:5432/unstressvn
 ```
 
-**Ghi nhớ URL này** — dùng làm `DATABASE_URL` cho app ở bước 9.
+**Ghi nhớ URL này** — dùng làm `DATABASE_URL` cho app ở bước 9. Thay `PROJECT_UUID-db` bằng hostname thực tế mà Coolify hiển thị.
 
 > **Quan trọng:** Dùng **Internal URL** (không phải Public URL) vì app và DB cùng Docker network.
-
-### Bước 4: Start Database
-
-Bấm **Deploy** / **Start** để khởi động PostgreSQL.
 
 ---
 
@@ -460,7 +494,7 @@ git push -u origin main
 
 ---
 
-## 8. Deploy ứng dụng trên Coolify
+## 8. Tạo Application trên Coolify
 
 ### Bước 1: Kết nối Git
 
@@ -471,7 +505,7 @@ git push -u origin main
 ### Bước 2: Tạo Application
 
 1. Vào **Project** → **+ New** → **Application**
-2. Chọn **Git** source → chọn repo `unstressvn`
+2. Chọn **Git** source → chọn repo `web`
 3. Branch: `main`
 
 ### Bước 3: Cấu hình Build
@@ -484,9 +518,7 @@ Coolify tự detect `Dockerfile`. Kiểm tra:
 | **Dockerfile Location** | `/Dockerfile` |
 | **Port** | `8000` |
 
-### Bước 4: Deploy lần đầu
-
-**CHƯA bấm Deploy** — cần cấu hình Environment Variables trước (bước 9).
+> **CHƯA bấm Deploy** — cần cấu hình Environment Variables (bước 9) và Volumes (bước 10) trước.
 
 ---
 
@@ -498,12 +530,12 @@ Trong Coolify → Application → **Environment Variables**:
 
 | Variable | Giá trị | Mô tả |
 |----------|---------|--------|
-| `DATABASE_URL` | `postgresql://unstressvn:PASSWORD@HOSTNAME:5432/unstressvn` | Internal URL từ bước 6.3 |
+| `DATABASE_URL` | `postgresql://unstressvn:hs22JpKMFSOWmyfiJEmZ4RzZSeAg5ERAzR1CtWj2tQ8ThmluCrLTBGZTKwXZEPbS@HOSTNAME:5432/unstressvn` | Internal URL từ bước 6.4, thay `HOSTNAME` bằng hostname thực |
 | `DB_HOST` | *(hostname từ DATABASE_URL)* | Hostname PostgreSQL |
 | `DB_PORT` | `5432` | Port database |
 | `DB_NAME` | `unstressvn` | Tên database |
 | `DB_USER` | `unstressvn` | User database |
-| `DB_PASSWORD` | *(password từ bước 6)* | Password database |
+| `DB_PASSWORD` | `hs22JpKMFSOWmyfiJEmZ4RzZSeAg5ERAzR1CtWj2tQ8ThmluCrLTBGZTKwXZEPbS` | Password database |
 
 > **Mẹo:** Coolify hỗ trợ liên kết biến giữa các service. Có thể link trực tiếp đến database resource thay vì nhập thủ công.
 
@@ -515,12 +547,39 @@ Trong Coolify → Application → **Environment Variables**:
 
 ### Lưu ý
 
-- Tất cả cấu hình khác (DEBUG, ALLOWED_HOSTS, CORS, SMTP, v.v.) được quản lý qua **SiteConfiguration** trong Django Admin (bước 11) — không cần set env vars.
+- Tất cả cấu hình khác (DEBUG, ALLOWED_HOSTS, CORS, SMTP, v.v.) được quản lý qua **SiteConfiguration** trong Django Admin (bước 14) — không cần set env vars.
 - `docker-entrypoint.sh` hỗ trợ cả `DATABASE_URL` và `DB_*` riêng lẻ.
+
+---
+
+## 10. Persistent Storage (Volumes)
+
+Container mặc định **mất data** khi redeploy. Cần mount volumes **trước khi deploy lần đầu**.
+
+### Cấu hình trong Coolify
+
+Coolify → Application → **Storages** → thêm:
+
+| Container Path | Mô tả |
+|----------------|--------|
+| `/home/unstress/unstressvn/media` | Ảnh upload, covers, avatars |
+| `/home/unstress/unstressvn/logs` | Log files |
+| `/home/unstress/unstressvn/backups` | Database backups |
+
+> **Quan trọng:** Phải thêm volumes **trước khi** deploy lần đầu. Nếu deploy trước rồi thêm volumes sau, data upload sẽ bị mất khi redeploy.
+
+---
+
+## 11. Deploy lần đầu
+
+Sau khi đã hoàn thành:
+- ✅ Tạo Application (bước 8)
+- ✅ Set Environment Variables (bước 9)
+- ✅ Thêm Persistent Volumes (bước 10)
 
 ### Bấm Deploy
 
-Sau khi set env vars → bấm **Deploy**. Coolify sẽ:
+Coolify → Application → bấm **Deploy**. Coolify sẽ:
 1. Clone repo từ Git
 2. Build Docker image (multi-stage: frontend + backend)
 3. Start container
@@ -530,13 +589,26 @@ Sau khi set env vars → bấm **Deploy**. Coolify sẽ:
 
 Theo dõi quá trình build trong tab **Deployments** → xem logs.
 
+### Kiểm tra sau deploy
+
+```bash
+ssh -p 1992 root@45.88.223.89
+
+# Xem containers đang chạy
+docker ps
+
+# Kiểm tra logs container
+docker logs --tail 50 CONTAINER_ID
+```
+
+Tìm dòng `Starting Gunicorn on port 8000...` trong logs → deploy thành công.
+
 ---
 
-## 10. Cấu hình Domain & SSL qua Cloudflare
+## 12. Cấu hình Domain & SSL
 
-### Bước 1: DNS đã trỏ (bước 5.3)
+### Bước 1: Kiểm tra DNS (đã trỏ ở bước 5.3)
 
-Đã thực hiện ở bước 5.3. Kiểm tra:
 ```bash
 dig unstressvn.com +short
 # Phải trả về IP Cloudflare (vì Proxied), KHÔNG phải IP VPS
@@ -567,75 +639,9 @@ Nếu thấy `server: cloudflare` → Cloudflare proxy đang hoạt động.
 
 ---
 
-## 11. Cấu hình SiteConfiguration
-
-Sau khi deploy thành công, truy cập **Django Admin**:
-
-### Bước 1: Truy cập Admin
-
-Mở: `https://unstressvn.com/admin/`
-
-*(Cần tạo superuser trước — xem bước 13)*
-
-### Bước 2: Cập nhật SiteConfiguration
-
-Vào **Core** → **Site Configuration** → sửa:
-
-#### Bắt buộc
-
-| Field | Giá trị |
-|-------|---------|
-| **Debug mode** | ❌ **Tắt** |
-| **Maintenance mode** | ❌ Tắt |
-| **Allowed hosts** | `unstressvn.com,www.unstressvn.com` |
-| **CSRF trusted origins** | `https://unstressvn.com,https://www.unstressvn.com` |
-| **CORS allowed origins** | `https://unstressvn.com,https://www.unstressvn.com` |
-
-#### Email (tùy chọn)
-
-| Field | Giá trị |
-|-------|---------|
-| SMTP Host | `smtp.gmail.com` |
-| SMTP Port | `587` |
-| SMTP Username | `unstressvn@gmail.com` |
-| SMTP Password | App password từ Google |
-
-#### Khác (tùy chọn)
-
-| Field | Giá trị |
-|-------|---------|
-| YouTube API Key | Key từ Google Cloud Console |
-| Social Media URLs | Facebook, YouTube links |
-
-### Bước 3: Restart container
-
-Sau khi sửa SiteConfiguration → Coolify → Application → **Restart**
-
-*(Cần restart vì `apply_dynamic_settings()` chỉ chạy khi container khởi động)*
-
----
-
-## 12. Persistent Storage (Volumes)
-
-Container mặc định **mất data** khi redeploy. Cần mount volumes:
-
-### Cấu hình trong Coolify
-
-Coolify → Application → **Storages** → thêm:
-
-| Container Path | Mô tả |
-|----------------|--------|
-| `/home/unstress/unstressvn/media` | Ảnh upload, covers, avatars |
-| `/home/unstress/unstressvn/logs` | Log files |
-| `/home/unstress/unstressvn/backups` | Database backups |
-
-> **Quan trọng:** Thêm volumes **trước khi** upload media content. Nếu đã deploy, thêm volumes → **Redeploy**.
-
----
-
 ## 13. Tạo Superuser
 
-### Cách 1: Qua Coolify Terminal
+### Cách 1: Qua Coolify Terminal (khuyến nghị)
 
 1. Coolify → Application → **Terminal** (Execute Command)
 2. Chạy:
@@ -675,7 +681,57 @@ python manage.py createsuperuser --noinput
 
 ---
 
-## 14. Auto Deploy (CI/CD)
+## 14. Cấu hình SiteConfiguration
+
+Sau khi deploy thành công và đã tạo superuser, truy cập **Django Admin** để cấu hình ứng dụng.
+
+### Bước 1: Truy cập Admin
+
+Mở: `https://unstressvn.com/admin/`
+
+Đăng nhập bằng superuser đã tạo ở bước 13.
+
+### Bước 2: Cập nhật SiteConfiguration
+
+Vào **Core** → **Site Configuration** → sửa:
+
+#### Bắt buộc
+
+| Field | Giá trị |
+|-------|---------|
+| **Debug mode** | ❌ **Tắt** |
+| **Maintenance mode** | ❌ Tắt |
+| **Allowed hosts** | `unstressvn.com,www.unstressvn.com` |
+| **CSRF trusted origins** | `https://unstressvn.com,https://www.unstressvn.com` |
+| **CORS allowed origins** | `https://unstressvn.com,https://www.unstressvn.com` |
+
+#### Email (tùy chọn)
+
+| Field | Giá trị |
+|-------|---------|
+| SMTP Host | `smtp.gmail.com` |
+| SMTP Port | `587` |
+| SMTP Username | `unstressvn@gmail.com` |
+| SMTP Password | App password từ Google |
+
+#### Khác (tùy chọn)
+
+| Field | Giá trị |
+|-------|---------|
+| YouTube API Key | Key từ Google Cloud Console |
+| Social Media URLs | Facebook, YouTube links |
+
+### Bước 3: Restart container
+
+Sau khi sửa SiteConfiguration → Coolify → Application → **Restart**
+
+*(Cần restart vì `apply_dynamic_settings()` chỉ chạy khi container khởi động)*
+
+> **Khi debug_mode tắt**, Django tự động bật: SECURE_SSL_REDIRECT, HSTS, SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE, X_FRAME_OPTIONS='DENY' (xem `core/config.py`).
+
+---
+
+## 15. Auto Deploy (CI/CD)
 
 ### Webhook tự động
 
@@ -716,9 +772,9 @@ Coolify nhận webhook:
 
 ---
 
-## 15. Backup Database
+## 16. Backup & Restore Database
 
-### Backup thủ công qua SSH
+### 16.1 Backup thủ công qua SSH
 
 ```bash
 ssh -p 1992 root@45.88.223.89
@@ -726,26 +782,76 @@ ssh -p 1992 root@45.88.223.89
 # Tìm container PostgreSQL
 docker ps | grep postgres
 
-# Backup
+# Backup SQL
 docker exec POSTGRES_CONTAINER_ID pg_dump -U unstressvn unstressvn > backup_$(date +%Y%m%d).sql
 ```
 
-### Backup qua Coolify
+### 16.2 Backup qua Coolify
 
 Coolify có tính năng **Backup** cho Database resources:
 1. Coolify → Database → **Backups**
 2. Cấu hình schedule (hàng ngày)
 3. Lưu vào S3 hoặc local
 
-### Backup qua app container
+### 16.3 Backup qua app container
 
 ```bash
 docker exec CONTAINER_ID python manage.py dumpdata --natural-foreign --natural-primary -o /home/unstress/unstressvn/backups/backup.json
 ```
 
+### 16.4 Restore dữ liệu mẫu lên Coolify
+
+Sau khi deploy lần đầu, bạn có thể restore database đã có sẵn dữ liệu mẫu và cấu hình production.
+
+**File backup sẵn có (trên máy dev):**
+- `backups/unstressvn_production_20260221_234153.sql` — SQL thuần (566KB, dùng `psql`)
+- `backups/unstressvn_production_20260221_234143.dump` — Custom format (221KB, dùng `pg_restore`)
+
+> **Lưu ý:** Các file backup nằm trong `.gitignore` nên không có trong Git repo. Cần copy thủ công lên VPS.
+
+**Dữ liệu bao gồm:**
+- 27 bài News + 42 bài Knowledge + 39 Tools
+- 3 Flashcard Decks + 25 Flashcards
+- 19 Navigation Links
+- SiteConfiguration đã cấu hình cho `unstressvn.com` (debug=off, HTTPS, CORS)
+- 1 Superuser: `admin`
+
+#### Bước 1: Copy file backup lên VPS
+
+```bash
+# Từ máy dev, scp file SQL lên VPS
+scp -P 1992 backups/unstressvn_production_20260221_234153.sql root@45.88.223.89:/tmp/
+```
+
+#### Bước 2: Restore bằng SQL (khuyến nghị)
+
+```bash
+ssh -p 1992 root@45.88.223.89
+
+# Copy file SQL vào container PostgreSQL
+docker cp /tmp/unstressvn_production_20260221_234153.sql POSTGRES_CONTAINER_ID:/tmp/
+
+# Restore (sẽ xoá data cũ và import mới)
+docker exec -i POSTGRES_CONTAINER_ID psql -U unstressvn -d unstressvn -f /tmp/unstressvn_production_20260221_234153.sql
+```
+
+#### Hoặc: Restore bằng pg_restore
+
+```bash
+scp -P 1992 backups/unstressvn_production_20260221_234143.dump root@45.88.223.89:/tmp/
+
+ssh -p 1992 root@45.88.223.89
+
+docker cp /tmp/unstressvn_production_20260221_234143.dump POSTGRES_CONTAINER_ID:/tmp/
+
+docker exec -i POSTGRES_CONTAINER_ID pg_restore -U unstressvn -d unstressvn --clean --no-owner /tmp/unstressvn_production_20260221_234143.dump
+```
+
+> **Sau khi restore:** Restart app container trong Coolify để `apply_dynamic_settings()` load cấu hình SiteConfiguration mới từ database.
+
 ---
 
-## 16. Monitoring & Logs
+## 17. Monitoring & Logs
 
 ### Xem logs
 
@@ -775,7 +881,7 @@ Coolify hiển thị:
 
 ---
 
-## 17. Troubleshooting
+## 18. Troubleshooting
 
 ### Build failed
 
@@ -800,9 +906,10 @@ Coolify hiển thị:
 | 502 Bad Gateway | Container chưa sẵn sàng | Chờ health check, xem logs |
 | 521 (Cloudflare) | VPS/container down | Kiểm tra VPS và container status |
 | 525 SSL Handshake Failed | SSL mismatch | Cloudflare SSL → **Full** (không Strict) tạm thời |
+| 526 Invalid SSL Cert | coolify subdomain Proxied | Đổi `coolify` DNS record sang **DNS only** (xem bước 5.3) |
 | CSRF error | CSRF_TRUSTED_ORIGINS sai | Cập nhật SiteConfiguration, restart |
 | Static files 404 | Chưa collectstatic | Redeploy |
-| Media files lost | Chưa mount volume | Thêm volume → Redeploy |
+| Media files lost | Chưa mount volume | Thêm volume (bước 10) → Redeploy |
 
 ### Lệnh debug
 
@@ -833,14 +940,14 @@ python manage.py shell
  5. [ ] Cài Coolify, đổi port sang 9000
  6. [ ] Đăng ký Cloudflare, add site unstressvn.com
  7. [ ] Chuyển nameserver sang Cloudflare
- 8. [ ] Cấu hình DNS records (A records, Proxied)
+ 8. [ ] Cấu hình DNS records (A records, Proxied / DNS only)
  9. [ ] Cấu hình SSL: Full (Strict)
 10. [ ] Bật WAF, Bot Fight Mode, Hotlink Protection
 11. [ ] Cấu hình cache rules (bypass API/admin)
 12. [ ] Tạo PostgreSQL database trên Coolify
 13. [ ] Push code lên GitHub: ./commit+push.sh
 14. [ ] Kết nối GitHub với Coolify
-15. [ ] Tạo Application từ Git repo
+15. [ ] Tạo Application từ Git repo (web, branch main)
 16. [ ] Set environment variables (DATABASE_URL, DB_*)
 17. [ ] Thêm persistent volumes (media, logs, backups)
 18. [ ] Deploy lần đầu
