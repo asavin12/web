@@ -69,6 +69,86 @@
     {% endif %}
 </div>
 
+<!-- Restore Database -->
+<div class="module">
+    <h2 style="background: #79aec8;">🔄 Restore Database</h2>
+    <div style="padding: 15px;">
+        <div style="padding: 10px 15px; background: #fff3cd; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #ffc107;">
+            <strong>⚠️ CẢNH BÁO:</strong> Restore sẽ <strong>ghi đè toàn bộ dữ liệu hiện tại</strong>.
+            Hãy tạo backup trước khi restore. Sau khi restore xong, bạn cần <strong>restart container</strong>
+            (trong Coolify) để load lại SiteConfiguration.
+        </div>
+
+        <!-- Tab buttons -->
+        <div style="display: flex; gap: 0; margin-bottom: 0;">
+            <button type="button" id="tabUpload" onclick="switchRestoreTab('upload')"
+                style="padding: 8px 20px; background: #417690; color: #fff; border: 1px solid #417690; border-bottom: none; border-radius: 4px 4px 0 0; cursor: pointer; font-size: 13px; font-weight: bold;">
+                📤 Upload file từ máy tính
+            </button>
+            <button type="button" id="tabServer" onclick="switchRestoreTab('server')"
+                style="padding: 8px 20px; background: #e0e0e0; color: #333; border: 1px solid #ccc; border-bottom: none; border-radius: 4px 4px 0 0; cursor: pointer; font-size: 13px; margin-left: -1px;">
+                📂 Chọn file từ server
+            </button>
+        </div>
+
+        <!-- Upload tab -->
+        <div id="restoreUpload" style="border: 1px solid #417690; border-radius: 0 4px 4px 4px; padding: 20px;">
+            <form id="restoreUploadForm" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 12px;">
+                {% csrf_token %}
+                <div>
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Chọn file backup (.sql hoặc .dump):</label>
+                    <input type="file" name="backup_file" id="restoreFile" accept=".sql,.dump"
+                        style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                </div>
+                <div id="restoreFileInfo" style="display: none; padding: 8px 12px; background: #f0f0f0; border-radius: 4px; font-size: 13px;"></div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <button type="submit" id="restoreUploadBtn" class="default" disabled
+                        style="padding: 8px 20px; opacity: 0.5;">
+                        🔄 Restore từ file upload
+                    </button>
+                    <span id="restoreUploadStatus"></span>
+                </div>
+            </form>
+        </div>
+
+        <!-- Server file tab -->
+        <div id="restoreServer" style="display: none; border: 1px solid #ccc; border-radius: 0 4px 4px 4px; padding: 20px;">
+            {% if backups %}
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="text-align: left; padding: 8px; border-bottom: 2px solid #ddd;">File</th>
+                        <th style="text-align: left; padding: 8px; border-bottom: 2px solid #ddd;">Size</th>
+                        <th style="text-align: left; padding: 8px; border-bottom: 2px solid #ddd;">Ngày tạo</th>
+                        <th style="text-align: center; padding: 8px; border-bottom: 2px solid #ddd;">Restore</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for backup in backups %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 8px;"><strong>{{ backup.filename }}</strong></td>
+                        <td style="padding: 8px;">{{ backup.size }}</td>
+                        <td style="padding: 8px;">{{ backup.created }}</td>
+                        <td style="padding: 8px; text-align: center;">
+                            <button type="button" onclick="restoreFromServer('{{ backup.filename }}')"
+                                style="padding: 5px 14px; background: #e17009; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                🔄 Restore
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="padding: 15px; text-align: center; color: #666;">
+                Chưa có backup nào trên server. Tạo backup trước hoặc upload file từ máy tính.
+            </p>
+            {% endif %}
+            <div id="restoreServerStatus" style="margin-top: 12px;"></div>
+        </div>
+    </div>
+</div>
+
 <!-- Info -->
 <div class="module">
     <h2>Thông tin</h2>
@@ -76,16 +156,17 @@
         <li>Backups được lưu tại: <code>{{ backup_dir }}</code></li>
         <li>Format: PostgreSQL SQL dump</li>
         <li>Khuyến nghị backup định kỳ hàng ngày</li>
+        <li>Sau khi restore, cần <strong>restart container</strong> để load lại SiteConfiguration</li>
     </ul>
 </div>
 
 <!-- Quick Links -->
 <div class="module">
     <h2>Liên kết</h2>
-    <ul class="object-tools" style="margin: 10px 0; padding: 0;">
-        <li><a href="/admin/postgres/">← Back to Dashboard</a></li>
-        <li><a href="/admin/postgres/tables/">Browse Tables</a></li>
-    </ul>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 15px;">
+        <a href="/admin/postgres/" style="display: inline-block; padding: 6px 14px; background: #417690; color: #fff; border-radius: 4px; text-decoration: none; font-size: 13px;">← Back to Dashboard</a>
+        <a href="/admin/postgres/tables/" style="display: inline-block; padding: 6px 14px; background: #417690; color: #fff; border-radius: 4px; text-decoration: none; font-size: 13px;">Browse Tables</a>
+    </div>
 </div>
 
 <script>
@@ -158,6 +239,139 @@ function deleteBackup(filename) {
         }
     })
     .catch(err => alert('Error: ' + err.message));
+}
+
+// ============ Restore Functions ============
+
+function switchRestoreTab(tab) {
+    const uploadPanel = document.getElementById('restoreUpload');
+    const serverPanel = document.getElementById('restoreServer');
+    const tabUpload = document.getElementById('tabUpload');
+    const tabServer = document.getElementById('tabServer');
+
+    if (tab === 'upload') {
+        uploadPanel.style.display = 'block';
+        serverPanel.style.display = 'none';
+        tabUpload.style.background = '#417690';
+        tabUpload.style.color = '#fff';
+        tabUpload.style.borderColor = '#417690';
+        tabUpload.style.fontWeight = 'bold';
+        tabServer.style.background = '#e0e0e0';
+        tabServer.style.color = '#333';
+        tabServer.style.borderColor = '#ccc';
+        tabServer.style.fontWeight = 'normal';
+    } else {
+        uploadPanel.style.display = 'none';
+        serverPanel.style.display = 'block';
+        tabServer.style.background = '#417690';
+        tabServer.style.color = '#fff';
+        tabServer.style.borderColor = '#417690';
+        tabServer.style.fontWeight = 'bold';
+        tabUpload.style.background = '#e0e0e0';
+        tabUpload.style.color = '#333';
+        tabUpload.style.borderColor = '#ccc';
+        tabUpload.style.fontWeight = 'normal';
+    }
+}
+
+// File input change handler
+document.getElementById('restoreFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const btn = document.getElementById('restoreUploadBtn');
+    const info = document.getElementById('restoreFileInfo');
+
+    if (file) {
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        info.style.display = 'block';
+        info.innerHTML = '📄 <strong>' + file.name + '</strong> — ' + sizeMB + ' MB';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    } else {
+        info.style.display = 'none';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+    }
+});
+
+// Upload restore form
+document.getElementById('restoreUploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const fileInput = document.getElementById('restoreFile');
+    if (!fileInput.files[0]) {
+        alert('Vui lòng chọn file backup');
+        return;
+    }
+
+    if (!confirm('⚠️ BẠN CÓ CHẮC CHẮN?\n\nRestore sẽ GHI ĐÈ toàn bộ dữ liệu hiện tại.\nHãy đảm bảo đã backup trước khi tiếp tục.\n\nFile: ' + fileInput.files[0].name)) return;
+
+    const btn = document.getElementById('restoreUploadBtn');
+    const status = document.getElementById('restoreUploadStatus');
+    const formData = new FormData();
+    formData.append('backup_file', fileInput.files[0]);
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Đang restore...';
+    status.innerHTML = '<span style="color: #856404;">⏳ Đang restore database, vui lòng chờ...</span>';
+
+    fetch('/admin/postgres/restore/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            status.innerHTML = '<span style="color: green;">✅ ' + data.message + '</span>';
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            status.innerHTML = '<span style="color: red;">❌ ' + data.message + '</span>';
+        }
+    })
+    .catch(err => {
+        status.innerHTML = '<span style="color: red;">❌ Lỗi: ' + err.message + '</span>';
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = '🔄 Restore từ file upload';
+    });
+});
+
+// Restore from server file
+function restoreFromServer(filename) {
+    if (!confirm('⚠️ BẠN CÓ CHẮC CHẮN?\n\nRestore sẽ GHI ĐÈ toàn bộ dữ liệu hiện tại.\nHãy đảm bảo đã backup trước khi tiếp tục.\n\nFile: ' + filename)) return;
+
+    const status = document.getElementById('restoreServerStatus');
+    status.innerHTML = '<span style="color: #856404;">⏳ Đang restore từ <strong>' + filename + '</strong>, vui lòng chờ...</span>';
+
+    // Disable all restore buttons
+    document.querySelectorAll('#restoreServer button').forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+
+    fetch('/admin/postgres/restore/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({filename: filename})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            status.innerHTML = '<div style="padding: 10px; background: #d4edda; border-radius: 4px;"><strong>✅ ' + data.message + '</strong><br><small>Trang sẽ reload trong 2 giây...</small></div>';
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            status.innerHTML = '<div style="padding: 10px; background: #f8d7da; border-radius: 4px;"><strong>❌ ' + data.message + '</strong></div>';
+        }
+    })
+    .catch(err => {
+        status.innerHTML = '<div style="padding: 10px; background: #f8d7da; border-radius: 4px;"><strong>❌ Lỗi: ' + err.message + '</strong></div>';
+    })
+    .finally(() => {
+        document.querySelectorAll('#restoreServer button').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+    });
 }
 </script>
 {% endblock %}

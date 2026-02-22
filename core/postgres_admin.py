@@ -647,16 +647,30 @@ def restore_database(request):
         env = os.environ.copy()
         env['PGPASSWORD'] = db_config.get('PASSWORD', '')
         
-        # Run psql to restore
-        cmd = [
-            'psql',
-            '-h', db_config.get('HOST', 'localhost'),
-            '-p', str(db_config.get('PORT', '5432')),
-            '-U', db_config.get('USER', 'postgres'),
-            '-d', db_config.get('NAME', 'unstressvn'),
-            '-f', filepath,
-            '--no-password',
-        ]
+        # Choose restore command based on file extension
+        if filepath.endswith('.dump'):
+            # Custom format → pg_restore
+            cmd = [
+                'pg_restore',
+                '-h', db_config.get('HOST', 'localhost'),
+                '-p', str(db_config.get('PORT', '5432')),
+                '-U', db_config.get('USER', 'postgres'),
+                '-d', db_config.get('NAME', 'unstressvn'),
+                '--clean', '--no-owner', '--no-privileges',
+                '--no-password',
+                filepath,
+            ]
+        else:
+            # SQL plain text → psql
+            cmd = [
+                'psql',
+                '-h', db_config.get('HOST', 'localhost'),
+                '-p', str(db_config.get('PORT', '5432')),
+                '-U', db_config.get('USER', 'postgres'),
+                '-d', db_config.get('NAME', 'unstressvn'),
+                '-f', filepath,
+                '--no-password',
+            ]
         
         result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=600)
         
@@ -665,14 +679,26 @@ def restore_database(request):
             os.unlink(filepath)
         
         if result.returncode == 0:
+            warning_msg = ''
+            if result.stderr and ('ERROR' not in result.stderr):
+                warning_msg = ' (có một số notice/warning, điều này bình thường)'
             return JsonResponse({
                 'status': 'success',
-                'message': f'Restore thành công từ {filename}!',
+                'message': f'Restore thành công từ {filename}!{warning_msg} Hãy restart container để load lại cấu hình.',
             })
         else:
+            # psql often returns 0 even with some errors; pg_restore returns non-zero
+            # Check if stderr contains actual errors vs just notices
+            stderr = result.stderr or ''
+            error_lines = [l for l in stderr.split('\n') if 'ERROR' in l]
+            if not error_lines and result.returncode <= 1:
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f'Restore hoàn tất từ {filename} (có warnings nhưng không ảnh hưởng). Hãy restart container.',
+                })
             return JsonResponse({
                 'status': 'error',
-                'message': f'Lỗi restore: {result.stderr[:500]}',
+                'message': f'Lỗi restore: {stderr[:500]}',
             }, status=500)
             
     except subprocess.TimeoutExpired:
