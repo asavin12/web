@@ -64,25 +64,29 @@ def spa_view(request, path=''):
     """
     Serve React SPA.
     
-    Development mode (DEBUG=True):
+    Development mode (DEBUG=True và KHÔNG có built files):
         - Render template với Vite dev server scripts
         
-    Production mode (DEBUG=False):
+    Production mode (DEBUG=False HOẶC có built files):
         - Serve built static files từ frontend/dist
     """
     
-    if settings.DEBUG:
-        # Development: Render template với Vite dev server
-        return render(request, 'spa.html', {'debug': True})
-    
-    # Production: Serve built files
+    # Xác định thư mục frontend/dist
     frontend_dir = getattr(settings, 'FRONTEND_DIR', None)
-    
     if not frontend_dir:
         frontend_dir = Path(settings.BASE_DIR) / 'frontend' / 'dist'
     else:
         frontend_dir = Path(frontend_dir)
     
+    index_path = frontend_dir / 'index.html'
+    has_built_files = index_path.exists()
+    
+    # Chỉ dùng Vite dev server khi DEBUG=True VÀ không có built files
+    # (trong Docker container luôn có built files từ multi-stage build)
+    if settings.DEBUG and not has_built_files:
+        return render(request, 'spa.html', {'debug': True})
+    
+    # Production: Serve built files
     # Nếu request là cho static asset (js, css, images)
     if path and '.' in path.split('/')[-1]:
         asset_path = frontend_dir / 'assets' / path.split('/')[-1]
@@ -96,7 +100,6 @@ def spa_view(request, path=''):
         return HttpResponseNotFound('Asset not found')
     
     # Serve index.html cho tất cả các routes (SPA routing)
-    index_path = frontend_dir / 'index.html'
     if index_path.exists():
         with open(index_path, 'r', encoding='utf-8') as f:
             return HttpResponse(f.read(), content_type='text/html')
