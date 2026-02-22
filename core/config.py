@@ -60,21 +60,39 @@ def apply_dynamic_settings():
 
     # === Allowed Hosts ===
     if config.allowed_hosts:
-        settings.ALLOWED_HOSTS = [
-            h.strip() for h in config.allowed_hosts.split(',') if h.strip()
-        ]
+        hosts = [h.strip() for h in config.allowed_hosts.split(',') if h.strip()]
+        # Merge env var ALLOWED_HOSTS (cần cho deploy trước khi cấu hình SiteConfiguration)
+        env_hosts = os.environ.get('ALLOWED_HOSTS', '')
+        if env_hosts:
+            for h in env_hosts.split(','):
+                h = h.strip()
+                if h and h not in hosts:
+                    hosts.append(h)
+        settings.ALLOWED_HOSTS = hosts
 
     # === CSRF ===
     if config.csrf_trusted_origins:
-        settings.CSRF_TRUSTED_ORIGINS = [
-            o.strip() for o in config.csrf_trusted_origins.split(',') if o.strip()
-        ]
+        origins = [o.strip() for o in config.csrf_trusted_origins.split(',') if o.strip()]
+        # Merge env var CSRF_TRUSTED_ORIGINS
+        env_csrf = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+        if env_csrf:
+            for o in env_csrf.split(','):
+                o = o.strip()
+                if o and o not in origins:
+                    origins.append(o)
+        settings.CSRF_TRUSTED_ORIGINS = origins
 
     # === CORS ===
     if config.cors_allowed_origins:
-        settings.CORS_ALLOWED_ORIGINS = [
-            o.strip() for o in config.cors_allowed_origins.split(',') if o.strip()
-        ]
+        cors_origins = [o.strip() for o in config.cors_allowed_origins.split(',') if o.strip()]
+        # Merge env var CORS_ALLOWED_ORIGINS
+        env_cors = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+        if env_cors:
+            for o in env_cors.split(','):
+                o = o.strip()
+                if o and o not in cors_origins:
+                    cors_origins.append(o)
+        settings.CORS_ALLOWED_ORIGINS = cors_origins
 
     # === Email ===
     settings.EMAIL_HOST = config.email_host

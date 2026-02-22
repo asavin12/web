@@ -47,13 +47,23 @@ SECRET_KEY = _get_or_create_secret_key()
 
 DEBUG = True  # Default dev, DB override
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'host.docker.internal']
+# Hỗ trợ ALLOWED_HOSTS từ env var (cần cho deploy lần đầu trước khi cấu hình SiteConfiguration)
+_env_hosts = os.environ.get('ALLOWED_HOSTS', '')
+if _env_hosts:
+    ALLOWED_HOSTS = [h.strip() for h in _env_hosts.split(',') if h.strip()]
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'host.docker.internal']
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://host.docker.internal:8000',
-]
+# Hỗ trợ CSRF_TRUSTED_ORIGINS từ env var
+_env_csrf = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+if _env_csrf:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _env_csrf.split(',') if o.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+        'http://host.docker.internal:8000',
+    ]
 
 # =============================================
 # INSTALLED APPS

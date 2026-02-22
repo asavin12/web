@@ -561,8 +561,13 @@ Trong Coolify → Application → tab **Configuration** → sidebar **Environmen
 | `DB_NAME` | `unstressvn` | Tên database |
 | `DB_USER` | `unstressvn` | User database |
 | `DB_PASSWORD` | `hs22JpKMFSOWmyfiJEmZ4RzZSeAg5ERAzR1CtWj2tQ8ThmluCrLTBGZTKwXZEPbS` | Password database |
+| `ALLOWED_HOSTS` | `unstressvn.com,www.unstressvn.com` | Domain được phép truy cập (quan trọng cho deploy lần đầu!) |
+| `CSRF_TRUSTED_ORIGINS` | `https://unstressvn.com,https://www.unstressvn.com` | CSRF trusted origins |
+| `CORS_ALLOWED_ORIGINS` | `https://unstressvn.com,https://www.unstressvn.com` | CORS allowed origins |
 
 > **Mẹo:** Coolify hỗ trợ liên kết biến giữa các service. Có thể link trực tiếp đến database resource thay vì nhập thủ công.
+
+> **Quan trọng:** `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `CORS_ALLOWED_ORIGINS` **bắt buộc** khi deploy lần đầu. Nếu thiếu, Django trả về **400 Bad Request** vì SiteConfiguration chưa được cấu hình. Sau khi cấu hình SiteConfiguration ở bước 14, env vars sẽ được **merge** với giá trị từ DB (không bị ghi đè).
 
 ### Tùy chọn
 
@@ -572,7 +577,8 @@ Trong Coolify → Application → tab **Configuration** → sidebar **Environmen
 
 ### Lưu ý
 
-- Tất cả cấu hình khác (DEBUG, ALLOWED_HOSTS, CORS, SMTP, v.v.) được quản lý qua **SiteConfiguration** trong Django Admin (bước 14) — không cần set env vars.
+- Các cấu hình khác (DEBUG, SMTP, v.v.) được quản lý qua **SiteConfiguration** trong Django Admin (bước 14).
+- `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `CORS_ALLOWED_ORIGINS` được merge: giá trị từ env var + giá trị từ DB → không bao giờ bị mất domain.
 - `docker-entrypoint.sh` hỗ trợ cả `DATABASE_URL` và `DB_*` riêng lẻ.
 
 ---
