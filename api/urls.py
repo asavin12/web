@@ -72,7 +72,9 @@ urlpatterns = [
     path('n8n/health/', n8n_views.n8n_health_check, name='n8n-health'),
     path('n8n/categories/', n8n_views.n8n_get_categories, name='n8n-categories'),
     path('n8n/news/', n8n_views.n8n_create_news_article, name='n8n-create-news'),
+    path('n8n/news/<str:identifier>/', n8n_views.n8n_update_news_article, name='n8n-update-news'),
     path('n8n/knowledge/', n8n_views.n8n_create_knowledge_article, name='n8n-create-knowledge'),
+    path('n8n/knowledge/<str:identifier>/', n8n_views.n8n_update_knowledge_article, name='n8n-update-knowledge'),
     path('n8n/resources/', n8n_views.n8n_create_resource, name='n8n-create-resource'),
     path('n8n/videos/', n8n_views.n8n_create_video, name='n8n-create-video'),
 ]

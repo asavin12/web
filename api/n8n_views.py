@@ -550,7 +550,9 @@ def n8n_create_knowledge_article(request):
         language=language,
         level=level,
         author=request.user,
+        is_featured=request.data.get('is_featured', False),
         is_published=request.data.get('is_published', True),
+        published_at=timezone.now() if request.data.get('is_published', True) else None,
         meta_title=request.data.get('meta_title', ''),
         meta_description=request.data.get('meta_description', ''),
         meta_keywords=request.data.get('meta_keywords', ''),
@@ -593,6 +595,296 @@ def n8n_create_knowledge_article(request):
         response_data['seo_warnings'] = seo_warnings
     
     return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+# ============ N8N UPDATE Endpoints ============
+
+def _update_article(request, article, model_name, url_prefix):
+    """
+    Helper chung để cập nhật bài viết (News hoặc Knowledge).
+    Trả về Response.
+    """
+    data = request.data
+    updated_fields = []
+
+    # Updatable text fields
+    text_fields = {
+        'title': 'title',
+        'content': 'content',
+        'excerpt': 'excerpt',
+        'meta_title': 'meta_title',
+        'meta_description': 'meta_description',
+        'meta_keywords': 'meta_keywords',
+    }
+    for param, field in text_fields.items():
+        if param in data:
+            setattr(article, field, data[param])
+            updated_fields.append(field)
+
+    # Boolean fields
+    if 'is_featured' in data:
+        article.is_featured = data['is_featured']
+        updated_fields.append('is_featured')
+
+    if 'is_published' in data:
+        was_published = article.is_published
+        article.is_published = data['is_published']
+        updated_fields.append('is_published')
+        # Auto-set published_at khi publish lần đầu
+        if data['is_published'] and not was_published and not article.published_at:
+            article.published_at = timezone.now()
+            updated_fields.append('published_at')
+
+    # Category
+    if 'category' in data:
+        category_input = data['category']
+        if category_input:
+            if model_name == 'news':
+                from news.models import Category
+            else:
+                from knowledge.models import Category
+            try:
+                if isinstance(category_input, int) or (isinstance(category_input, str) and category_input.isdigit()):
+                    article.category = Category.objects.get(id=int(category_input))
+                else:
+                    article.category = Category.objects.get(slug=category_input)
+                updated_fields.append('category')
+            except Category.DoesNotExist:
+                return Response(
+                    {'success': False, 'error': f'Category "{category_input}" không tồn tại'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            article.category = None
+            updated_fields.append('category')
+
+    # Knowledge-specific fields
+    if model_name == 'knowledge':
+        if 'language' in data:
+            language = data['language']
+            if language in ['de', 'en', 'all']:
+                article.language = language
+                updated_fields.append('language')
+        if 'level' in data:
+            level = data['level']
+            if level in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'all']:
+                article.level = level
+                updated_fields.append('level')
+
+    # Slug update (nếu title thay đổi và yêu cầu regenerate)
+    if 'regenerate_slug' in data and data['regenerate_slug'] and 'title' in data:
+        Model = type(article)
+        base_slug = vietnamese_slugify(data['title'])
+        slug = base_slug
+        counter = 1
+        while Model.objects.filter(slug=slug).exclude(id=article.id).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        article.slug = slug
+        updated_fields.append('slug')
+
+    # N8N tracking fields update
+    n8n_fields = {
+        'source_url': 'source_url',
+        'source_id': 'source_id',
+        'workflow_id': 'n8n_workflow_id',
+        'execution_id': 'n8n_execution_id',
+        'is_ai_generated': 'is_ai_generated',
+        'ai_model': 'ai_model',
+    }
+    for param, field in n8n_fields.items():
+        if param in data:
+            setattr(article, field, data[param])
+            updated_fields.append(field)
+
+    # SEO validation (optional)
+    skip_validation = data.get('skip_seo_validation', True)  # Default skip cho update
+    if not skip_validation:
+        # Merge existing data with updates for validation
+        validate_data = {
+            'title': article.title,
+            'content': article.content,
+            'excerpt': article.excerpt,
+            'meta_title': article.meta_title,
+            'meta_description': article.meta_description,
+        }
+        seo_valid, seo_warnings, seo_errors = validate_seo_content(validate_data)
+        if not seo_valid:
+            return Response({
+                'success': False,
+                'error': 'Nội dung không đạt chuẩn SEO',
+                'seo_errors': seo_errors,
+                'seo_warnings': seo_warnings,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Cover image update
+    image_source = 'unchanged'
+    if 'cover_image' in request.FILES or 'cover_image_url' in data:
+        cover_image, image_source = process_article_image(
+            request, article.slug,
+            upload_to=f'{model_name}/covers/'
+        )
+        if cover_image:
+            article.cover_image = cover_image
+            updated_fields.append('cover_image')
+
+    if not updated_fields:
+        return Response(
+            {'success': False, 'error': 'Không có trường nào được cập nhật'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    article.save()
+
+    response_data = {
+        'success': True,
+        'article': {
+            'id': article.id,
+            'title': article.title,
+            'slug': article.slug,
+            'url': f'/{url_prefix}/{article.slug}',
+            'is_published': article.is_published,
+            'is_featured': article.is_featured,
+            'updated_at': article.updated_at.isoformat(),
+            'cover_image': article.cover_image.url if article.cover_image else None,
+        },
+        'updated_fields': updated_fields,
+        'image_source': image_source,
+        'message': f'Đã cập nhật bài viết {model_name} thành công',
+    }
+
+    return Response(response_data, status=status.HTTP_200_OK)
+
+
+def _find_article(Model, identifier):
+    """
+    Tìm bài viết bằng slug, id, hoặc source_id (n8n).
+    Trả về (article, None) hoặc (None, error_response).
+    """
+    article = None
+
+    # Try by slug
+    article = Model.objects.filter(slug=identifier).first()
+    if article:
+        return article, None
+
+    # Try by id
+    if isinstance(identifier, int) or (isinstance(identifier, str) and identifier.isdigit()):
+        article = Model.objects.filter(id=int(identifier)).first()
+        if article:
+            return article, None
+
+    # Try by source_id (n8n tracking)
+    article = Model.objects.filter(source='n8n', source_id=identifier).first()
+    if article:
+        return article, None
+
+    return None, Response(
+        {'success': False, 'error': f'Không tìm thấy bài viết với identifier "{identifier}"'},
+        status=status.HTTP_404_NOT_FOUND
+    )
+
+
+@api_view(['PUT', 'PATCH'])
+@authentication_classes([APIKeyAuthentication])
+@parser_classes([JSONParser, MultiPartParser, FormParser])
+def n8n_update_news_article(request, identifier):
+    """
+    Cập nhật bài viết News từ n8n
+
+    URL: /api/v1/n8n/news/<identifier>/
+    identifier: slug, id, hoặc source_id
+
+    Methods:
+        PUT: Cập nhật toàn bộ
+        PATCH: Cập nhật một phần
+
+    Headers:
+        X-API-Key: <N8N_API_KEY>
+
+    Body (JSON hoặc multipart/form-data):
+        {
+            "title": "Tiêu đề mới (tùy chọn)",
+            "content": "Nội dung mới (tùy chọn)",
+            "excerpt": "Mô tả mới (tùy chọn)",
+            "category": "slug-category hoặc id (tùy chọn)",
+            "is_featured": true/false,
+            "is_published": true/false,
+            "cover_image_url": "URL ảnh mới (tùy chọn)",
+            "meta_title": "SEO title mới",
+            "meta_description": "SEO description mới",
+            "meta_keywords": "keywords mới",
+            "regenerate_slug": false,
+            "skip_seo_validation": true
+        }
+
+    Returns:
+        {
+            "success": true,
+            "article": {...},
+            "updated_fields": ["title", "content", ...],
+            "message": "Đã cập nhật bài viết thành công"
+        }
+    """
+    from news.models import Article
+
+    article, error = _find_article(Article, identifier)
+    if error:
+        return error
+
+    return _update_article(request, article, 'news', 'tin-tuc')
+
+
+@api_view(['PUT', 'PATCH'])
+@authentication_classes([APIKeyAuthentication])
+@parser_classes([JSONParser, MultiPartParser, FormParser])
+def n8n_update_knowledge_article(request, identifier):
+    """
+    Cập nhật bài viết Knowledge từ n8n
+
+    URL: /api/v1/n8n/knowledge/<identifier>/
+    identifier: slug, id, hoặc source_id
+
+    Methods:
+        PUT: Cập nhật toàn bộ
+        PATCH: Cập nhật một phần
+
+    Headers:
+        X-API-Key: <N8N_API_KEY>
+
+    Body (JSON hoặc multipart/form-data):
+        {
+            "title": "Tiêu đề mới (tùy chọn)",
+            "content": "Nội dung mới (tùy chọn)",
+            "excerpt": "Mô tả mới (tùy chọn)",
+            "category": "slug-category hoặc id (tùy chọn)",
+            "language": "de/en/all (tùy chọn)",
+            "level": "A1/A2/B1/B2/C1/C2/all (tùy chọn)",
+            "is_featured": true/false,
+            "is_published": true/false,
+            "cover_image_url": "URL ảnh mới (tùy chọn)",
+            "meta_title": "SEO title mới",
+            "meta_description": "SEO description mới",
+            "meta_keywords": "keywords mới",
+            "regenerate_slug": false,
+            "skip_seo_validation": true
+        }
+
+    Returns:
+        {
+            "success": true,
+            "article": {...},
+            "updated_fields": ["title", "content", "language", ...],
+            "message": "Đã cập nhật bài viết thành công"
+        }
+    """
+    from knowledge.models import KnowledgeArticle
+
+    article, error = _find_article(KnowledgeArticle, identifier)
+    if error:
+        return error
+
+    return _update_article(request, article, 'knowledge', 'kien-thuc')
 
 
 @api_view(['POST'])

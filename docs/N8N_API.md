@@ -167,6 +167,109 @@ POST /api/v1/n8n/knowledge/
 
 ---
 
+### Cập nhật bài viết Tin tức (News)
+
+```
+PUT/PATCH /api/v1/n8n/news/<identifier>/
+```
+
+**identifier:** `slug`, `id`, hoặc `source_id` (N8N tracking)
+
+**Headers:**
+- `Content-Type: application/json`
+- `X-API-Key: your-api-key`
+
+**Body (tất cả trường tùy chọn):**
+```json
+{
+  "title": "Tiêu đề mới",
+  "content": "<h2>Nội dung mới</h2><p>...</p>",
+  "excerpt": "Mô tả mới",
+  "category": "slug-category hoặc id",
+  "is_featured": true,
+  "is_published": true,
+  "cover_image_url": "https://example.com/new-image.jpg",
+  "meta_title": "SEO title mới",
+  "meta_description": "SEO description mới",
+  "meta_keywords": "keywords mới",
+  "regenerate_slug": false,
+  "skip_seo_validation": true
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "article": {
+    "id": 11,
+    "title": "Tiêu đề mới",
+    "slug": "tieu-de-bai-viet",
+    "url": "/tin-tuc/tieu-de-bai-viet",
+    "is_published": true,
+    "is_featured": true,
+    "updated_at": "2026-01-26T10:30:00Z",
+    "cover_image": "/media/news/covers/..."
+  },
+  "updated_fields": ["title", "content", "is_featured"],
+  "image_source": "unchanged",
+  "message": "Đã cập nhật bài viết news thành công"
+}
+```
+
+---
+
+### Cập nhật bài viết Kiến thức (Knowledge)
+
+```
+PUT/PATCH /api/v1/n8n/knowledge/<identifier>/
+```
+
+**identifier:** `slug`, `id`, hoặc `source_id` (N8N tracking)
+
+**Headers:**
+- `Content-Type: application/json`
+- `X-API-Key: your-api-key`
+
+**Body (tất cả trường tùy chọn):**
+```json
+{
+  "title": "Tiêu đề mới",
+  "content": "<h2>Nội dung mới</h2><p>...</p>",
+  "excerpt": "Mô tả mới",
+  "category": "ngu-phap",
+  "language": "de",
+  "level": "B1",
+  "is_featured": true,
+  "is_published": true,
+  "cover_image_url": "https://example.com/new-image.jpg",
+  "regenerate_slug": false,
+  "skip_seo_validation": true
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "article": {
+    "id": 14,
+    "title": "Ngữ pháp tiếng Đức B1",
+    "slug": "ngu-phap-tieng-duc-a1",
+    "url": "/kien-thuc/ngu-phap-tieng-duc-a1",
+    "is_published": true,
+    "is_featured": true,
+    "updated_at": "2026-01-26T10:30:00Z",
+    "cover_image": "/media/knowledge/covers/..."
+  },
+  "updated_fields": ["title", "level", "is_featured"],
+  "image_source": "unchanged",
+  "message": "Đã cập nhật bài viết knowledge thành công"
+}
+```
+
+---
+
 ### Tạo Tài liệu (Resource)
 
 ```

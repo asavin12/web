@@ -206,7 +206,135 @@ Content-Type: application/json
 
 ---
 
-### 5. Create Resource
+### 5. Update News Article
+
+Cập nhật bài viết tin tức (hỗ trợ cập nhật từng phần)
+
+```http
+PUT /api/v1/n8n/news/<identifier>/
+PATCH /api/v1/n8n/news/<identifier>/
+```
+
+**identifier:** Có thể là `slug`, `id`, hoặc `source_id` (N8N tracking)
+
+**Headers:**
+```
+X-API-Key: <your-api-key>
+Content-Type: application/json
+```
+
+**Body (JSON) — tất cả trường đều tùy chọn:**
+```json
+{
+  "title": "Tiêu đề mới",
+  "content": "<p>Nội dung mới</p>",
+  "excerpt": "Mô tả mới",
+  "category": "hoc-tieng-duc",
+  "is_featured": true,
+  "is_published": true,
+  "cover_image_url": "https://example.com/new-image.jpg",
+  "meta_title": "SEO title mới",
+  "meta_description": "SEO description mới",
+  "meta_keywords": "keyword1, keyword2",
+  "regenerate_slug": false,
+  "skip_seo_validation": true,
+  "workflow_id": "n8n-workflow-id",
+  "execution_id": "n8n-execution-id"
+}
+```
+
+**Lưu ý:**
+- `regenerate_slug`: Nếu `true` và `title` thay đổi → tạo slug mới từ title mới
+- `skip_seo_validation`: Default `true` cho update (không bắt buộc SEO check)
+- Khi `is_published` chuyển từ `false` → `true` và chưa có `published_at` → tự động set
+
+**Response:**
+```json
+{
+  "success": true,
+  "article": {
+    "id": 11,
+    "title": "Tiêu đề mới",
+    "slug": "tieu-de-bai-viet",
+    "url": "/tin-tuc/tieu-de-bai-viet",
+    "is_published": true,
+    "is_featured": true,
+    "updated_at": "2024-01-26T10:30:00Z",
+    "cover_image": "/media/news/covers/unstressvn-tieu-de-bai-viet-cover.webp"
+  },
+  "updated_fields": ["title", "content", "is_featured"],
+  "image_source": "unchanged",
+  "message": "Đã cập nhật bài viết news thành công"
+}
+```
+
+---
+
+### 6. Update Knowledge Article
+
+Cập nhật bài viết kiến thức (hỗ trợ cập nhật từng phần)
+
+```http
+PUT /api/v1/n8n/knowledge/<identifier>/
+PATCH /api/v1/n8n/knowledge/<identifier>/
+```
+
+**identifier:** Có thể là `slug`, `id`, hoặc `source_id` (N8N tracking)
+
+**Headers:**
+```
+X-API-Key: <your-api-key>
+Content-Type: application/json
+```
+
+**Body (JSON) — tất cả trường đều tùy chọn:**
+```json
+{
+  "title": "Tiêu đề mới",
+  "content": "<p>Nội dung mới</p>",
+  "excerpt": "Mô tả mới",
+  "category": "ngu-phap",
+  "language": "de",
+  "level": "B1",
+  "is_featured": true,
+  "is_published": true,
+  "cover_image_url": "https://example.com/new-image.jpg",
+  "meta_title": "SEO title mới",
+  "meta_description": "SEO description mới",
+  "regenerate_slug": false,
+  "skip_seo_validation": true
+}
+```
+
+**Knowledge-specific fields:**
+| Field | Options | Default |
+|-------|---------|---------|
+| `language` | `de`, `en`, `all` | không thay đổi |
+| `level` | `A1`, `A2`, `B1`, `B2`, `C1`, `C2`, `all` | không thay đổi |
+
+**Response:**
+```json
+{
+  "success": true,
+  "article": {
+    "id": 14,
+    "title": "Ngữ pháp tiếng Đức B1",
+    "slug": "ngu-phap-tieng-duc-a1",
+    "url": "/kien-thuc/ngu-phap-tieng-duc-a1",
+    "is_published": true,
+    "is_featured": true,
+    "updated_at": "2024-01-26T10:30:00Z",
+    "cover_image": "/media/knowledge/covers/unstressvn-ngu-phap-tieng-duc-a1-cover.webp"
+  },
+  "updated_fields": ["title", "level", "is_featured"],
+  "image_source": "unchanged",
+  "message": "Đã cập nhật bài viết knowledge thành công"
+}
+```
+
+---
+
+### 7. Create Resource
 
 Tạo tài liệu học tập (ebook, audio, video, pdf...)
 
@@ -258,7 +386,7 @@ Content-Type: application/json
 
 ---
 
-### 6. Create Video
+### 8. Create Video
 
 Tạo video từ YouTube (auto fetch metadata)
 
