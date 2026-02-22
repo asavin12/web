@@ -60,7 +60,7 @@ class ToolViewSet(viewsets.ReadOnlyModelViewSet):
     def featured(self, request):
         """Lấy danh sách công cụ nổi bật"""
         featured = self.get_queryset().filter(is_featured=True)[:6]
-        serializer = ToolListSerializer(featured, many=True)
+        serializer = ToolListSerializer(featured, many=True, context={'request': request})
         return Response(serializer.data)
 
 
@@ -97,7 +97,7 @@ class FlashcardDeckViewSet(viewsets.ReadOnlyModelViewSet):
     def featured(self, request):
         """Lấy danh sách bộ flashcard nổi bật"""
         featured = self.get_queryset().filter(is_featured=True)[:6]
-        serializer = FlashcardDeckSerializer(featured, many=True)
+        serializer = FlashcardDeckSerializer(featured, many=True, context={'request': request})
         return Response(serializer.data)
     
     @action(detail=True, methods=['get'])
@@ -105,5 +105,5 @@ class FlashcardDeckViewSet(viewsets.ReadOnlyModelViewSet):
         """Lấy tất cả thẻ của một bộ"""
         deck = self.get_object()
         cards = deck.cards.all()
-        serializer = FlashcardSerializer(cards, many=True)
+        serializer = FlashcardSerializer(cards, many=True, context={'request': request})
         return Response(serializer.data)

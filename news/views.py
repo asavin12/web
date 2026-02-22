@@ -53,14 +53,14 @@ class ArticleViewSet(viewsets.ReadOnlyModelViewSet):
     def featured(self, request):
         """Lấy bài viết nổi bật"""
         featured = self.get_queryset().filter(is_featured=True)[:5]
-        serializer = ArticleListSerializer(featured, many=True)
+        serializer = ArticleListSerializer(featured, many=True, context={'request': request})
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def latest(self, request):
         """Lấy bài viết mới nhất"""
         latest = self.get_queryset()[:10]
-        serializer = ArticleListSerializer(latest, many=True)
+        serializer = ArticleListSerializer(latest, many=True, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
@@ -82,5 +82,5 @@ class ArticleViewSet(viewsets.ReadOnlyModelViewSet):
             )[:remaining]
             related = list(related) + list(more_articles)
         
-        serializer = ArticleListSerializer(related, many=True)
+        serializer = ArticleListSerializer(related, many=True, context={'request': request})
         return Response(serializer.data)

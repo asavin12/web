@@ -224,6 +224,16 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # =============================================
+# PROXY & SECURITY (behind Traefik / Cloudflare)
+# =============================================
+# Luôn tin tưởng header X-Forwarded-Proto do reverse proxy gửi
+# Đảm bảo request.is_secure() trả về True khi truy cập qua HTTPS
+# → DRF tạo URL đúng https:// thay vì http://
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+# =============================================
 # AUTHENTICATION
 # =============================================
 LOGIN_URL = '/api/v1/auth/login/'

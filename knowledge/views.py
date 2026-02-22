@@ -53,7 +53,7 @@ class KnowledgeArticleViewSet(viewsets.ReadOnlyModelViewSet):
     def featured(self, request):
         """Lấy bài viết nổi bật"""
         featured = self.get_queryset().filter(is_featured=True)[:5]
-        serializer = KnowledgeArticleListSerializer(featured, many=True)
+        serializer = KnowledgeArticleListSerializer(featured, many=True, context={'request': request})
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
@@ -63,7 +63,7 @@ class KnowledgeArticleViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = self.get_queryset()
         if language != 'all':
             queryset = queryset.filter(language__in=[language, 'all'])
-        serializer = KnowledgeArticleListSerializer(queryset[:20], many=True)
+        serializer = KnowledgeArticleListSerializer(queryset[:20], many=True, context={'request': request})
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
@@ -73,7 +73,7 @@ class KnowledgeArticleViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = self.get_queryset()
         if level != 'all':
             queryset = queryset.filter(level__in=[level, 'all'])
-        serializer = KnowledgeArticleListSerializer(queryset[:20], many=True)
+        serializer = KnowledgeArticleListSerializer(queryset[:20], many=True, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
@@ -97,5 +97,5 @@ class KnowledgeArticleViewSet(viewsets.ReadOnlyModelViewSet):
         else:  # most_viewed
             queryset = queryset.order_by('-view_count')
         
-        serializer = KnowledgeArticleListSerializer(queryset[:limit], many=True)
+        serializer = KnowledgeArticleListSerializer(queryset[:limit], many=True, context={'request': request})
         return Response(serializer.data)
