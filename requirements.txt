@@ -61,5 +61,6 @@ uritemplate==4.2.0
 urllib3==2.6.1
 zope.interface==8.1.1
 django-cors-headers>=4.3.0
-drf-spectacular>=0.27.0django-storages==1.14.6
+drf-spectacular>=0.27.0
+django-storages==1.14.6
 boto3==1.42.37
