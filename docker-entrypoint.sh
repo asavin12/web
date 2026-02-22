@@ -56,7 +56,7 @@ exec gunicorn unstressvn_settings.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers "${GUNICORN_WORKERS:-3}" \
     --timeout 120 \
-    --keepalive 5 \
+    --keep-alive 5 \
     --max-requests 1000 \
     --max-requests-jitter 50 \
     --access-logfile - \
