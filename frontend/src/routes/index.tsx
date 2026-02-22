@@ -17,6 +17,8 @@ const ResourceListPage = lazy(() => import('@/pages/Resources/ResourceListPage')
 const ResourceDetailPage = lazy(() => import('@/pages/Resources/ResourceDetailPage'));
 const VideoListPage = lazy(() => import('@/pages/Videos/VideoListPage'));
 const VideoDetailPage = lazy(() => import('@/pages/Videos/VideoDetailPage'));
+const StreamListPage = lazy(() => import('@/pages/Stream/StreamListPage'));
+const StreamPlayerPage = lazy(() => import('@/pages/Stream/StreamPlayerPage'));
 const SearchPage = lazy(() => import('@/pages/Search/SearchPage'));
 const NotificationsPage = lazy(() => import('@/pages/Notifications/NotificationsPage'));
 const AboutPage = lazy(() => import('@/pages/Static/AboutPage'));
@@ -100,6 +102,16 @@ const router = createBrowserRouter([
       {
         path: 'video/:slug',
         element: <LazyPage><VideoDetailPage /></LazyPage>,
+      },
+      
+      // Stream Media (public)
+      {
+        path: 'stream',
+        element: <LazyPage><StreamListPage /></LazyPage>,
+      },
+      {
+        path: 'stream/:uid',
+        element: <LazyPage><StreamPlayerPage /></LazyPage>,
       },
       
       // News (using unified ArticlesPage)

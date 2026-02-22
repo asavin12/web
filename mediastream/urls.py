@@ -6,6 +6,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from . import api_views
+from . import translation_views
 
 app_name = 'mediastream'
 
@@ -28,6 +29,9 @@ urlpatterns = [
     path('info/<uuid:uid>/', views.media_info, name='info'),
     path('list/', views.list_media, name='list'),
     path('categories/', views.list_categories, name='categories'),
+    
+    # ===== Translation API (Gemini) =====
+    path('translate/', translation_views.translate_subtitle, name='translate'),
     
     # ===== Admin URLs =====
     # Upload page đã chuyển vào Django Admin (/admin/mediastream/streammedia/)

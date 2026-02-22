@@ -87,6 +87,7 @@ export default function Navbar() {
     { to: '/', label: t('nav.home', 'Trang chủ') },
     { to: '/tai-lieu', label: t('nav.resources', 'Thư viện') },
     { to: '/video', label: t('nav.videos', 'Video') },
+    { to: '/stream', label: t('nav.stream', 'Stream') },
   ];
 
   // Dropdown menus for News and Knowledge - Hierarchical structure

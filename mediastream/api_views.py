@@ -2,13 +2,13 @@
 REST API Views cho MediaStream
 Cung cấp API để frontend lấy danh sách media, categories, playlists
 """
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import StreamMedia, MediaCategory, MediaSubtitle, MediaPlaylist
+from .models import StreamMedia, MediaCategory, MediaPlaylist
 from .serializers import (
     StreamMediaSerializer, StreamMediaDetailSerializer,
     MediaCategorySerializer, MediaPlaylistSerializer
@@ -60,9 +60,8 @@ class StreamMediaViewSet(viewsets.ReadOnlyModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         """Lấy chi tiết media và tăng view count"""
         instance = self.get_object()
-        # Tăng view count
-        instance.view_count += 1
-        instance.save(update_fields=['view_count'])
+        # Tăng view count (atomic)
+        instance.increment_view()
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
     

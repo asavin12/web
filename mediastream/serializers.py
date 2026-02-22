@@ -23,7 +23,7 @@ class MediaSubtitleSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = MediaSubtitle
-        fields = ['id', 'language', 'label', 'subtitle_url']
+        fields = ['id', 'language', 'label', 'subtitle_url', 'is_default']
     
     def get_subtitle_url(self, obj):
         return f"/media-stream/subtitle/{obj.id}/"
@@ -72,7 +72,8 @@ class StreamMediaDetailSerializer(StreamMediaSerializer):
     
     class Meta(StreamMediaSerializer.Meta):
         fields = StreamMediaSerializer.Meta.fields + [
-            'embed_code', 'tags', 'transcript'
+            'embed_code', 'tags', 'transcript', 'mime_type',
+            'file_size', 'width', 'height'
         ]
     
     def get_embed_code(self, obj):

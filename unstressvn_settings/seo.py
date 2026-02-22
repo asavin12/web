@@ -28,6 +28,7 @@ from resources.models import Resource
 from news.models import Article as NewsArticle
 from knowledge.models import KnowledgeArticle
 from tools.models import Tool
+from mediastream.models import StreamMedia
 
 
 class StaticViewSitemap(Sitemap):
@@ -42,6 +43,7 @@ class StaticViewSitemap(Sitemap):
             ('/cong-cu', 0.9),
             ('/tai-lieu', 0.8),
             ('/video', 0.8),
+            ('/stream', 0.8),
             ('/tim-kiem', 0.5),
             ('/gioi-thieu', 0.6),
             ('/lien-he', 0.5),
@@ -149,6 +151,25 @@ class ToolsSitemap(Sitemap):
         return f'/cong-cu/{category_slug}/{obj.slug}'
 
 
+class StreamSitemap(Sitemap):
+    """Sitemap cho Stream Media (Video/Audio streaming)"""
+    changefreq = 'weekly'
+    priority = 0.7
+
+    def items(self):
+        return (
+            StreamMedia.objects
+            .filter(is_active=True, is_public=True)
+            .order_by('-updated_at')
+        )
+
+    def lastmod(self, obj):
+        return obj.updated_at
+
+    def location(self, obj):
+        return f'/stream/{obj.uid}'
+
+
 # Tất cả sitemaps
 sitemaps = {
     'static': StaticViewSitemap,
@@ -157,6 +178,7 @@ sitemaps = {
     'news': NewsSitemap,
     'knowledge': KnowledgeSitemap,
     'tools': ToolsSitemap,
+    'stream': StreamSitemap,
 }
 
 
@@ -185,6 +207,7 @@ def robots_txt(request):
         "Allow: /cong-cu/",
         "Allow: /tai-lieu/",
         "Allow: /video/",
+        "Allow: /stream/",
         "Allow: /gioi-thieu",
         "Allow: /lien-he",
         "Allow: /tim-kiem",

@@ -701,6 +701,10 @@ class SiteConfiguration(models.Model):
         'YouTube API Key', blank=True, default='',
         help_text='🔒 Google YouTube Data API v3 key. Mã hoá tự động khi lưu.',
     )
+    gemini_api_key = EncryptedTextField(
+        'Google Gemini API Key', blank=True, default='',
+        help_text='🔒 Google Gemini API key cho dịch phụ đề realtime. Mã hoá tự động khi lưu.',
+    )
 
     # === MinIO/S3 Storage ===
     minio_endpoint_url = models.CharField(
