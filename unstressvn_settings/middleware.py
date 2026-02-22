@@ -40,18 +40,23 @@ class PublicMediaMiddleware:
         # Xóa security headers không phù hợp cho public media
         headers_to_remove = [
             'X-Frame-Options',
+            'X-Content-Type-Options',
             'Content-Security-Policy',
             'Cross-Origin-Opener-Policy',
             'Cross-Origin-Embedder-Policy',
             'Cross-Origin-Resource-Policy',
             'Content-Disposition',
             'Content-Language',
+            'Referrer-Policy',
             'Vary',
             'Set-Cookie',
         ]
         for header in headers_to_remove:
             if header in response:
                 del response[header]
+
+        # Xóa cookies (Django tự thêm Set-Cookie từ response.cookies)
+        response.cookies.clear()
 
         # Thêm headers cho public caching và CDN
         response['Cache-Control'] = 'public, max-age=31536000, immutable'
