@@ -69,3 +69,4 @@ Desktop.ini
 *.tmp
 *.temp
 *.bak
+backups/*.tar.gz
