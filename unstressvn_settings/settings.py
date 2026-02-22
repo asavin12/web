@@ -53,6 +53,10 @@ if _env_hosts:
     ALLOWED_HOSTS = [h.strip() for h in _env_hosts.split(',') if h.strip()]
 else:
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'host.docker.internal']
+# Luôn giữ localhost cho Docker healthcheck (curl localhost:8000/...)
+for _h in ['localhost', '127.0.0.1']:
+    if _h not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_h)
 
 # Hỗ trợ CSRF_TRUSTED_ORIGINS từ env var
 _env_csrf = os.environ.get('CSRF_TRUSTED_ORIGINS', '')

@@ -68,6 +68,10 @@ def apply_dynamic_settings():
                 h = h.strip()
                 if h and h not in hosts:
                     hosts.append(h)
+        # Luôn giữ localhost cho Docker healthcheck
+        for _h in ['localhost', '127.0.0.1']:
+            if _h not in hosts:
+                hosts.append(_h)
         settings.ALLOWED_HOSTS = hosts
 
     # === CSRF ===
