@@ -366,7 +366,7 @@ def stream_from_gdrive(request, media):
     
     Hỗ trợ đầy đủ HTTP Range/206 cho video seeking.
     """
-    from .gdrive import download_to_cache, get_cached_file_size, is_cached
+    from .gdrive import download_to_cache, is_cached
     
     file_id = media.gdrive_file_id
     if not file_id:

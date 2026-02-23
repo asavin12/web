@@ -2,17 +2,16 @@
 Google Drive Service cho MediaStream
 Lấy video từ Google Drive và stream/cache trên VPS
 
-Hỗ trợ 2 chế độ xác thực:
-1. API Key (đơn giản, chỉ cho file public)
-2. Service Account (linh hoạt, cho cả file private)
+Phương pháp: Direct HTTP download — KHÔNG cần API Key hay Service Account.
+Chỉ yêu cầu file được chia sẻ "Anyone with the link can view".
 
 Luồng hoạt động:
-  Client → Server → [Cache check] → Google Drive API → Cache → Stream to Client
+  Client → Server (referrer check) → [Cache check] → Google Drive download → Cache → Stream
 
 Bảo mật:
-- File Google Drive phải được chia sẻ "Anyone with the link" hoặc với service account
-- Server proxy stream → client không bao giờ thấy Google Drive URL trực tiếp
+- Server proxy stream → client không bao giờ thấy Google Drive URL
 - Referrer protection vẫn hoạt động như local storage
+- Google Drive chỉ thấy request từ VPS IP, không phải từ user
 """
 
 import os
@@ -21,8 +20,11 @@ import logging
 import hashlib
 import json
 import time
+import mimetypes
 from pathlib import Path
-from typing import Optional, Dict, Any, Tuple, Generator
+from typing import Optional, Dict, Any
+
+import requests
 
 from django.conf import settings
 
@@ -37,47 +39,33 @@ GDRIVE_CACHE_MAX_SIZE = getattr(settings, 'GDRIVE_CACHE_MAX_SIZE', 10 * 1024 * 1
 # Cache TTL (default: 7 days in seconds)
 GDRIVE_CACHE_TTL = getattr(settings, 'GDRIVE_CACHE_TTL', 7 * 24 * 3600)
 
-# Chunk size for streaming from Google Drive (1MB)
+# Chunk size for download (1MB)
 GDRIVE_CHUNK_SIZE = 1024 * 1024
 
+# Google Drive direct download URL (new domain since ~2024)
+GDRIVE_DOWNLOAD_URL = 'https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t'
 
-def get_google_api_key() -> Optional[str]:
-    """Get Google API key from SiteConfiguration"""
-    try:
-        from core.models import SiteConfiguration
-        config = SiteConfiguration.get_solo()
-        # Reuse YouTube API key (cùng Google project)
-        return config.youtube_api_key or None
-    except Exception:
-        return None
+# Fallback: old URL format (may redirect to new domain)
+GDRIVE_DOWNLOAD_URL_OLD = 'https://drive.google.com/uc?export=download&id={file_id}'
 
-
-def get_gdrive_service():
-    """
-    Get Google Drive service client.
-    Uses API key for public files (simple, no credentials file needed).
-    """
-    try:
-        from googleapiclient.discovery import build
-        api_key = get_google_api_key()
-        if not api_key:
-            logger.warning("No Google API key configured in SiteConfiguration")
-            return None
-        return build('drive', 'v3', developerKey=api_key)
-    except ImportError:
-        logger.error("google-api-python-client not installed")
-        return None
-    except Exception as e:
-        logger.error(f"Failed to create Google Drive service: {e}")
-        return None
+# User agent to avoid blocks
+USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 
 def extract_file_id(url_or_id: str) -> str:
-    """Extract Google Drive file ID from various URL formats"""
+    """
+    Extract Google Drive file ID from various URL formats.
+    
+    Supports:
+    - https://drive.google.com/file/d/FILE_ID/view
+    - https://drive.google.com/open?id=FILE_ID
+    - https://drive.google.com/uc?id=FILE_ID
+    - https://drive.google.com/uc?export=download&id=FILE_ID
+    - Raw FILE_ID string (20+ chars)
+    """
     patterns = [
         r'/file/d/([a-zA-Z0-9_-]+)',
         r'[?&]id=([a-zA-Z0-9_-]+)',
-        r'uc\?.*id=([a-zA-Z0-9_-]+)',
         r'^([a-zA-Z0-9_-]{20,})$',
     ]
     for pattern in patterns:
@@ -85,26 +73,6 @@ def extract_file_id(url_or_id: str) -> str:
         if match:
             return match.group(1)
     return url_or_id.strip()
-
-
-def get_file_metadata(file_id: str) -> Optional[Dict[str, Any]]:
-    """
-    Get file metadata from Google Drive.
-    Returns: dict with name, mimeType, size, etc.
-    """
-    service = get_gdrive_service()
-    if not service:
-        return None
-    
-    try:
-        metadata = service.files().get(
-            fileId=file_id,
-            fields='id,name,mimeType,size,videoMediaMetadata,imageMediaMetadata'
-        ).execute()
-        return metadata
-    except Exception as e:
-        logger.error(f"Failed to get file metadata for {file_id}: {e}")
-        return None
 
 
 # ============================================================================
@@ -119,7 +87,6 @@ def ensure_cache_dir():
 def get_cache_path(file_id: str) -> str:
     """Get local cache file path for a Google Drive file"""
     ensure_cache_dir()
-    # Use hash of file_id as filename to avoid path issues
     safe_name = hashlib.md5(file_id.encode()).hexdigest()
     return os.path.join(GDRIVE_CACHE_DIR, safe_name)
 
@@ -137,6 +104,11 @@ def is_cached(file_id: str) -> bool:
     if not os.path.exists(cache_path):
         return False
     
+    # File must be non-empty
+    if os.path.getsize(cache_path) == 0:
+        _remove_cached(file_id)
+        return False
+    
     # Check TTL
     if os.path.exists(meta_path):
         try:
@@ -144,7 +116,6 @@ def is_cached(file_id: str) -> bool:
                 meta = json.load(f)
             cached_at = meta.get('cached_at', 0)
             if time.time() - cached_at > GDRIVE_CACHE_TTL:
-                # Expired
                 _remove_cached(file_id)
                 return False
         except (json.JSONDecodeError, OSError):
@@ -185,7 +156,6 @@ def evict_cache_if_needed(needed_bytes: int = 0):
     if current_size + needed_bytes <= GDRIVE_CACHE_MAX_SIZE:
         return
     
-    # Collect all cached files with their access times
     files = []
     for f in Path(GDRIVE_CACHE_DIR).iterdir():
         if f.is_file() and not f.name.endswith('.meta.json'):
@@ -194,13 +164,11 @@ def evict_cache_if_needed(needed_bytes: int = 0):
     # Sort by access time (oldest first)
     files.sort(key=lambda x: x[1])
     
-    # Remove until we have enough space
     for fp, _, fsize in files:
         if current_size + needed_bytes <= GDRIVE_CACHE_MAX_SIZE:
             break
         try:
-            file_id_hash = fp.stem
-            meta_path = fp.with_suffix('.meta.json')
+            meta_path = fp.parent / (fp.name + '.meta.json')
             fp.unlink(missing_ok=True)
             meta_path.unlink(missing_ok=True)
             current_size -= fsize
@@ -219,176 +187,255 @@ def save_file_meta(file_id: str, metadata: Dict[str, Any]):
     }
     try:
         with open(meta_path, 'w') as f:
-            json.dump(meta, f)
+            json.dump(meta, f, indent=2)
     except OSError as e:
         logger.warning(f"Failed to save cache meta: {e}")
 
 
-def get_cached_file_size(file_id: str) -> Optional[int]:
-    """Get cached file size or None"""
-    cache_path = get_cache_path(file_id)
-    if os.path.exists(cache_path):
-        return os.path.getsize(cache_path)
+def get_cached_meta(file_id: str) -> Optional[Dict[str, Any]]:
+    """Get cached metadata or None"""
+    meta_path = get_cache_meta_path(file_id)
+    if os.path.exists(meta_path):
+        try:
+            with open(meta_path, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            pass
     return None
 
 
 # ============================================================================
-# Download & Stream from Google Drive
+# Download from Google Drive (Direct HTTP - NO API Key needed)
 # ============================================================================
+
+def _get_confirm_token(response: requests.Response) -> Optional[str]:
+    """
+    Extract confirmation token for large file download.
+    Google shows a warning page for files > ~100MB.
+    """
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            return value
+    
+    # Check HTML content for confirmation token
+    if 'confirm=t' in response.text:
+        return 't'
+    
+    # Check for virus scan warning
+    if 'Google Drive - Virus scan warning' in response.text or 'Too large for Google' in response.text:
+        return 't'
+    
+    return None
+
 
 def download_to_cache(file_id: str) -> Optional[str]:
     """
     Download file from Google Drive to local cache.
     Returns: local file path or None on failure.
     
-    Uses chunks for large files to avoid memory issues.
+    Handles:
+    - New domain (drive.usercontent.google.com) with confirm=t
+    - Fallback to old domain (drive.google.com/uc) with virus scan bypass
+    - Chunked download for memory efficiency
     """
-    service = get_gdrive_service()
-    if not service:
-        return None
-    
-    # Check if already cached
     cache_path = get_cache_path(file_id)
+    
+    # Check cache first
     if is_cached(file_id):
         logger.info(f"Cache hit: {file_id}")
-        # Update access time
-        os.utime(cache_path, None)
+        os.utime(cache_path, None)  # Update access time
         return cache_path
     
     logger.info(f"Cache miss, downloading from Google Drive: {file_id}")
     
+    session = requests.Session()
+    session.headers.update({'User-Agent': USER_AGENT})
+    
     try:
-        from googleapiclient.http import MediaIoBaseDownload
-        import io
+        # Step 1: Try new domain first (drive.usercontent.google.com)
+        url = GDRIVE_DOWNLOAD_URL.format(file_id=file_id)
+        response = session.get(url, stream=True, timeout=60)
+        response.raise_for_status()
         
-        # Get file metadata first
-        metadata = get_file_metadata(file_id)
-        file_size = int(metadata.get('size', 0)) if metadata else 0
+        content_type = response.headers.get('Content-Type', '')
+        
+        # Step 2: If new URL returned HTML, try old URL with confirm flow
+        if 'text/html' in content_type:
+            logger.info(f"New URL returned HTML, trying old URL for {file_id}")
+            response.close()
+            
+            url = GDRIVE_DOWNLOAD_URL_OLD.format(file_id=file_id)
+            response = session.get(url, stream=True, timeout=60)
+            response.raise_for_status()
+            content_type = response.headers.get('Content-Type', '')
+            
+            if 'text/html' in content_type:
+                # Parse the virus scan warning page for the actual download form
+                html = response.text
+                token = _get_confirm_token(response)
+                
+                # Extract form action URL (new Google pattern)
+                import re as _re
+                form_action = _re.search(r'action="([^"]+)"', html)
+                
+                if form_action:
+                    # Use the form action URL with confirm params
+                    confirm_url = form_action.group(1)
+                    # Add query params from form
+                    params = {}
+                    for inp in _re.finditer(r'name="([^"]+)"\s+value="([^"]+)"', html):
+                        params[inp.group(1)] = inp.group(2)
+                    
+                    logger.info(f"Using form action URL: {confirm_url} with params: {list(params.keys())}")
+                    response = session.get(confirm_url, params=params, stream=True, timeout=60)
+                    response.raise_for_status()
+                    content_type = response.headers.get('Content-Type', '')
+                
+                if 'text/html' in content_type:
+                    logger.error(f"Still getting HTML for {file_id}. "
+                                 f"File may not be shared publicly.")
+                    return None
+        
+        # Step 3: Get file size from headers
+        file_size = int(response.headers.get('Content-Length', 0))
+        actual_content_type = content_type
+        
+        # Get filename from Content-Disposition if available
+        filename = ''
+        cd = response.headers.get('Content-Disposition', '')
+        if cd:
+            fname_match = re.search(r"filename\*?=['\"]?(?:UTF-8'')?([^'\";\n]+)", cd)
+            if fname_match:
+                filename = fname_match.group(1).strip()
+        
+        logger.info(f"Downloading: {filename or file_id} ({file_size} bytes, {actual_content_type})")
         
         # Evict cache if needed
         if file_size > 0:
             evict_cache_if_needed(file_size)
         
-        # Download file
-        request = service.files().get_media(fileId=file_id)
+        # Step 4: Download in chunks
+        downloaded = 0
+        with open(cache_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=GDRIVE_CHUNK_SIZE):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if file_size > 0 and downloaded % (5 * GDRIVE_CHUNK_SIZE) == 0:
+                        pct = int(downloaded / file_size * 100)
+                        logger.debug(f"Download {file_id}: {pct}% ({downloaded}/{file_size})")
         
-        with open(cache_path, 'wb') as fh:
-            downloader = MediaIoBaseDownload(fh, request, chunksize=GDRIVE_CHUNK_SIZE)
-            done = False
-            while not done:
-                status, done = downloader.next_chunk()
-                if status:
-                    logger.debug(f"Download {file_id}: {int(status.progress() * 100)}%")
+        # Verify download
+        actual_size = os.path.getsize(cache_path)
+        if actual_size == 0:
+            logger.error(f"Downloaded file is empty: {file_id}")
+            os.remove(cache_path)
+            return None
+        
+        # Guess mime type from filename
+        mime_type = actual_content_type
+        if filename:
+            guessed = mimetypes.guess_type(filename)[0]
+            if guessed:
+                mime_type = guessed
         
         # Save metadata
         save_file_meta(file_id, {
-            'name': metadata.get('name', '') if metadata else '',
-            'mime_type': metadata.get('mimeType', '') if metadata else '',
-            'size': file_size,
+            'filename': filename,
+            'mime_type': mime_type,
+            'size': actual_size,
+            'content_type': actual_content_type,
         })
         
-        logger.info(f"Downloaded to cache: {file_id} ({file_size} bytes)")
+        logger.info(f"Downloaded to cache: {file_id} → {actual_size} bytes ({filename})")
         return cache_path
         
+    except requests.exceptions.Timeout:
+        logger.error(f"Timeout downloading {file_id}")
+        _cleanup_partial(cache_path)
+        return None
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"Connection error downloading {file_id}: {e}")
+        _cleanup_partial(cache_path)
+        return None
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"HTTP error downloading {file_id}: {e}")
+        _cleanup_partial(cache_path)
+        return None
     except Exception as e:
-        logger.error(f"Failed to download {file_id} from Google Drive: {e}")
-        # Clean up partial download
-        try:
-            os.remove(cache_path)
-        except OSError:
-            pass
+        logger.error(f"Unexpected error downloading {file_id}: {e}")
+        _cleanup_partial(cache_path)
         return None
+    finally:
+        session.close()
 
 
-def stream_from_gdrive_direct(file_id: str, range_start: int = 0, range_end: int = None) -> Optional[Generator[bytes, None, None]]:
-    """
-    Stream directly from Google Drive without caching.
-    Useful for very large files or first-time access.
-    
-    Returns: generator of chunks or None on failure.
-    """
-    service = get_gdrive_service()
-    if not service:
-        return None
-    
+def _cleanup_partial(cache_path: str):
+    """Remove partial download file"""
     try:
-        from googleapiclient.http import HttpRequest
-        import httplib2
-        
-        # Build range header
-        headers = {}
-        if range_start or range_end:
-            if range_end:
-                headers['Range'] = f'bytes={range_start}-{range_end}'
-            else:
-                headers['Range'] = f'bytes={range_start}-'
-        
-        # Get download URL
-        request = service.files().get_media(fileId=file_id)
-        request.headers.update(headers)
-        
-        # Execute and get response body
-        http = service._http
-        response, content = http.request(request.uri, method='GET', headers=request.headers)
-        
-        if response.status in (200, 206):
-            # Return content in chunks
-            chunk_size = 8192
-            for i in range(0, len(content), chunk_size):
-                yield content[i:i + chunk_size]
-        else:
-            logger.error(f"Google Drive API returned {response.status} for {file_id}")
-            return None
-            
-    except Exception as e:
-        logger.error(f"Failed to stream {file_id}: {e}")
-        return None
-
-
-def get_gdrive_file_info(file_id: str) -> Optional[Dict[str, Any]]:
-    """
-    Get comprehensive file info from Google Drive.
-    Returns dict with: name, mime_type, size, video_metadata
-    """
-    metadata = get_file_metadata(file_id)
-    if not metadata:
-        return None
-    
-    info = {
-        'name': metadata.get('name', ''),
-        'mime_type': metadata.get('mimeType', ''),
-        'size': int(metadata.get('size', 0)),
-    }
-    
-    # Video metadata (duration, width, height)
-    video_meta = metadata.get('videoMediaMetadata', {})
-    if video_meta:
-        info['duration_ms'] = int(video_meta.get('durationMillis', 0))
-        info['duration'] = info['duration_ms'] // 1000 if info['duration_ms'] else None
-        info['width'] = int(video_meta.get('width', 0)) or None
-        info['height'] = int(video_meta.get('height', 0)) or None
-    
-    return info
+        if os.path.exists(cache_path):
+            os.remove(cache_path)
+    except OSError:
+        pass
 
 
 # ============================================================================
-# Admin Helper Functions
+# File Info (without API Key)
+# ============================================================================
+
+def get_gdrive_file_info(file_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get basic file info by doing a HEAD-like request.
+    Returns: dict with filename, mime_type, size
+    """
+    # Check cache metadata first
+    cached_meta = get_cached_meta(file_id)
+    if cached_meta:
+        return {
+            'filename': cached_meta.get('filename', ''),
+            'mime_type': cached_meta.get('mime_type', ''),
+            'size': cached_meta.get('size', 0),
+        }
+    
+    session = requests.Session()
+    session.headers.update({'User-Agent': USER_AGENT})
+    
+    try:
+        url = GDRIVE_DOWNLOAD_URL.format(file_id=file_id)
+        response = session.get(url, stream=True, timeout=15)
+        
+        content_type = response.headers.get('Content-Type', '')
+        size = int(response.headers.get('Content-Length', 0))
+        
+        filename = ''
+        cd = response.headers.get('Content-Disposition', '')
+        if cd:
+            fname_match = re.search(r"filename\*?=['\"]?(?:UTF-8'')?([^'\";\n]+)", cd)
+            if fname_match:
+                filename = fname_match.group(1).strip()
+        
+        response.close()
+        
+        return {
+            'filename': filename,
+            'mime_type': content_type,
+            'size': size,
+        }
+    except Exception as e:
+        logger.error(f"Failed to get file info for {file_id}: {e}")
+        return None
+    finally:
+        session.close()
+
+
+# ============================================================================
+# Admin Helper
 # ============================================================================
 
 def import_from_gdrive_url(url: str) -> Dict[str, Any]:
     """
-    Import media from Google Drive URL.
-    Returns dict with all metadata for creating StreamMedia.
-    
-    Usage in admin:
-        info = import_from_gdrive_url("https://drive.google.com/file/d/xxx/view")
-        media = StreamMedia(
-            title=info['title'],
-            storage_type='gdrive',
-            gdrive_file_id=info['file_id'],
-            gdrive_url=url,
-            **info['metadata']
-        )
+    Import media info from Google Drive URL.
+    Returns dict with metadata for creating StreamMedia.
     """
     file_id = extract_file_id(url)
     if not file_id:
@@ -398,33 +445,25 @@ def import_from_gdrive_url(url: str) -> Dict[str, Any]:
     if not info:
         return {'error': f'Could not get file info for ID: {file_id}'}
     
-    # Determine media type from mime
     mime_type = info.get('mime_type', '')
     if 'video' in mime_type:
         media_type = 'video'
     elif 'audio' in mime_type:
         media_type = 'audio'
     else:
-        media_type = 'video'  # Default
+        media_type = 'video'
     
-    # Clean title from filename
-    title = info.get('name', 'Untitled')
-    # Remove file extension
-    title = os.path.splitext(title)[0]
-    # Clean up common patterns
-    title = title.replace('_', ' ').replace('-', ' ')
+    title = info.get('filename', 'Untitled')
+    if title:
+        title = os.path.splitext(title)[0]
+        title = title.replace('_', ' ').replace('-', ' ')
     
-    result = {
+    return {
         'file_id': file_id,
-        'title': title,
+        'title': title or 'Untitled',
         'metadata': {
             'media_type': media_type,
             'mime_type': mime_type,
             'file_size': info.get('size', 0),
-            'duration': info.get('duration'),
-            'width': info.get('width'),
-            'height': info.get('height'),
         }
     }
-    
-    return result
