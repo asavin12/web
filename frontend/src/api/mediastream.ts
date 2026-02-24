@@ -74,7 +74,6 @@ export interface TranslateRequest {
   vtt_content?: string;
   source_lang?: string;
   target_lang: string;
-  gemini_api_key?: string;
 }
 
 export interface TranslateResponse {

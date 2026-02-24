@@ -188,20 +188,19 @@ def translate_subtitle(request):
       - target_lang: str
       - cached: bool
     """
+    # Get Gemini API key
+    api_key = _get_gemini_api_key()
+    if not api_key:
+        return JsonResponse({
+            'error': 'Gemini API key chưa được cấu hình. '
+                     'Vui lòng thêm key trong Admin > Cấu hình hệ thống.'
+        }, status=503)
+    
     # Parse request body
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({'error': 'Invalid JSON body'}, status=400)
-    
-    # Get Gemini API key: ưu tiên key do người dùng gửi từ frontend
-    user_api_key = body.get('gemini_api_key', '').strip()
-    api_key = user_api_key or _get_gemini_api_key()
-    if not api_key:
-        return JsonResponse({
-            'error': 'Chưa có Gemini API Key. '
-                     'Vui lòng nhập API Key trong phần "Dịch AI" để sử dụng tính năng dịch phụ đề.'
-        }, status=503)
     
     target_lang = body.get('target_lang', '').strip()
     if not target_lang or target_lang not in SUPPORTED_LANGUAGES:
