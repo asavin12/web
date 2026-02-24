@@ -36,6 +36,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import GeminiApiKeyManager, { getStoredGeminiApiKey } from '@/components/stream/GeminiApiKeyManager';
 
 // ============================================================================
 // Subtitle Parsing (VTT + SRT)
@@ -385,6 +386,7 @@ export default function StreamPlayerPage() {
   const [isTranslating1, setIsTranslating1] = useState(false);
   const [isTranslating2, setIsTranslating2] = useState(false);
   const [translateError, setTranslateError] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState(() => getStoredGeminiApiKey());
 
   // Fetch media data
   const { data: media, isLoading, error } = useQuery({
@@ -442,6 +444,7 @@ export default function StreamPlayerPage() {
           const data = await mediaStreamApi.translateSubtitle({
             subtitle_id: refId,
             target_lang: track1Source.targetLang,
+            ...(geminiApiKey ? { gemini_api_key: geminiApiKey } : {}),
           });
           if (!cancelled) {
             setTrack1Cues(parseSubtitleContent(data.translated_vtt));
@@ -459,7 +462,7 @@ export default function StreamPlayerPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [track1Source, loadServerSubtitle, getReferenceSubtitleId]);
+  }, [track1Source, loadServerSubtitle, getReferenceSubtitleId, geminiApiKey]);
 
   // Load Track 2 cues
   useEffect(() => {
@@ -486,6 +489,7 @@ export default function StreamPlayerPage() {
           const data = await mediaStreamApi.translateSubtitle({
             subtitle_id: refId,
             target_lang: track2Source.targetLang,
+            ...(geminiApiKey ? { gemini_api_key: geminiApiKey } : {}),
           });
           if (!cancelled) {
             setTrack2Cues(parseSubtitleContent(data.translated_vtt));
@@ -503,7 +507,7 @@ export default function StreamPlayerPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [track2Source, loadServerSubtitle, getReferenceSubtitleId]);
+  }, [track2Source, loadServerSubtitle, getReferenceSubtitleId, geminiApiKey]);
 
   // Auto-select default subtitle for Track 1
   useEffect(() => {
@@ -748,6 +752,13 @@ export default function StreamPlayerPage() {
                 {translateError && (
                   <p className="text-xs text-red-500 mt-2">{translateError}</p>
                 )}
+
+                {/* Gemini API Key Manager */}
+                <div className="mt-3">
+                  <GeminiApiKeyManager
+                    onKeyChange={(key) => setGeminiApiKey(key)}
+                  />
+                </div>
               </div>
 
               {/* ===== Video Info ===== */}
