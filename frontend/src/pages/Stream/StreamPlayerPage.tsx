@@ -36,6 +36,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import GeminiApiKeyManager, { getStoredGeminiApiKey } from '@/components/stream/GeminiApiKeyManager';
 
 // ============================================================================
 // Subtitle Parsing (VTT + SRT)
@@ -166,7 +167,6 @@ const TRANSLATE_LANGUAGES = [
 // ============================================================================
 
 interface TrackControlProps {
-  trackNumber: 1 | 2;
   label: string;
   colorClasses: string;
   serverSubtitles: MediaSubtitle[];
@@ -176,7 +176,6 @@ interface TrackControlProps {
 }
 
 function SubtitleTrackControl({
-  trackNumber,
   label,
   colorClasses,
   serverSubtitles,
@@ -384,7 +383,9 @@ export default function StreamPlayerPage() {
   const [track2Cues, setTrack2Cues] = useState<SubtitleCue[]>([]);
   const [isTranslating1, setIsTranslating1] = useState(false);
   const [isTranslating2, setIsTranslating2] = useState(false);
-  const [translateError, setTranslateError] = useState('');
+  const [translateError1, setTranslateError1] = useState('');
+  const [translateError2, setTranslateError2] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState(() => getStoredGeminiApiKey());
 
   // Fetch media data
   const { data: media, isLoading, error } = useQuery({
@@ -442,14 +443,15 @@ export default function StreamPlayerPage() {
           const data = await mediaStreamApi.translateSubtitle({
             subtitle_id: refId,
             target_lang: track1Source.targetLang,
+            ...(geminiApiKey ? { gemini_api_key: geminiApiKey } : {}),
           });
           if (!cancelled) {
             setTrack1Cues(parseSubtitleContent(data.translated_vtt));
-            setTranslateError('');
+            setTranslateError1('');
           }
         } catch (err: any) {
           if (!cancelled) {
-            setTranslateError(err?.response?.data?.error || err.message || 'Translation failed');
+            setTranslateError1(err?.response?.data?.error || err.message || 'Dịch thất bại');
           }
         } finally {
           if (!cancelled) setIsTranslating1(false);
@@ -459,7 +461,7 @@ export default function StreamPlayerPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [track1Source, loadServerSubtitle, getReferenceSubtitleId]);
+  }, [track1Source, loadServerSubtitle, getReferenceSubtitleId, geminiApiKey]);
 
   // Load Track 2 cues
   useEffect(() => {
@@ -486,14 +488,15 @@ export default function StreamPlayerPage() {
           const data = await mediaStreamApi.translateSubtitle({
             subtitle_id: refId,
             target_lang: track2Source.targetLang,
+            ...(geminiApiKey ? { gemini_api_key: geminiApiKey } : {}),
           });
           if (!cancelled) {
             setTrack2Cues(parseSubtitleContent(data.translated_vtt));
-            setTranslateError('');
+            setTranslateError2('');
           }
         } catch (err: any) {
           if (!cancelled) {
-            setTranslateError(err?.response?.data?.error || err.message || 'Translation failed');
+            setTranslateError2(err?.response?.data?.error || err.message || 'Dịch thất bại');
           }
         } finally {
           if (!cancelled) setIsTranslating2(false);
@@ -503,7 +506,7 @@ export default function StreamPlayerPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [track2Source, loadServerSubtitle, getReferenceSubtitleId]);
+  }, [track2Source, loadServerSubtitle, getReferenceSubtitleId, geminiApiKey]);
 
   // Auto-select default subtitle for Track 1
   useEffect(() => {
@@ -531,8 +534,28 @@ export default function StreamPlayerPage() {
   }, [currentTime, track2Cues]);
 
   // Transcript: primary = Track 1, secondary = Track 2
-  const transcriptCues = track1Cues.length > 0 ? track1Cues : track2Cues;
-  const secondaryCues = track1Cues.length > 0 && track2Cues.length > 0 ? track2Cues : [];
+  const transcriptCues = useMemo(
+    () => track1Cues.length > 0 ? track1Cues : track2Cues,
+    [track1Cues, track2Cues]
+  );
+  const secondaryCues = useMemo(
+    () => track1Cues.length > 0 && track2Cues.length > 0 ? track2Cues : [],
+    [track1Cues, track2Cues]
+  );
+
+  // O(1) lookup map for secondary cues by approximate startTime
+  const secondaryCueMap = useMemo(() => {
+    const map = new Map<number, SubtitleCue>();
+    for (const sc of secondaryCues) {
+      map.set(Math.round(sc.startTime), sc);
+    }
+    return map;
+  }, [secondaryCues]);
+
+  const findSecondaryCue = useCallback((startTime: number): SubtitleCue | undefined => {
+    const key = Math.round(startTime);
+    return secondaryCueMap.get(key) || secondaryCueMap.get(key - 1) || secondaryCueMap.get(key + 1);
+  }, [secondaryCueMap]);
 
   // ========================================================================
   // Video event handlers
@@ -588,6 +611,44 @@ export default function StreamPlayerPage() {
       setIsPlaying(true);
     }
   }, []);
+
+  // Keyboard shortcuts: Space=play/pause, ←→=seek 5s, F=fullscreen, M=mute
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      switch (e.code) {
+        case 'Space':
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 5);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (videoRef.current) videoRef.current.currentTime = Math.min(duration, videoRef.current.currentTime + 5);
+          break;
+        case 'KeyF':
+          if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleFullscreen(); }
+          break;
+        case 'KeyM':
+          if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleMute(); }
+          break;
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [togglePlay, toggleFullscreen, toggleMute, duration]);
+
+  // Auto-scroll transcript to active cue
+  const activeCueIndex = activeCue1?.index ?? activeCue2?.index ?? -1;
+  useEffect(() => {
+    if (activeCueIndex >= 0 && showTranscript) {
+      const el = document.getElementById(`transcript-cue-${activeCueIndex}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [activeCueIndex, showTranscript]);
 
   // ========================================================================
   // Loading / Error states
@@ -724,7 +785,6 @@ export default function StreamPlayerPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Track 1 */}
                   <SubtitleTrackControl
-                    trackNumber={1}
                     label="Track 1 (chính)"
                     colorClasses="border-vintage-olive/30 bg-vintage-olive/5"
                     serverSubtitles={serverSubs}
@@ -735,7 +795,6 @@ export default function StreamPlayerPage() {
 
                   {/* Track 2 */}
                   <SubtitleTrackControl
-                    trackNumber={2}
                     label="Track 2 (phụ)"
                     colorClasses="border-blue-300/30 bg-blue-50/50"
                     serverSubtitles={serverSubs}
@@ -745,9 +804,19 @@ export default function StreamPlayerPage() {
                   />
                 </div>
 
-                {translateError && (
-                  <p className="text-xs text-red-500 mt-2">{translateError}</p>
+                {(translateError1 || translateError2) && (
+                  <div className="mt-2 space-y-1">
+                    {translateError1 && <p className="text-xs text-red-500">Track 1: {translateError1}</p>}
+                    {translateError2 && <p className="text-xs text-red-500">Track 2: {translateError2}</p>}
+                  </div>
                 )}
+
+                {/* Gemini API Key Manager */}
+                <div className="mt-3">
+                  <GeminiApiKeyManager
+                    onKeyChange={(key: string) => setGeminiApiKey(key)}
+                  />
+                </div>
               </div>
 
               {/* ===== Video Info ===== */}
@@ -833,12 +902,11 @@ export default function StreamPlayerPage() {
                         {transcriptCues.map((cue) => {
                           const isActive = (activeCue1?.index === cue.index && track1Cues === transcriptCues)
                             || (activeCue2?.index === cue.index && track2Cues === transcriptCues);
-                          const secondCue = secondaryCues.find(
-                            sc => Math.abs(sc.startTime - cue.startTime) < 2
-                          );
+                          const secondCue = findSecondaryCue(cue.startTime);
 
                           return (
                             <button
+                              id={`transcript-cue-${cue.index}`}
                               key={cue.index}
                               onClick={() => seekToCue(cue)}
                               className={`w-full text-left p-3 hover:bg-vintage-cream/50 transition ${

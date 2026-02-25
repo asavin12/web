@@ -74,6 +74,7 @@ export interface TranslateRequest {
   vtt_content?: string;
   source_lang?: string;
   target_lang: string;
+  gemini_api_key?: string;
 }
 
 export interface TranslateResponse {
@@ -125,14 +126,6 @@ export const mediaStreamApi = {
     const response = await streamApi.get<StreamMedia>(
       `/api/media/${uid}/`
     );
-    return response.data;
-  },
-
-  /**
-   * Get media info (legacy JSON endpoint)
-   */
-  getInfo: async (uid: string): Promise<StreamMedia> => {
-    const response = await streamApi.get(`/info/${uid}/`);
     return response.data;
   },
 
