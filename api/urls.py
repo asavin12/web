@@ -70,11 +70,45 @@ urlpatterns = [
     # ============ N8N Automation API ============
     # Để n8n tự động đăng bài, sử dụng header X-API-Key
     path('n8n/health/', n8n_views.n8n_health_check, name='n8n-health'),
+
+    # --- Categories ---
     path('n8n/categories/', n8n_views.n8n_get_categories, name='n8n-categories'),
+    path('n8n/categories/create/', n8n_views.n8n_create_category, name='n8n-create-category'),
+
+    # --- News CRUD ---
     path('n8n/news/', n8n_views.n8n_create_news_article, name='n8n-create-news'),
+    path('n8n/news/list/', n8n_views.n8n_list_news, name='n8n-list-news'),
     path('n8n/news/<str:identifier>/', n8n_views.n8n_update_news_article, name='n8n-update-news'),
+
+    # --- Knowledge CRUD ---
     path('n8n/knowledge/', n8n_views.n8n_create_knowledge_article, name='n8n-create-knowledge'),
+    path('n8n/knowledge/list/', n8n_views.n8n_list_knowledge, name='n8n-list-knowledge'),
     path('n8n/knowledge/<str:identifier>/', n8n_views.n8n_update_knowledge_article, name='n8n-update-knowledge'),
+
+    # --- Resources CRUD ---
     path('n8n/resources/', n8n_views.n8n_create_resource, name='n8n-create-resource'),
+    path('n8n/resources/list/', n8n_views.n8n_list_resources, name='n8n-list-resources'),
+    path('n8n/resources/<str:identifier>/', n8n_views.n8n_update_resource, name='n8n-update-resource'),
+
+    # --- Tools CRUD ---
+    path('n8n/tools/', n8n_views.n8n_create_tool, name='n8n-create-tool'),
+    path('n8n/tools/list/', n8n_views.n8n_list_tools, name='n8n-list-tools'),
+    path('n8n/tools/<str:identifier>/', n8n_views.n8n_update_tool, name='n8n-update-tool'),
+
+    # --- Videos ---
     path('n8n/videos/', n8n_views.n8n_create_video, name='n8n-create-video'),
+    path('n8n/videos/list/', n8n_views.n8n_list_videos, name='n8n-list-videos'),
+
+    # --- Flashcards ---
+    path('n8n/flashcards/', n8n_views.n8n_create_flashcard_deck, name='n8n-create-flashcard'),
+    path('n8n/flashcards/<str:identifier>/', n8n_views.n8n_update_flashcard_deck, name='n8n-update-flashcard'),
+
+    # --- Stream Media ---
+    path('n8n/stream-media/', n8n_views.n8n_create_stream_media, name='n8n-create-stream-media'),
+
+    # --- Delete (generic) ---
+    path('n8n/<str:content_type>/<str:identifier>/delete/', n8n_views.n8n_delete_content, name='n8n-delete'),
+
+    # --- Bulk Operations ---
+    path('n8n/bulk/', n8n_views.n8n_bulk_create, name='n8n-bulk'),
 ]

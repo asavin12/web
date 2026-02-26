@@ -1198,3 +1198,1685 @@ def n8n_create_video(request):
         'message': 'Đã tạo video thành công',
         'action': 'created'
     }, status=status.HTTP_201_CREATED)
+
+
+# ============================================================================
+# LIST Endpoints — Cho n8n kiểm tra nội dung đã có
+# ============================================================================
+
+def _serialize_article(article, url_prefix):
+    """Serialize cơ bản cho News/Knowledge article"""
+    data = {
+        'id': article.id,
+        'title': article.title,
+        'slug': article.slug,
+        'url': f'/{url_prefix}/{article.slug}',
+        'is_published': article.is_published,
+        'is_featured': article.is_featured,
+        'view_count': article.view_count,
+        'created_at': article.created_at.isoformat(),
+        'updated_at': article.updated_at.isoformat(),
+        'category': article.category.slug if article.category else None,
+        'cover_image': article.cover_image.url if article.cover_image else None,
+        'source': getattr(article, 'source', ''),
+        'source_id': getattr(article, 'source_id', ''),
+    }
+    if hasattr(article, 'language'):
+        data['language'] = article.language
+        data['level'] = article.level
+    return data
+
+
+@api_view(['GET'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_list_news(request):
+    """
+    Danh sách bài viết News — cho n8n kiểm tra trước khi tạo
+
+    GET /api/v1/n8n/news/list/
+    Headers: X-API-Key: <key>
+    Query params:
+        - page (default: 1)
+        - page_size (default: 20, max: 100)
+        - category (slug)
+        - is_published (true/false)
+        - search (tìm trong title)
+        - source (n8n / admin / ...)
+    """
+    from news.models import Article
+    qs = Article.objects.select_related('category').order_by('-created_at')
+
+    # Filters
+    if request.query_params.get('category'):
+        qs = qs.filter(category__slug=request.query_params['category'])
+    if request.query_params.get('is_published'):
+        qs = qs.filter(is_published=request.query_params['is_published'].lower() == 'true')
+    if request.query_params.get('search'):
+        qs = qs.filter(Q(title__icontains=request.query_params['search']))
+    if request.query_params.get('source'):
+        qs = qs.filter(source=request.query_params['source'])
+
+    # Pagination
+    page = max(1, int(request.query_params.get('page', 1)))
+    page_size = min(100, max(1, int(request.query_params.get('page_size', 20))))
+    total = qs.count()
+    articles = qs[(page - 1) * page_size:page * page_size]
+
+    return Response({
+        'success': True,
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+        'results': [_serialize_article(a, 'tin-tuc') for a in articles],
+    })
+
+
+@api_view(['GET'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_list_knowledge(request):
+    """
+    Danh sách bài viết Knowledge
+
+    GET /api/v1/n8n/knowledge/list/
+    Headers: X-API-Key: <key>
+    Query params:
+        - page, page_size, category, is_published, search, source
+        - language (de/en/all)
+        - level (A1-C2/all)
+    """
+    from knowledge.models import KnowledgeArticle
+    qs = KnowledgeArticle.objects.select_related('category').order_by('-created_at')
+
+    if request.query_params.get('category'):
+        qs = qs.filter(category__slug=request.query_params['category'])
+    if request.query_params.get('is_published'):
+        qs = qs.filter(is_published=request.query_params['is_published'].lower() == 'true')
+    if request.query_params.get('search'):
+        qs = qs.filter(Q(title__icontains=request.query_params['search']))
+    if request.query_params.get('source'):
+        qs = qs.filter(source=request.query_params['source'])
+    if request.query_params.get('language'):
+        qs = qs.filter(language=request.query_params['language'])
+    if request.query_params.get('level'):
+        qs = qs.filter(level=request.query_params['level'])
+
+    page = max(1, int(request.query_params.get('page', 1)))
+    page_size = min(100, max(1, int(request.query_params.get('page_size', 20))))
+    total = qs.count()
+    articles = qs[(page - 1) * page_size:page * page_size]
+
+    return Response({
+        'success': True,
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+        'results': [_serialize_article(a, 'kien-thuc') for a in articles],
+    })
+
+
+@api_view(['GET'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_list_resources(request):
+    """
+    Danh sách Resources
+
+    GET /api/v1/n8n/resources/list/
+    Headers: X-API-Key: <key>
+    Query params:
+        - page, page_size, category, search, source
+        - resource_type (ebook/pdf/audio/video/document/flashcard)
+    """
+    from resources.models import Resource
+    qs = Resource.objects.select_related('category').order_by('-created_at')
+
+    if request.query_params.get('category'):
+        qs = qs.filter(category__slug=request.query_params['category'])
+    if request.query_params.get('search'):
+        qs = qs.filter(Q(title__icontains=request.query_params['search']))
+    if request.query_params.get('source'):
+        qs = qs.filter(source=request.query_params['source'])
+    if request.query_params.get('resource_type'):
+        qs = qs.filter(resource_type=request.query_params['resource_type'])
+
+    page = max(1, int(request.query_params.get('page', 1)))
+    page_size = min(100, max(1, int(request.query_params.get('page_size', 20))))
+    total = qs.count()
+    resources = qs[(page - 1) * page_size:page * page_size]
+
+    return Response({
+        'success': True,
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+        'results': [{
+            'id': r.id,
+            'title': r.title,
+            'slug': r.slug,
+            'resource_type': r.resource_type,
+            'category': r.category.slug if r.category else None,
+            'is_active': r.is_active,
+            'is_featured': r.is_featured,
+            'url': f'/tai-lieu/{r.slug}',
+            'created_at': r.created_at.isoformat(),
+            'source': getattr(r, 'source', ''),
+            'source_id': getattr(r, 'source_id', ''),
+        } for r in resources],
+    })
+
+
+@api_view(['GET'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_list_tools(request):
+    """
+    Danh sách Tools
+
+    GET /api/v1/n8n/tools/list/
+    Headers: X-API-Key: <key>
+    Query params:
+        - page, page_size, category, search
+        - tool_type (internal/external/embed/article)
+        - language (en/de/all)
+        - is_published (true/false)
+    """
+    from tools.models import Tool
+    qs = Tool.objects.select_related('category').order_by('-created_at')
+
+    if request.query_params.get('category'):
+        qs = qs.filter(category__slug=request.query_params['category'])
+    if request.query_params.get('search'):
+        qs = qs.filter(Q(name__icontains=request.query_params['search']))
+    if request.query_params.get('tool_type'):
+        qs = qs.filter(tool_type=request.query_params['tool_type'])
+    if request.query_params.get('language'):
+        qs = qs.filter(language=request.query_params['language'])
+    if request.query_params.get('is_published'):
+        qs = qs.filter(is_published=request.query_params['is_published'].lower() == 'true')
+
+    page = max(1, int(request.query_params.get('page', 1)))
+    page_size = min(100, max(1, int(request.query_params.get('page_size', 20))))
+    total = qs.count()
+    tools = qs[(page - 1) * page_size:page * page_size]
+
+    return Response({
+        'success': True,
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+        'results': [{
+            'id': t.id,
+            'name': t.name,
+            'slug': t.slug,
+            'tool_type': t.tool_type,
+            'language': t.language,
+            'category': t.category.slug if t.category else None,
+            'is_published': t.is_published,
+            'is_active': t.is_active,
+            'url': f'/cong-cu/{t.slug}',
+            'created_at': t.created_at.isoformat(),
+        } for t in tools],
+    })
+
+
+@api_view(['GET'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_list_videos(request):
+    """
+    Danh sách Videos (core.Video)
+
+    GET /api/v1/n8n/videos/list/
+    Headers: X-API-Key: <key>
+    Query params:
+        - page, page_size, search, source
+        - language (en/de/all)
+        - level (A1-C2/all)
+    """
+    from core.models import Video
+    qs = Video.objects.order_by('-created_at')
+
+    if request.query_params.get('search'):
+        qs = qs.filter(Q(title__icontains=request.query_params['search']))
+    if request.query_params.get('source'):
+        qs = qs.filter(source=request.query_params['source'])
+    if request.query_params.get('language'):
+        qs = qs.filter(language=request.query_params['language'])
+    if request.query_params.get('level'):
+        qs = qs.filter(level=request.query_params['level'])
+
+    page = max(1, int(request.query_params.get('page', 1)))
+    page_size = min(100, max(1, int(request.query_params.get('page_size', 20))))
+    total = qs.count()
+    videos = qs[(page - 1) * page_size:page * page_size]
+
+    return Response({
+        'success': True,
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+        'results': [{
+            'id': v.id,
+            'title': v.title,
+            'slug': v.slug,
+            'youtube_id': v.youtube_id,
+            'language': v.language,
+            'level': v.level,
+            'is_active': v.is_active,
+            'url': f'/videos/{v.slug}',
+            'created_at': v.created_at.isoformat(),
+            'source': getattr(v, 'source', ''),
+            'source_id': getattr(v, 'source_id', ''),
+        } for v in videos],
+    })
+
+
+# ============================================================================
+# Tools CRUD — Tạo & cập nhật công cụ học tập
+# ============================================================================
+
+@api_view(['POST'])
+@authentication_classes([APIKeyAuthentication])
+@parser_classes([JSONParser, MultiPartParser, FormParser])
+def n8n_create_tool(request):
+    """
+    Tạo Tool từ n8n
+
+    POST /api/v1/n8n/tools/
+    Headers: X-API-Key: <key>
+
+    Body (JSON hoặc multipart/form-data):
+        {
+            "name": "Tên công cụ" (bắt buộc),
+            "description": "Mô tả" (bắt buộc),
+            "content": "Nội dung HTML (cho tool_type=article)",
+            "excerpt": "Mô tả ngắn",
+            "category": "slug hoặc id",
+            "tool_type": "internal|external|embed|article" (default: "article"),
+            "url": "URL công cụ bên ngoài (cho external)",
+            "embed_code": "Iframe/embed HTML (cho embed)",
+            "icon": "Tên icon (lucide-react)",
+            "language": "en|de|all" (default: "all"),
+            "cover_image_url": "URL ảnh bìa",
+            "auto_placeholder": true,
+            "is_featured": false,
+            "is_published": true,
+            "meta_title": "SEO title",
+            "meta_description": "SEO description",
+            "skip_seo_validation": false
+        }
+
+    Returns:
+        {
+            "success": true,
+            "tool": {...},
+            "image_source": "url|upload|placeholder|none",
+            "message": "Đã tạo công cụ thành công"
+        }
+    """
+    from tools.models import Tool, ToolCategory
+
+    name = request.data.get('name')
+    description = request.data.get('description')
+
+    if not name:
+        return Response(
+            {'success': False, 'error': 'Thiếu trường "name"'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if not description:
+        return Response(
+            {'success': False, 'error': 'Thiếu trường "description"'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Tool type validation
+    tool_type = request.data.get('tool_type', 'article')
+    valid_types = ['internal', 'external', 'embed', 'article']
+    if tool_type not in valid_types:
+        return Response(
+            {'success': False, 'error': f'tool_type phải là: {", ".join(valid_types)}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # External required URL
+    if tool_type == 'external' and not request.data.get('url'):
+        return Response(
+            {'success': False, 'error': 'tool_type "external" cần trường "url"'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Article type = SEO validation
+    content = request.data.get('content', '')
+    if tool_type == 'article' and content:
+        skip_validation = request.data.get('skip_seo_validation', False)
+        seo_valid, seo_warnings, seo_errors = validate_seo_content({
+            'title': name,
+            'content': content,
+            'excerpt': request.data.get('excerpt', ''),
+            'meta_title': request.data.get('meta_title', ''),
+            'meta_description': request.data.get('meta_description', ''),
+        })
+        if not seo_valid and not skip_validation:
+            return Response({
+                'success': False,
+                'error': 'Nội dung không đạt chuẩn SEO',
+                'seo_errors': seo_errors,
+                'seo_warnings': seo_warnings,
+                'hint': 'Gửi skip_seo_validation=true để bỏ qua'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Category
+    category_input = request.data.get('category')
+    category = None
+    if category_input:
+        try:
+            if isinstance(category_input, int) or (isinstance(category_input, str) and category_input.isdigit()):
+                category = ToolCategory.objects.get(id=int(category_input))
+            else:
+                category = ToolCategory.objects.get(slug=category_input)
+        except ToolCategory.DoesNotExist:
+            category = ToolCategory.objects.create(
+                name=category_input,
+                slug=vietnamese_slugify(category_input)
+            )
+
+    # Generate unique slug
+    base_slug = vietnamese_slugify(name)
+    slug = base_slug
+    counter = 1
+    while Tool.objects.filter(slug=slug).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    # Language
+    language = request.data.get('language', 'all')
+    if language not in ['de', 'en', 'all']:
+        language = 'all'
+
+    # Process cover image
+    cover_image, image_source = process_article_image(
+        request, slug, upload_to='tools/covers/'
+    )
+
+    is_published = request.data.get('is_published', True)
+
+    tool = Tool.objects.create(
+        name=name,
+        slug=slug,
+        description=description,
+        content=content,
+        excerpt=request.data.get('excerpt', ''),
+        category=category,
+        author=request.user,
+        tool_type=tool_type,
+        url=request.data.get('url', ''),
+        embed_code=request.data.get('embed_code', ''),
+        icon=request.data.get('icon', ''),
+        language=language,
+        is_featured=request.data.get('is_featured', False),
+        is_published=is_published,
+        is_active=True,
+        published_at=timezone.now() if is_published else None,
+        meta_title=request.data.get('meta_title', ''),
+        meta_description=request.data.get('meta_description', ''),
+    )
+
+    if cover_image:
+        tool.cover_image = cover_image
+        tool.save()
+
+    response_data = {
+        'success': True,
+        'tool': {
+            'id': tool.id,
+            'name': tool.name,
+            'slug': tool.slug,
+            'tool_type': tool.tool_type,
+            'language': tool.language,
+            'url': f'/cong-cu/{tool.slug}',
+            'is_published': tool.is_published,
+            'cover_image': tool.cover_image.url if tool.cover_image else None,
+            'created_at': tool.created_at.isoformat(),
+        },
+        'image_source': image_source,
+        'message': 'Đã tạo công cụ thành công',
+    }
+
+    if tool_type == 'article' and content:
+        _, seo_warnings_final, _ = validate_seo_content({
+            'title': name, 'content': content,
+            'excerpt': request.data.get('excerpt', ''),
+        })
+        if seo_warnings_final:
+            response_data['seo_warnings'] = seo_warnings_final
+
+    return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PUT', 'PATCH'])
+@authentication_classes([APIKeyAuthentication])
+@parser_classes([JSONParser, MultiPartParser, FormParser])
+def n8n_update_tool(request, identifier):
+    """
+    Cập nhật Tool từ n8n
+
+    PUT/PATCH /api/v1/n8n/tools/<identifier>/
+    identifier: slug hoặc id
+
+    Body (JSON):
+        Bất kỳ trường nào của Tool (name, description, content, category,
+        tool_type, url, embed_code, icon, language, is_featured, is_published,
+        is_active, meta_title, meta_description, cover_image_url,
+        regenerate_slug)
+    """
+    from tools.models import Tool, ToolCategory
+
+    # Find tool
+    tool = Tool.objects.filter(slug=identifier).first()
+    if not tool and (isinstance(identifier, int) or (isinstance(identifier, str) and identifier.isdigit())):
+        tool = Tool.objects.filter(id=int(identifier)).first()
+    if not tool:
+        return Response(
+            {'success': False, 'error': f'Không tìm thấy tool "{identifier}"'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    data = request.data
+    updated_fields = []
+
+    # Text fields
+    for param in ['name', 'description', 'content', 'excerpt', 'url', 'embed_code',
+                   'icon', 'meta_title', 'meta_description']:
+        if param in data:
+            setattr(tool, param, data[param])
+            updated_fields.append(param)
+
+    # Tool type
+    if 'tool_type' in data:
+        valid_types = ['internal', 'external', 'embed', 'article']
+        if data['tool_type'] in valid_types:
+            tool.tool_type = data['tool_type']
+            updated_fields.append('tool_type')
+
+    # Language
+    if 'language' in data:
+        if data['language'] in ['de', 'en', 'all']:
+            tool.language = data['language']
+            updated_fields.append('language')
+
+    # Booleans
+    for param in ['is_featured', 'is_published', 'is_active']:
+        if param in data:
+            was_published = tool.is_published
+            setattr(tool, param, data[param])
+            updated_fields.append(param)
+            if param == 'is_published' and data[param] and not was_published and not tool.published_at:
+                tool.published_at = timezone.now()
+                updated_fields.append('published_at')
+
+    # Category
+    if 'category' in data:
+        category_input = data['category']
+        if category_input:
+            try:
+                if isinstance(category_input, int) or (isinstance(category_input, str) and category_input.isdigit()):
+                    tool.category = ToolCategory.objects.get(id=int(category_input))
+                else:
+                    tool.category = ToolCategory.objects.get(slug=category_input)
+                updated_fields.append('category')
+            except ToolCategory.DoesNotExist:
+                return Response(
+                    {'success': False, 'error': f'Category "{category_input}" không tồn tại'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            tool.category = None
+            updated_fields.append('category')
+
+    # Slug regeneration
+    if data.get('regenerate_slug') and 'name' in data:
+        base_slug = vietnamese_slugify(data['name'])
+        slug = base_slug
+        counter = 1
+        while Tool.objects.filter(slug=slug).exclude(id=tool.id).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        tool.slug = slug
+        updated_fields.append('slug')
+
+    # Cover image
+    image_source = 'unchanged'
+    if 'cover_image' in request.FILES or 'cover_image_url' in data:
+        cover_image, image_source = process_article_image(
+            request, tool.slug, upload_to='tools/covers/'
+        )
+        if cover_image:
+            tool.cover_image = cover_image
+            updated_fields.append('cover_image')
+
+    if not updated_fields:
+        return Response(
+            {'success': False, 'error': 'Không có trường nào được cập nhật'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    tool.save()
+
+    return Response({
+        'success': True,
+        'tool': {
+            'id': tool.id,
+            'name': tool.name,
+            'slug': tool.slug,
+            'tool_type': tool.tool_type,
+            'url': f'/cong-cu/{tool.slug}',
+            'is_published': tool.is_published,
+            'cover_image': tool.cover_image.url if tool.cover_image else None,
+            'updated_at': tool.updated_at.isoformat(),
+        },
+        'updated_fields': updated_fields,
+        'image_source': image_source,
+        'message': 'Đã cập nhật công cụ thành công',
+    })
+
+
+# ============================================================================
+# Flashcard CRUD — Tạo bộ flashcard với các thẻ
+# ============================================================================
+
+@api_view(['POST'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_create_flashcard_deck(request):
+    """
+    Tạo bộ Flashcard (deck + cards) từ n8n
+
+    POST /api/v1/n8n/flashcards/
+    Headers: X-API-Key: <key>
+
+    Body (JSON):
+        {
+            "name": "Tên bộ flashcard" (bắt buộc),
+            "description": "Mô tả",
+            "language": "en|de" (bắt buộc),
+            "level": "A1|A2|B1|B2|C1|C2" (bắt buộc),
+            "is_public": true,
+            "is_featured": false,
+            "cards": [
+                {
+                    "front": "Hello" (bắt buộc),
+                    "back": "Xin chào" (bắt buộc),
+                    "example": "Hello, how are you?",
+                    "pronunciation": "/həˈloʊ/",
+                    "audio_url": "https://..."
+                },
+                ...
+            ]
+        }
+
+    Returns:
+        {
+            "success": true,
+            "deck": {...},
+            "cards_created": 10,
+            "message": "Đã tạo bộ flashcard thành công"
+        }
+    """
+    from tools.models import FlashcardDeck, Flashcard
+
+    name = request.data.get('name')
+    language = request.data.get('language')
+    level = request.data.get('level')
+
+    if not name:
+        return Response(
+            {'success': False, 'error': 'Thiếu trường "name"'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if not language or language not in ['en', 'de']:
+        return Response(
+            {'success': False, 'error': 'Trường "language" bắt buộc (en hoặc de)'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if not level or level not in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']:
+        return Response(
+            {'success': False, 'error': 'Trường "level" bắt buộc (A1-C2)'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Generate unique slug
+    base_slug = vietnamese_slugify(name)
+    slug = base_slug
+    counter = 1
+    while FlashcardDeck.objects.filter(slug=slug).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    # Check duplicate by name + language + level
+    existing = FlashcardDeck.objects.filter(
+        name=name, language=language, level=level
+    ).first()
+    if existing:
+        return Response({
+            'success': True,
+            'deck': {
+                'id': existing.id,
+                'name': existing.name,
+                'slug': existing.slug,
+                'card_count': existing.cards.count(),
+            },
+            'message': 'Bộ flashcard đã tồn tại',
+            'action': 'skipped'
+        })
+
+    # Create deck
+    deck = FlashcardDeck.objects.create(
+        name=name,
+        slug=slug,
+        description=request.data.get('description', ''),
+        language=language,
+        level=level,
+        author=request.user,
+        is_public=request.data.get('is_public', True),
+        is_featured=request.data.get('is_featured', False),
+    )
+
+    # Create cards
+    cards_data = request.data.get('cards', [])
+    cards_created = 0
+    card_errors = []
+
+    for i, card_data in enumerate(cards_data):
+        front = card_data.get('front', '').strip()
+        back = card_data.get('back', '').strip()
+        if not front or not back:
+            card_errors.append(f'Card {i + 1}: thiếu front hoặc back')
+            continue
+
+        Flashcard.objects.create(
+            deck=deck,
+            front=front,
+            back=back,
+            example=card_data.get('example', ''),
+            pronunciation=card_data.get('pronunciation', ''),
+            audio_url=card_data.get('audio_url', ''),
+            order=i,
+        )
+        cards_created += 1
+
+    response_data = {
+        'success': True,
+        'deck': {
+            'id': deck.id,
+            'name': deck.name,
+            'slug': deck.slug,
+            'language': deck.language,
+            'level': deck.level,
+            'url': f'/cong-cu/flashcards/{deck.slug}',
+            'created_at': deck.created_at.isoformat(),
+        },
+        'cards_created': cards_created,
+        'message': f'Đã tạo bộ flashcard với {cards_created} thẻ',
+        'action': 'created',
+    }
+
+    if card_errors:
+        response_data['card_errors'] = card_errors
+
+    return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PUT', 'PATCH'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_update_flashcard_deck(request, identifier):
+    """
+    Cập nhật bộ Flashcard từ n8n
+
+    PUT/PATCH /api/v1/n8n/flashcards/<identifier>/
+    identifier: slug hoặc id
+
+    Body (JSON):
+        {
+            "name": "Tên mới",
+            "description": "Mô tả mới",
+            "is_public": true,
+            "is_featured": false,
+            "add_cards": [...],     // Thêm thẻ mới
+            "replace_cards": [...]  // Xoá tất cả thẻ cũ, thay bằng mới
+        }
+    """
+    from tools.models import FlashcardDeck, Flashcard
+
+    deck = FlashcardDeck.objects.filter(slug=identifier).first()
+    if not deck and (isinstance(identifier, str) and identifier.isdigit()):
+        deck = FlashcardDeck.objects.filter(id=int(identifier)).first()
+    if not deck:
+        return Response(
+            {'success': False, 'error': f'Không tìm thấy FlashcardDeck "{identifier}"'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    data = request.data
+    updated_fields = []
+
+    for field in ['name', 'description']:
+        if field in data:
+            setattr(deck, field, data[field])
+            updated_fields.append(field)
+
+    for field in ['is_public', 'is_featured']:
+        if field in data:
+            setattr(deck, field, data[field])
+            updated_fields.append(field)
+
+    if 'language' in data and data['language'] in ['en', 'de']:
+        deck.language = data['language']
+        updated_fields.append('language')
+    if 'level' in data and data['level'] in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']:
+        deck.level = data['level']
+        updated_fields.append('level')
+
+    deck.save()
+
+    # Replace all cards
+    cards_created = 0
+    if 'replace_cards' in data:
+        deck.cards.all().delete()
+        for i, card_data in enumerate(data['replace_cards']):
+            front = card_data.get('front', '').strip()
+            back = card_data.get('back', '').strip()
+            if front and back:
+                Flashcard.objects.create(
+                    deck=deck, front=front, back=back,
+                    example=card_data.get('example', ''),
+                    pronunciation=card_data.get('pronunciation', ''),
+                    audio_url=card_data.get('audio_url', ''),
+                    order=i,
+                )
+                cards_created += 1
+        updated_fields.append(f'replace_cards({cards_created})')
+
+    # Add cards
+    elif 'add_cards' in data:
+        max_order = deck.cards.order_by('-order').values_list('order', flat=True).first() or 0
+        for i, card_data in enumerate(data['add_cards']):
+            front = card_data.get('front', '').strip()
+            back = card_data.get('back', '').strip()
+            if front and back:
+                Flashcard.objects.create(
+                    deck=deck, front=front, back=back,
+                    example=card_data.get('example', ''),
+                    pronunciation=card_data.get('pronunciation', ''),
+                    audio_url=card_data.get('audio_url', ''),
+                    order=max_order + i + 1,
+                )
+                cards_created += 1
+        updated_fields.append(f'add_cards({cards_created})')
+
+    return Response({
+        'success': True,
+        'deck': {
+            'id': deck.id,
+            'name': deck.name,
+            'slug': deck.slug,
+            'card_count': deck.cards.count(),
+            'updated_at': deck.updated_at.isoformat(),
+        },
+        'updated_fields': updated_fields,
+        'cards_modified': cards_created,
+        'message': 'Đã cập nhật bộ flashcard thành công',
+    })
+
+
+# ============================================================================
+# Resource UPDATE
+# ============================================================================
+
+@api_view(['PUT', 'PATCH'])
+@authentication_classes([APIKeyAuthentication])
+@parser_classes([JSONParser, MultiPartParser, FormParser])
+def n8n_update_resource(request, identifier):
+    """
+    Cập nhật Resource từ n8n
+
+    PUT/PATCH /api/v1/n8n/resources/<identifier>/
+    identifier: slug, id, hoặc source_id
+
+    Body (JSON):
+        {
+            "title": "Tên mới",
+            "description": "Mô tả mới",
+            "category": "slug hoặc id",
+            "resource_type": "ebook|pdf|audio|video|document|flashcard",
+            "external_url": "URL mới",
+            "youtube_url": "YouTube URL mới",
+            "author": "Tác giả mới",
+            "is_featured": true/false,
+            "is_active": true/false,
+            "cover_image_url": "URL ảnh mới",
+            "regenerate_slug": false
+        }
+    """
+    from resources.models import Resource, Category
+
+    # Find resource
+    resource, error = _find_article(Resource, identifier)
+    if error:
+        return error
+
+    data = request.data
+    updated_fields = []
+
+    for param in ['title', 'description', 'external_url', 'youtube_url', 'author']:
+        if param in data:
+            setattr(resource, param, data[param])
+            updated_fields.append(param)
+
+    for param in ['is_featured', 'is_active']:
+        if param in data:
+            setattr(resource, param, data[param])
+            updated_fields.append(param)
+
+    if 'resource_type' in data:
+        valid_types = ['ebook', 'book', 'pdf', 'audio', 'video', 'document', 'flashcard']
+        if data['resource_type'] in valid_types:
+            resource.resource_type = data['resource_type']
+            updated_fields.append('resource_type')
+
+    if 'category' in data:
+        category_input = data['category']
+        if category_input:
+            try:
+                if isinstance(category_input, int) or (isinstance(category_input, str) and category_input.isdigit()):
+                    resource.category = Category.objects.get(id=int(category_input))
+                else:
+                    resource.category = Category.objects.get(slug=category_input)
+                updated_fields.append('category')
+            except Category.DoesNotExist:
+                return Response(
+                    {'success': False, 'error': f'Category "{category_input}" không tồn tại'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+    if data.get('regenerate_slug') and 'title' in data:
+        base_slug = vietnamese_slugify(data['title'])
+        slug = base_slug
+        counter = 1
+        while Resource.objects.filter(slug=slug).exclude(id=resource.id).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        resource.slug = slug
+        updated_fields.append('slug')
+
+    # N8N tracking
+    for param, field in {'source_url': 'source_url', 'source_id': 'source_id',
+                         'workflow_id': 'n8n_workflow_id', 'execution_id': 'n8n_execution_id'}.items():
+        if param in data:
+            setattr(resource, field, data[param])
+            updated_fields.append(field)
+
+    # Cover image
+    image_source = 'unchanged'
+    if 'cover_image' in request.FILES or 'cover_image_url' in data:
+        cover_image, image_source = process_article_image(
+            request, resource.slug, upload_to='resources/covers/'
+        )
+        if cover_image:
+            resource.cover_image = cover_image
+            updated_fields.append('cover_image')
+
+    if not updated_fields:
+        return Response(
+            {'success': False, 'error': 'Không có trường nào được cập nhật'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    resource.save()
+
+    return Response({
+        'success': True,
+        'resource': {
+            'id': resource.id,
+            'title': resource.title,
+            'slug': resource.slug,
+            'resource_type': resource.resource_type,
+            'url': f'/tai-lieu/{resource.slug}',
+            'updated_at': resource.updated_at.isoformat(),
+        },
+        'updated_fields': updated_fields,
+        'image_source': image_source,
+        'message': 'Đã cập nhật tài liệu thành công',
+    })
+
+
+# ============================================================================
+# Stream Media — Tạo video streaming (GDrive / local)
+# ============================================================================
+
+@api_view(['POST'])
+@authentication_classes([APIKeyAuthentication])
+@parser_classes([JSONParser, MultiPartParser, FormParser])
+def n8n_create_stream_media(request):
+    """
+    Tạo StreamMedia từ n8n (hỗ trợ Google Drive)
+
+    POST /api/v1/n8n/stream-media/
+    Headers: X-API-Key: <key>
+
+    Body (JSON):
+        {
+            "title": "Tiêu đề video" (bắt buộc),
+            "description": "Mô tả",
+            "media_type": "video|audio" (default: "video"),
+            "storage_type": "gdrive|local" (default: "gdrive"),
+            "gdrive_url": "https://drive.google.com/file/d/xxx/view" (cho gdrive),
+            "category": "slug hoặc id",
+            "language": "vi|en|de|all" (default: "all"),
+            "level": "A1|A2|B1|B2|C1|C2|all" (default: "all"),
+            "tags": "tag1, tag2, tag3",
+            "transcript": "Nội dung transcript",
+            "is_public": true,
+            "requires_login": false
+        }
+
+    Returns:
+        {
+            "success": true,
+            "media": {...},
+            "message": "Đã tạo stream media thành công"
+        }
+    """
+    from mediastream.models import StreamMedia, MediaCategory
+
+    title = request.data.get('title')
+    if not title:
+        return Response(
+            {'success': False, 'error': 'Thiếu trường "title"'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    storage_type = request.data.get('storage_type', 'gdrive')
+    if storage_type not in ['gdrive', 'local']:
+        storage_type = 'gdrive'
+
+    # GDrive validation
+    gdrive_url = request.data.get('gdrive_url', '')
+    if storage_type == 'gdrive' and not gdrive_url:
+        return Response(
+            {'success': False, 'error': 'storage_type "gdrive" cần trường "gdrive_url"'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Check duplicate by gdrive_url
+    if gdrive_url:
+        existing = StreamMedia.objects.filter(gdrive_url=gdrive_url).first()
+        if existing:
+            return Response({
+                'success': True,
+                'media': {
+                    'id': existing.id,
+                    'uid': str(existing.uid),
+                    'title': existing.title,
+                    'stream_url': f'/media-stream/play/{existing.uid}/',
+                },
+                'message': 'Video đã tồn tại với GDrive URL này',
+                'action': 'skipped',
+            })
+
+    # Category
+    category_input = request.data.get('category')
+    category = None
+    if category_input:
+        try:
+            if isinstance(category_input, int) or (isinstance(category_input, str) and category_input.isdigit()):
+                category = MediaCategory.objects.get(id=int(category_input))
+            else:
+                category = MediaCategory.objects.get(slug=category_input)
+        except MediaCategory.DoesNotExist:
+            category = MediaCategory.objects.create(
+                name=category_input,
+                slug=vietnamese_slugify(category_input)
+            )
+
+    # Generate unique slug
+    base_slug = vietnamese_slugify(title)
+    slug = base_slug
+    counter = 1
+    while StreamMedia.objects.filter(slug=slug).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    # Language & Level
+    language = request.data.get('language', 'all')
+    if language not in ['vi', 'en', 'de', 'all']:
+        language = 'all'
+    level = request.data.get('level', 'all')
+    if level not in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'all']:
+        level = 'all'
+
+    media_type = request.data.get('media_type', 'video')
+    if media_type not in ['video', 'audio']:
+        media_type = 'video'
+
+    media = StreamMedia.objects.create(
+        title=title,
+        slug=slug,
+        description=request.data.get('description', ''),
+        media_type=media_type,
+        storage_type=storage_type,
+        gdrive_url=gdrive_url,
+        category=category,
+        language=language,
+        level=level,
+        tags=request.data.get('tags', ''),
+        transcript=request.data.get('transcript', ''),
+        is_public=request.data.get('is_public', True),
+        is_active=True,
+        requires_login=request.data.get('requires_login', False),
+        uploaded_by=request.user,
+    )
+
+    return Response({
+        'success': True,
+        'media': {
+            'id': media.id,
+            'uid': str(media.uid),
+            'title': media.title,
+            'slug': media.slug,
+            'storage_type': media.storage_type,
+            'gdrive_file_id': media.gdrive_file_id or '',
+            'media_type': media.media_type,
+            'stream_url': f'/media-stream/play/{media.uid}/',
+            'language': media.language,
+            'level': media.level,
+            'created_at': media.created_at.isoformat(),
+        },
+        'message': 'Đã tạo stream media thành công',
+        'action': 'created',
+    }, status=status.HTTP_201_CREATED)
+
+
+# ============================================================================
+# DELETE — Xoá nội dung (soft delete: is_active=False)
+# ============================================================================
+
+@api_view(['DELETE'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_delete_content(request, content_type, identifier):
+    """
+    Xoá nội dung (soft delete: đặt is_active/is_published = False)
+
+    DELETE /api/v1/n8n/<content_type>/<identifier>/delete/
+    Headers: X-API-Key: <key>
+
+    content_type: news | knowledge | resources | tools | videos | stream-media | flashcards
+    identifier: slug, id, hoặc source_id
+
+    Query params:
+        - hard=true: Xoá vĩnh viễn (KHÔNG THỂ HOÀN TÁC)
+
+    Returns:
+        {
+            "success": true,
+            "action": "soft_delete" | "hard_delete",
+            "message": "Đã xoá thành công"
+        }
+    """
+    hard_delete = request.query_params.get('hard', '').lower() == 'true'
+
+    # Model mapping
+    model_map = {
+        'news': ('news.models', 'Article', 'is_published'),
+        'knowledge': ('knowledge.models', 'KnowledgeArticle', 'is_published'),
+        'resources': ('resources.models', 'Resource', 'is_active'),
+        'tools': ('tools.models', 'Tool', 'is_active'),
+        'videos': ('core.models', 'Video', 'is_active'),
+        'stream-media': ('mediastream.models', 'StreamMedia', 'is_active'),
+        'flashcards': ('tools.models', 'FlashcardDeck', 'is_public'),
+    }
+
+    if content_type not in model_map:
+        return Response(
+            {'success': False, 'error': f'content_type không hợp lệ. Hỗ trợ: {", ".join(model_map.keys())}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    module_path, model_name, deactivate_field = model_map[content_type]
+
+    import importlib
+    module = importlib.import_module(module_path)
+    Model = getattr(module, model_name)
+
+    # Find object
+    obj = None
+    # Try slug first
+    if hasattr(Model, 'slug'):
+        obj = Model.objects.filter(slug=identifier).first()
+    # Try by id
+    if not obj and (isinstance(identifier, str) and identifier.isdigit()):
+        obj = Model.objects.filter(id=int(identifier)).first()
+    # Try by uid (StreamMedia)
+    if not obj and content_type == 'stream-media':
+        obj = Model.objects.filter(uid=identifier).first()
+    # Try by source_id (n8n tracking)
+    if not obj and hasattr(Model, 'source_id'):
+        obj = Model.objects.filter(source='n8n', source_id=identifier).first()
+
+    if not obj:
+        return Response(
+            {'success': False, 'error': f'Không tìm thấy {content_type} "{identifier}"'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    title = getattr(obj, 'title', None) or getattr(obj, 'name', str(obj))
+
+    if hard_delete:
+        obj.delete()
+        return Response({
+            'success': True,
+            'action': 'hard_delete',
+            'message': f'Đã xoá vĩnh viễn "{title}"',
+        })
+    else:
+        setattr(obj, deactivate_field, False)
+        obj.save(update_fields=[deactivate_field])
+        return Response({
+            'success': True,
+            'action': 'soft_delete',
+            'field_changed': deactivate_field,
+            'message': f'Đã ẩn "{title}" (soft delete: {deactivate_field}=False)',
+        })
+
+
+# ============================================================================
+# Categories EXPANDED — Thêm tools + media categories
+# ============================================================================
+
+@api_view(['POST'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_create_category(request):
+    """
+    Tạo category mới cho bất kỳ loại nội dung nào
+
+    POST /api/v1/n8n/categories/create/
+    Headers: X-API-Key: <key>
+
+    Body (JSON):
+        {
+            "type": "news|knowledge|resources|tools|media" (bắt buộc),
+            "name": "Tên category" (bắt buộc),
+            "slug": "slug-tuy-chon",
+            "description": "Mô tả",
+            "icon": "Icon (emoji hoặc lucide-react name)"
+        }
+    """
+    cat_type = request.data.get('type')
+    name = request.data.get('name')
+
+    if not cat_type:
+        return Response(
+            {'success': False, 'error': 'Thiếu trường "type" (news/knowledge/resources/tools/media)'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if not name:
+        return Response(
+            {'success': False, 'error': 'Thiếu trường "name"'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    slug = request.data.get('slug') or vietnamese_slugify(name)
+    description = request.data.get('description', '')
+    icon = request.data.get('icon', '')
+
+    category_models = {
+        'news': 'news.models.Category',
+        'knowledge': 'knowledge.models.Category',
+        'resources': 'resources.models.Category',
+        'tools': 'tools.models.ToolCategory',
+        'media': 'mediastream.models.MediaCategory',
+    }
+
+    if cat_type not in category_models:
+        return Response(
+            {'success': False, 'error': f'type phải là: {", ".join(category_models.keys())}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    import importlib
+    module_path, class_name = category_models[cat_type].rsplit('.', 1)
+    module = importlib.import_module(module_path)
+    Model = getattr(module, class_name)
+
+    # Check existing
+    existing = Model.objects.filter(slug=slug).first()
+    if existing:
+        return Response({
+            'success': True,
+            'category': {'id': existing.id, 'name': existing.name, 'slug': existing.slug},
+            'message': 'Category đã tồn tại',
+            'action': 'skipped',
+        })
+
+    kwargs = {'name': name, 'slug': slug, 'description': description}
+    if hasattr(Model, 'icon'):
+        kwargs['icon'] = icon
+
+    cat = Model.objects.create(**kwargs)
+
+    return Response({
+        'success': True,
+        'category': {'id': cat.id, 'name': cat.name, 'slug': cat.slug, 'type': cat_type},
+        'message': f'Đã tạo category {cat_type} thành công',
+        'action': 'created',
+    }, status=status.HTTP_201_CREATED)
+
+
+# ============================================================================
+# BULK Operations — Tạo nhiều nội dung cùng lúc
+# ============================================================================
+
+@api_view(['POST'])
+@authentication_classes([APIKeyAuthentication])
+@parser_classes([JSONParser])
+def n8n_bulk_create(request):
+    """
+    Tạo nhiều nội dung cùng lúc (batch operation)
+
+    POST /api/v1/n8n/bulk/
+    Headers: X-API-Key: <key>
+
+    Body (JSON):
+        {
+            "content_type": "news|knowledge|resources|tools|videos|flashcards|stream-media",
+            "items": [
+                { ... item 1 ... },
+                { ... item 2 ... },
+                ...
+            ],
+            "skip_seo_validation": true
+        }
+
+    Mỗi item có cùng format như endpoint tạo đơn lẻ tương ứng.
+    Max 50 items/request.
+
+    Returns:
+        {
+            "success": true,
+            "total": 10,
+            "created": 8,
+            "skipped": 1,
+            "failed": 1,
+            "results": [
+                {"index": 0, "status": "created", "id": 1, "title": "..."},
+                {"index": 1, "status": "skipped", "reason": "duplicate"},
+                {"index": 2, "status": "failed", "error": "..."},
+                ...
+            ]
+        }
+    """
+    content_type = request.data.get('content_type')
+    items = request.data.get('items', [])
+
+    if not content_type:
+        return Response(
+            {'success': False, 'error': 'Thiếu trường "content_type"'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if not items or not isinstance(items, list):
+        return Response(
+            {'success': False, 'error': 'Trường "items" phải là danh sách không rỗng'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if len(items) > 50:
+        return Response(
+            {'success': False, 'error': 'Tối đa 50 items/request'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Route to appropriate create function
+    handler_map = {
+        'news': _bulk_create_news,
+        'knowledge': _bulk_create_knowledge,
+        'resources': _bulk_create_resource,
+        'tools': _bulk_create_tool,
+        'videos': _bulk_create_video,
+        'flashcards': _bulk_create_flashcard,
+        'stream-media': _bulk_create_stream_media,
+    }
+
+    if content_type not in handler_map:
+        return Response(
+            {'success': False, 'error': f'content_type phải là: {", ".join(handler_map.keys())}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    skip_validation = request.data.get('skip_seo_validation', True)
+    handler = handler_map[content_type]
+
+    results = []
+    created = 0
+    skipped = 0
+    failed = 0
+
+    for i, item in enumerate(items):
+        try:
+            result = handler(item, request.user, skip_validation)
+            results.append({'index': i, **result})
+            if result['status'] == 'created':
+                created += 1
+            elif result['status'] == 'skipped':
+                skipped += 1
+            else:
+                failed += 1
+        except Exception as e:
+            results.append({'index': i, 'status': 'failed', 'error': str(e)})
+            failed += 1
+
+    return Response({
+        'success': True,
+        'content_type': content_type,
+        'total': len(items),
+        'created': created,
+        'skipped': skipped,
+        'failed': failed,
+        'results': results,
+    }, status=status.HTTP_201_CREATED if created > 0 else status.HTTP_200_OK)
+
+
+# --- Bulk helpers (internal) ---
+
+def _generate_unique_slug(Model, title, slug_field='slug'):
+    base_slug = vietnamese_slugify(title)
+    slug = base_slug
+    counter = 1
+    while Model.objects.filter(**{slug_field: slug}).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+    return slug
+
+
+def _resolve_category(Model, category_input):
+    if not category_input:
+        return None
+    try:
+        if isinstance(category_input, int) or (isinstance(category_input, str) and category_input.isdigit()):
+            return Model.objects.get(id=int(category_input))
+        return Model.objects.get(slug=category_input)
+    except Model.DoesNotExist:
+        return Model.objects.create(
+            name=category_input,
+            slug=vietnamese_slugify(category_input)
+        )
+
+
+def _bulk_create_news(item, user, skip_validation):
+    from news.models import Article, Category
+    title = item.get('title', '')
+    if not title:
+        return {'status': 'failed', 'error': 'Thiếu title'}
+    if not item.get('content'):
+        return {'status': 'failed', 'error': 'Thiếu content'}
+
+    # Duplicate check
+    slug_check = vietnamese_slugify(title)
+    if Article.objects.filter(slug=slug_check).exists():
+        existing = Article.objects.get(slug=slug_check)
+        return {'status': 'skipped', 'reason': 'duplicate', 'id': existing.id, 'title': existing.title}
+
+    if not skip_validation:
+        valid, warnings, errors = validate_seo_content(item)
+        if not valid:
+            return {'status': 'failed', 'error': f'SEO errors: {"; ".join(errors)}'}
+
+    slug = _generate_unique_slug(Article, title)
+    category = _resolve_category(Category, item.get('category'))
+    is_published = item.get('is_published', True)
+
+    article = Article.objects.create(
+        title=title, slug=slug, content=item.get('content', ''),
+        excerpt=item.get('excerpt', ''), category=category, author=user,
+        is_featured=item.get('is_featured', False), is_published=is_published,
+        published_at=timezone.now() if is_published else None,
+        meta_title=item.get('meta_title', ''), meta_description=item.get('meta_description', ''),
+        meta_keywords=item.get('meta_keywords', ''),
+        source='n8n', source_id=item.get('source_id', ''),
+        n8n_workflow_id=item.get('workflow_id', ''),
+        n8n_execution_id=item.get('execution_id', ''),
+        n8n_created_at=timezone.now(),
+        is_ai_generated=item.get('is_ai_generated', False),
+        ai_model=item.get('ai_model', ''),
+    )
+    return {'status': 'created', 'id': article.id, 'title': article.title, 'slug': article.slug}
+
+
+def _bulk_create_knowledge(item, user, skip_validation):
+    from knowledge.models import KnowledgeArticle, Category
+    title = item.get('title', '')
+    if not title:
+        return {'status': 'failed', 'error': 'Thiếu title'}
+    if not item.get('content'):
+        return {'status': 'failed', 'error': 'Thiếu content'}
+
+    slug_check = vietnamese_slugify(title)
+    if KnowledgeArticle.objects.filter(slug=slug_check).exists():
+        existing = KnowledgeArticle.objects.get(slug=slug_check)
+        return {'status': 'skipped', 'reason': 'duplicate', 'id': existing.id, 'title': existing.title}
+
+    if not skip_validation:
+        valid, warnings, errors = validate_seo_content(item)
+        if not valid:
+            return {'status': 'failed', 'error': f'SEO errors: {"; ".join(errors)}'}
+
+    slug = _generate_unique_slug(KnowledgeArticle, title)
+    category = _resolve_category(Category, item.get('category'))
+    is_published = item.get('is_published', True)
+
+    language = item.get('language', 'all')
+    if language not in ['de', 'en', 'all']:
+        language = 'all'
+    level = item.get('level', 'all')
+    if level not in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'all']:
+        level = 'all'
+
+    article = KnowledgeArticle.objects.create(
+        title=title, slug=slug, content=item.get('content', ''),
+        excerpt=item.get('excerpt', ''), category=category, author=user,
+        language=language, level=level,
+        is_featured=item.get('is_featured', False), is_published=is_published,
+        published_at=timezone.now() if is_published else None,
+        meta_title=item.get('meta_title', ''), meta_description=item.get('meta_description', ''),
+        meta_keywords=item.get('meta_keywords', ''),
+        source='n8n', source_id=item.get('source_id', ''),
+        n8n_workflow_id=item.get('workflow_id', ''),
+        n8n_execution_id=item.get('execution_id', ''),
+        n8n_created_at=timezone.now(),
+        is_ai_generated=item.get('is_ai_generated', False),
+        ai_model=item.get('ai_model', ''),
+    )
+    return {'status': 'created', 'id': article.id, 'title': article.title, 'slug': article.slug}
+
+
+def _bulk_create_resource(item, user, skip_validation):
+    from resources.models import Resource, Category
+    title = item.get('title', '')
+    if not title:
+        return {'status': 'failed', 'error': 'Thiếu title'}
+    if not item.get('description'):
+        return {'status': 'failed', 'error': 'Thiếu description'}
+
+    slug_check = vietnamese_slugify(title)
+    if Resource.objects.filter(slug=slug_check).exists():
+        existing = Resource.objects.get(slug=slug_check)
+        return {'status': 'skipped', 'reason': 'duplicate', 'id': existing.id, 'title': existing.title}
+
+    slug = _generate_unique_slug(Resource, title)
+    category = _resolve_category(Category, item.get('category'))
+    resource_type = item.get('resource_type', 'document')
+    if resource_type not in ['ebook', 'book', 'pdf', 'audio', 'video', 'document', 'flashcard']:
+        resource_type = 'document'
+
+    resource = Resource.objects.create(
+        title=title, slug=slug, description=item.get('description', ''),
+        category=category, resource_type=resource_type,
+        external_url=item.get('external_url', ''), youtube_url=item.get('youtube_url', ''),
+        author=item.get('author', ''), is_featured=item.get('is_featured', False), is_active=True,
+        source='n8n', source_id=item.get('source_id', ''),
+        n8n_workflow_id=item.get('workflow_id', ''),
+        n8n_execution_id=item.get('execution_id', ''),
+        n8n_created_at=timezone.now(),
+        is_ai_generated=item.get('is_ai_generated', False),
+        ai_model=item.get('ai_model', ''),
+    )
+    return {'status': 'created', 'id': resource.id, 'title': resource.title, 'slug': resource.slug}
+
+
+def _bulk_create_tool(item, user, skip_validation):
+    from tools.models import Tool, ToolCategory
+    name = item.get('name', '')
+    if not name:
+        return {'status': 'failed', 'error': 'Thiếu name'}
+    if not item.get('description'):
+        return {'status': 'failed', 'error': 'Thiếu description'}
+
+    slug_check = vietnamese_slugify(name)
+    if Tool.objects.filter(slug=slug_check).exists():
+        existing = Tool.objects.get(slug=slug_check)
+        return {'status': 'skipped', 'reason': 'duplicate', 'id': existing.id, 'title': existing.name}
+
+    slug = _generate_unique_slug(Tool, name)
+    category = _resolve_category(ToolCategory, item.get('category'))
+    tool_type = item.get('tool_type', 'article')
+    if tool_type not in ['internal', 'external', 'embed', 'article']:
+        tool_type = 'article'
+    language = item.get('language', 'all')
+    if language not in ['de', 'en', 'all']:
+        language = 'all'
+    is_published = item.get('is_published', True)
+
+    tool = Tool.objects.create(
+        name=name, slug=slug, description=item.get('description', ''),
+        content=item.get('content', ''), excerpt=item.get('excerpt', ''),
+        category=category, author=user, tool_type=tool_type,
+        url=item.get('url', ''), embed_code=item.get('embed_code', ''),
+        icon=item.get('icon', ''), language=language,
+        is_featured=item.get('is_featured', False), is_published=is_published, is_active=True,
+        published_at=timezone.now() if is_published else None,
+        meta_title=item.get('meta_title', ''), meta_description=item.get('meta_description', ''),
+    )
+    return {'status': 'created', 'id': tool.id, 'title': tool.name, 'slug': tool.slug}
+
+
+def _bulk_create_video(item, user, skip_validation):
+    from core.models import Video
+    from core.youtube import extract_youtube_id
+    youtube_input = item.get('youtube_id', '')
+    if not youtube_input:
+        return {'status': 'failed', 'error': 'Thiếu youtube_id'}
+
+    youtube_id = extract_youtube_id(youtube_input)
+    if not youtube_id:
+        return {'status': 'failed', 'error': 'YouTube ID không hợp lệ'}
+
+    if Video.objects.filter(youtube_id=youtube_id).exists():
+        existing = Video.objects.get(youtube_id=youtube_id)
+        return {'status': 'skipped', 'reason': 'duplicate', 'id': existing.id, 'title': existing.title}
+
+    language = item.get('language', 'en')
+    if language not in ['de', 'en', 'all']:
+        language = 'en'
+    level = item.get('level', 'all')
+    if level not in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'all']:
+        level = 'all'
+
+    video = Video.objects.create(
+        youtube_id=youtube_id, title=item.get('title', ''),
+        description=item.get('description', ''), language=language, level=level,
+        is_featured=item.get('is_featured', False), is_active=True,
+        source='n8n', source_id=item.get('source_id', ''),
+        n8n_workflow_id=item.get('workflow_id', ''),
+        n8n_execution_id=item.get('execution_id', ''),
+        n8n_created_at=timezone.now(),
+        is_ai_generated=item.get('is_ai_generated', False),
+        ai_model=item.get('ai_model', ''),
+    )
+    return {'status': 'created', 'id': video.id, 'title': video.title, 'slug': video.slug}
+
+
+def _bulk_create_flashcard(item, user, skip_validation):
+    from tools.models import FlashcardDeck, Flashcard
+    name = item.get('name', '')
+    if not name:
+        return {'status': 'failed', 'error': 'Thiếu name'}
+
+    language = item.get('language', '')
+    level = item.get('level', '')
+    if language not in ['en', 'de']:
+        return {'status': 'failed', 'error': 'language phải là en hoặc de'}
+    if level not in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']:
+        return {'status': 'failed', 'error': 'level phải là A1-C2'}
+
+    existing = FlashcardDeck.objects.filter(name=name, language=language, level=level).first()
+    if existing:
+        return {'status': 'skipped', 'reason': 'duplicate', 'id': existing.id, 'title': existing.name}
+
+    slug = _generate_unique_slug(FlashcardDeck, name)
+    deck = FlashcardDeck.objects.create(
+        name=name, slug=slug, description=item.get('description', ''),
+        language=language, level=level, author=user,
+        is_public=item.get('is_public', True), is_featured=item.get('is_featured', False),
+    )
+
+    cards_created = 0
+    for i, card_data in enumerate(item.get('cards', [])):
+        front = card_data.get('front', '').strip()
+        back = card_data.get('back', '').strip()
+        if front and back:
+            Flashcard.objects.create(
+                deck=deck, front=front, back=back,
+                example=card_data.get('example', ''),
+                pronunciation=card_data.get('pronunciation', ''),
+                audio_url=card_data.get('audio_url', ''),
+                order=i,
+            )
+            cards_created += 1
+
+    return {'status': 'created', 'id': deck.id, 'title': deck.name, 'slug': deck.slug,
+            'cards_created': cards_created}
+
+
+def _bulk_create_stream_media(item, user, skip_validation):
+    from mediastream.models import StreamMedia, MediaCategory
+    title = item.get('title', '')
+    if not title:
+        return {'status': 'failed', 'error': 'Thiếu title'}
+
+    gdrive_url = item.get('gdrive_url', '')
+    storage_type = item.get('storage_type', 'gdrive')
+
+    if storage_type == 'gdrive' and not gdrive_url:
+        return {'status': 'failed', 'error': 'gdrive cần trường gdrive_url'}
+
+    if gdrive_url:
+        existing = StreamMedia.objects.filter(gdrive_url=gdrive_url).first()
+        if existing:
+            return {'status': 'skipped', 'reason': 'duplicate', 'id': existing.id, 'title': existing.title}
+
+    slug = _generate_unique_slug(StreamMedia, title)
+    category = _resolve_category(MediaCategory, item.get('category'))
+
+    language = item.get('language', 'all')
+    if language not in ['vi', 'en', 'de', 'all']:
+        language = 'all'
+    level = item.get('level', 'all')
+    if level not in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'all']:
+        level = 'all'
+
+    media = StreamMedia.objects.create(
+        title=title, slug=slug, description=item.get('description', ''),
+        media_type=item.get('media_type', 'video'),
+        storage_type=storage_type, gdrive_url=gdrive_url,
+        category=category, language=language, level=level,
+        tags=item.get('tags', ''), transcript=item.get('transcript', ''),
+        is_public=item.get('is_public', True), is_active=True,
+        requires_login=item.get('requires_login', False),
+        uploaded_by=user,
+    )
+    return {'status': 'created', 'id': media.id, 'uid': str(media.uid),
+            'title': media.title, 'slug': media.slug}

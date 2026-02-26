@@ -2,53 +2,87 @@
 
 ## Tổng quan
 
-API này cho phép n8n workflow tự động tạo nội dung trên website UnstressVN.
+API cho phép n8n workflow tự động tạo, cập nhật, xoá nội dung trên website UnstressVN.
+Hỗ trợ đầy đủ 7 loại nội dung: News, Knowledge, Tools, Resources, Videos, Flashcards, Stream Media.
+
+**Base URL:** `https://unstressvn.com/api/v1/n8n/`
 
 ## Xác thực
 
-Tất cả các endpoint (trừ `/health/`) đều yêu cầu API Key trong header:
+Tất cả endpoint (trừ `/health/`) yêu cầu API Key trong header:
 
 ```
 X-API-Key: <your-api-key>
 ```
 
-API Key được lưu trong database và có thể quản lý qua Admin Panel.
+API Key được lưu trong database, quản lý qua Admin Panel → Core → API Keys.
 
 ---
 
-## Endpoints
+## Tổng quan Endpoints
 
-### 1. Health Check
+| Method | Endpoint | Mô tả |
+|--------|----------|-------|
+| GET | `/health/` | Health check (không cần auth) |
+| **Categories** | | |
+| GET | `/categories/?type=` | Danh sách categories |
+| POST | `/categories/create/` | Tạo category mới |
+| **News** | | |
+| POST | `/news/` | Tạo bài tin tức |
+| GET | `/news/list/` | Danh sách tin tức |
+| PUT/PATCH | `/news/<identifier>/` | Cập nhật tin tức |
+| **Knowledge** | | |
+| POST | `/knowledge/` | Tạo bài kiến thức |
+| GET | `/knowledge/list/` | Danh sách bài kiến thức |
+| PUT/PATCH | `/knowledge/<identifier>/` | Cập nhật bài kiến thức |
+| **Tools** | | |
+| POST | `/tools/` | Tạo công cụ |
+| GET | `/tools/list/` | Danh sách công cụ |
+| PUT/PATCH | `/tools/<identifier>/` | Cập nhật công cụ |
+| **Resources** | | |
+| POST | `/resources/` | Tạo tài liệu |
+| GET | `/resources/list/` | Danh sách tài liệu |
+| PUT/PATCH | `/resources/<identifier>/` | Cập nhật tài liệu |
+| **Videos** | | |
+| POST | `/videos/` | Tạo video YouTube |
+| GET | `/videos/list/` | Danh sách video |
+| **Flashcards** | | |
+| POST | `/flashcards/` | Tạo bộ flashcard + thẻ |
+| PUT/PATCH | `/flashcards/<identifier>/` | Cập nhật bộ flashcard |
+| **Stream Media** | | |
+| POST | `/stream-media/` | Tạo video GDrive stream |
+| **Delete** | | |
+| DELETE | `/<type>/<identifier>/delete/` | Xoá nội dung (soft/hard) |
+| **Bulk** | | |
+| POST | `/bulk/` | Tạo hàng loạt (max 50) |
 
-Kiểm tra kết nối API (không cần xác thực)
+---
+
+## 1. Health Check
 
 ```http
 GET /api/v1/n8n/health/
 ```
 
-**Response:**
+Không cần xác thực.
+
 ```json
 {
   "status": "ok",
   "service": "UnstressVN API",
   "version": "1.0.0",
-  "timestamp": "2024-01-25T00:00:00Z"
+  "timestamp": "2026-02-25T12:00:00Z"
 }
 ```
 
 ---
 
-### 2. Get Categories
+## 2. Categories
 
-Lấy danh sách tất cả categories
+### 2.1 Danh sách categories
 
 ```http
-GET /api/v1/n8n/categories/
-```
-
-**Headers:**
-```
-X-API-Key: <your-api-key>
+GET /api/v1/n8n/categories/?type=news|knowledge|resources|tools|media|all
 ```
 
 **Response:**
@@ -57,211 +91,152 @@ X-API-Key: <your-api-key>
   "success": true,
   "categories": [
     {"id": 1, "name": "Học tiếng Đức", "slug": "hoc-tieng-duc", "type": "news"},
-    {"id": 1, "name": "Ngữ pháp", "slug": "ngu-phap", "type": "knowledge"},
-    {"id": 1, "name": "Tiếng Đức", "slug": "tieng-duc", "type": "resources"}
+    {"id": 1, "name": "Ngữ pháp", "slug": "ngu-phap", "type": "knowledge"}
   ]
 }
 ```
 
+### 2.2 Tạo category mới
+
+```http
+POST /api/v1/n8n/categories/create/
+Content-Type: application/json
+```
+
+| Field | Bắt buộc | Mô tả |
+|-------|----------|-------|
+| `type` | ✅ | `news`, `knowledge`, `resources`, `tools`, `media` |
+| `name` | ✅ | Tên category |
+| `slug` | | Auto-generate từ name nếu bỏ qua |
+| `description` | | Mô tả |
+| `icon` | | Emoji hoặc lucide-react icon name |
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "category": {"id": 5, "name": "Phim Đức", "slug": "phim-duc", "type": "media"},
+  "message": "Đã tạo category media thành công",
+  "action": "created"
+}
+```
+
+Auto skip nếu slug đã tồn tại (trả 200 + `action: "skipped"`).
+
 ---
 
-### 3. Create News Article
+## 3. News — Tin tức
 
-Tạo bài viết tin tức (có hỗ trợ ảnh)
+### 3.1 Tạo bài viết
 
 ```http
 POST /api/v1/n8n/news/
-```
-
-**Headers:**
-```
-X-API-Key: <your-api-key>
 Content-Type: application/json
 ```
 
-**Body (JSON):**
-```json
-{
-  "title": "Tiêu đề bài viết",
-  "content": "<p>Nội dung HTML của bài viết</p>",
-  "excerpt": "Mô tả ngắn (tùy chọn)",
-  "category": "hoc-tieng-duc",
-  "cover_image_url": "https://example.com/image.jpg",
-  "auto_placeholder": true,
-  "is_featured": false,
-  "is_published": true,
-  "meta_title": "SEO title (tùy chọn)",
-  "meta_description": "SEO description (tùy chọn)",
-  "meta_keywords": "keyword1, keyword2 (tùy chọn)",
-  "source_url": "https://source.com/original-article",
-  "source_id": "unique-id-from-source",
-  "workflow_id": "n8n-workflow-id",
-  "execution_id": "n8n-execution-id",
-  "is_ai_generated": true,
-  "ai_model": "gpt-4"
-}
-```
+| Field | Bắt buộc | Mô tả |
+|-------|----------|-------|
+| `title` | ✅ | Tiêu đề (40-65 ký tự cho SEO) |
+| `content` | ✅ | Nội dung HTML |
+| `category` | | Slug hoặc ID (auto-create nếu chưa tồn tại) |
+| `excerpt` | | Mô tả ngắn (80-200 ký tự) |
+| `is_featured` | | Default: `false` |
+| `is_published` | | Default: `true` |
+| `cover_image_url` | | URL ảnh → auto download + WebP + responsive |
+| `auto_placeholder` | | Default: `true` — tạo placeholder nếu không có ảnh |
+| `skip_seo_validation` | | Default: `false` |
+| `meta_title` | | SEO title (50-60 ký tự) |
+| `meta_description` | | SEO description (120-155 ký tự) |
+| `meta_keywords` | | Comma-separated keywords |
+| `source_url` | | URL nguồn gốc |
+| `source_id` | | ID nguồn (dùng tìm lại khi update) |
+| `workflow_id` | | N8N workflow ID |
+| `execution_id` | | N8N execution ID |
+| `is_ai_generated` | | Boolean |
+| `ai_model` | | Model name (gpt-4, gemini...) |
 
-**Required fields:** `title`, `content`
-
-**Image Support:**
-| Field | Type | Description |
-|-------|------|-------------|
-| `cover_image_url` | string | URL ảnh bìa - auto download, convert WebP, tạo responsive sizes |
-| `cover_image` | file | Upload ảnh trực tiếp (multipart/form-data) |
-| `auto_placeholder` | bool | Default `true` - tự tạo placeholder nếu không có ảnh |
+**SEO Content Requirements (nếu không skip):**
+- `content`: ≥600 từ, KHÔNG `<h1>`, tối thiểu 3 `<h2>` (có id), bắt đầu bằng `<p>`, KHÔNG inline styles
+- `excerpt`: 80-200 ký tự
 
 **Image Pipeline:**
-1. Ảnh được download từ URL hoặc upload trực tiếp
-2. Auto convert sang WebP format (chất lượng cao, tối ưu dung lượng)
-3. Auto tạo thumbnail (400x267px)
-4. Auto tạo responsive sizes (480w, 768w, 1200w, 1920w) cho srcset
-5. Auto copy sang og_image cho social media sharing
-6. Nếu không có ảnh → tự tạo placeholder image từ title
+1. Download URL → convert WebP → responsive sizes (480w, 768w, 1200w, 1920w)
+2. Auto thumbnail (400×267px) + og_image cho social sharing
+3. Không có ảnh → auto placeholder từ title
 
-**Response:**
+**Response (201):**
 ```json
 {
   "success": true,
   "article": {
-    "id": 11,
-    "title": "Tiêu đề bài viết",
+    "id": 1,
+    "title": "...",
     "slug": "tieu-de-bai-viet",
     "url": "/tin-tuc/tieu-de-bai-viet",
     "is_published": true,
-    "created_at": "2024-01-25T00:00:00Z",
+    "created_at": "2026-02-25T12:00:00Z",
     "cover_image": "/media/news/covers/unstressvn-tieu-de-bai-viet-cover.webp",
-    "thumbnail": "/media/news/thumbnails/unstressvn-tieu-de-bai-viet-thumb.webp",
+    "thumbnail": "/media/news/thumbnails/...",
     "has_responsive_images": true
   },
   "image_source": "url",
-  "message": "Đã tạo bài viết thành công"
+  "seo_warnings": [],
+  "message": "Đã tạo bài viết tin tức thành công"
 }
 ```
 
----
-
-### 4. Create Knowledge Article
-
-Tạo bài viết kiến thức học tập (có hỗ trợ ảnh)
+### 3.2 Danh sách tin tức
 
 ```http
-POST /api/v1/n8n/knowledge/
+GET /api/v1/n8n/news/list/
 ```
 
-**Headers:**
-```
-X-API-Key: <your-api-key>
-Content-Type: application/json
-```
+**Query params:**
 
-**Body (JSON):**
-```json
-{
-  "title": "Ngữ pháp tiếng Đức A1",
-  "content": "<p>Nội dung bài học</p>",
-  "excerpt": "Mô tả ngắn",
-  "category": "ngu-phap",
-  "language": "de",
-  "level": "A1",
-  "cover_image_url": "https://example.com/grammar-image.jpg",
-  "auto_placeholder": true,
-  "is_published": true,
-  "is_ai_generated": true,
-  "ai_model": "gpt-4",
-  "workflow_id": "workflow-123",
-  "execution_id": "exec-456"
-}
-```
-
-**Required fields:** `title`, `content`
-
-**Language options:** `en` (Tiếng Anh), `de` (Tiếng Đức), `all` (Tất cả)
-
-**Level options:** `A1`, `A2`, `B1`, `B2`, `C1`, `C2`, `all`
-
-**Image Support:** Giống như News Article (xem mục 3)
+| Param | Mô tả |
+|-------|-------|
+| `page` | Default: 1 |
+| `page_size` | Default: 20, max: 100 |
+| `category` | Slug category |
+| `is_published` | `true` / `false` |
+| `search` | Tìm trong title |
+| `source` | Filter theo source (n8n, admin...) |
 
 **Response:**
 ```json
 {
   "success": true,
-  "article": {
-    "id": 14,
-    "title": "Ngữ pháp tiếng Đức A1",
-    "slug": "ngu-phap-tieng-duc-a1",
-    "language": "de",
-    "level": "A1",
-    "url": "/kien-thuc/ngu-phap-tieng-duc-a1",
-    "is_published": true,
-    "created_at": "2024-01-25T00:00:00Z",
-    "cover_image": "/media/knowledge/covers/unstressvn-ngu-phap-tieng-duc-a1-cover.webp",
-    "thumbnail": "/media/knowledge/thumbnails/unstressvn-ngu-phap-tieng-duc-a1-thumb.webp",
-    "has_responsive_images": true
-  },
-  "image_source": "url",
-  "message": "Đã tạo bài viết kiến thức thành công"
+  "total": 45,
+  "page": 1,
+  "page_size": 20,
+  "results": [
+    {
+      "id": 1, "title": "...", "slug": "...", "url": "/tin-tuc/...",
+      "is_published": true, "is_featured": false, "view_count": 123,
+      "created_at": "...", "updated_at": "...",
+      "category": "hoc-tieng-duc",
+      "cover_image": "/media/...",
+      "source": "n8n", "source_id": "..."
+    }
+  ]
 }
 ```
 
----
-
-### 5. Update News Article
-
-Cập nhật bài viết tin tức (hỗ trợ cập nhật từng phần)
+### 3.3 Cập nhật tin tức
 
 ```http
-PUT /api/v1/n8n/news/<identifier>/
-PATCH /api/v1/n8n/news/<identifier>/
+PUT/PATCH /api/v1/n8n/news/<identifier>/
 ```
 
-**identifier:** Có thể là `slug`, `id`, hoặc `source_id` (N8N tracking)
-
-**Headers:**
-```
-X-API-Key: <your-api-key>
-Content-Type: application/json
-```
-
-**Body (JSON) — tất cả trường đều tùy chọn:**
-```json
-{
-  "title": "Tiêu đề mới",
-  "content": "<p>Nội dung mới</p>",
-  "excerpt": "Mô tả mới",
-  "category": "hoc-tieng-duc",
-  "is_featured": true,
-  "is_published": true,
-  "cover_image_url": "https://example.com/new-image.jpg",
-  "meta_title": "SEO title mới",
-  "meta_description": "SEO description mới",
-  "meta_keywords": "keyword1, keyword2",
-  "regenerate_slug": false,
-  "skip_seo_validation": true,
-  "workflow_id": "n8n-workflow-id",
-  "execution_id": "n8n-execution-id"
-}
-```
-
-**Lưu ý:**
-- `regenerate_slug`: Nếu `true` và `title` thay đổi → tạo slug mới từ title mới
-- `skip_seo_validation`: Default `true` cho update (không bắt buộc SEO check)
-- Khi `is_published` chuyển từ `false` → `true` và chưa có `published_at` → tự động set
+`identifier` = slug, id, hoặc source_id. Body chứa bất kỳ field nào cần cập nhật.
+Thêm `"regenerate_slug": true` để tạo lại slug khi đổi title.
+Khi `is_published` chuyển false→true sẽ tự động set `published_at`.
 
 **Response:**
 ```json
 {
   "success": true,
-  "article": {
-    "id": 11,
-    "title": "Tiêu đề mới",
-    "slug": "tieu-de-bai-viet",
-    "url": "/tin-tuc/tieu-de-bai-viet",
-    "is_published": true,
-    "is_featured": true,
-    "updated_at": "2024-01-26T10:30:00Z",
-    "cover_image": "/media/news/covers/unstressvn-tieu-de-bai-viet-cover.webp"
-  },
+  "article": { "id": 1, "title": "...", "slug": "...", "url": "...", "updated_at": "..." },
   "updated_fields": ["title", "content", "is_featured"],
   "image_source": "unchanged",
   "message": "Đã cập nhật bài viết news thành công"
@@ -270,282 +245,630 @@ Content-Type: application/json
 
 ---
 
-### 6. Update Knowledge Article
+## 4. Knowledge — Kiến thức
 
-Cập nhật bài viết kiến thức (hỗ trợ cập nhật từng phần)
+### 4.1 Tạo bài viết
 
 ```http
-PUT /api/v1/n8n/knowledge/<identifier>/
-PATCH /api/v1/n8n/knowledge/<identifier>/
-```
-
-**identifier:** Có thể là `slug`, `id`, hoặc `source_id` (N8N tracking)
-
-**Headers:**
-```
-X-API-Key: <your-api-key>
+POST /api/v1/n8n/knowledge/
 Content-Type: application/json
 ```
 
-**Body (JSON) — tất cả trường đều tùy chọn:**
-```json
-{
-  "title": "Tiêu đề mới",
-  "content": "<p>Nội dung mới</p>",
-  "excerpt": "Mô tả mới",
-  "category": "ngu-phap",
-  "language": "de",
-  "level": "B1",
-  "is_featured": true,
-  "is_published": true,
-  "cover_image_url": "https://example.com/new-image.jpg",
-  "meta_title": "SEO title mới",
-  "meta_description": "SEO description mới",
-  "regenerate_slug": false,
-  "skip_seo_validation": true
-}
+Giống News, thêm:
+
+| Field | Mô tả | Default |
+|-------|-------|---------|
+| `language` | `de`, `en`, `all` | `all` |
+| `level` | `A1`, `A2`, `B1`, `B2`, `C1`, `C2`, `all` | `all` |
+
+### 4.2 Danh sách
+
+```http
+GET /api/v1/n8n/knowledge/list/?language=de&level=B1&page=1
 ```
 
-**Knowledge-specific fields:**
-| Field | Options | Default |
-|-------|---------|---------|
-| `language` | `de`, `en`, `all` | không thay đổi |
-| `level` | `A1`, `A2`, `B1`, `B2`, `C1`, `C2`, `all` | không thay đổi |
+Thêm filter: `language`, `level` (ngoài params chung).
 
-**Response:**
-```json
-{
-  "success": true,
-  "article": {
-    "id": 14,
-    "title": "Ngữ pháp tiếng Đức B1",
-    "slug": "ngu-phap-tieng-duc-a1",
-    "url": "/kien-thuc/ngu-phap-tieng-duc-a1",
-    "is_published": true,
-    "is_featured": true,
-    "updated_at": "2024-01-26T10:30:00Z",
-    "cover_image": "/media/knowledge/covers/unstressvn-ngu-phap-tieng-duc-a1-cover.webp"
-  },
-  "updated_fields": ["title", "level", "is_featured"],
-  "image_source": "unchanged",
-  "message": "Đã cập nhật bài viết knowledge thành công"
-}
+### 4.3 Cập nhật
+
+```http
+PUT/PATCH /api/v1/n8n/knowledge/<identifier>/
 ```
+
+Giống News update, thêm `language` + `level`.
 
 ---
 
-### 7. Create Resource
+## 5. Tools — Công cụ học tập
 
-Tạo tài liệu học tập (ebook, audio, video, pdf...)
+### 5.1 Tạo công cụ
+
+```http
+POST /api/v1/n8n/tools/
+Content-Type: application/json
+```
+
+| Field | Bắt buộc | Mô tả |
+|-------|----------|-------|
+| `name` | ✅ | Tên công cụ |
+| `description` | ✅ | Mô tả |
+| `tool_type` | | `article` (default), `internal`, `external`, `embed` |
+| `content` | | Nội dung HTML (cho article type) |
+| `category` | | Slug hoặc ID (auto-create) |
+| `url` | | URL (bắt buộc cho external type) |
+| `embed_code` | | iframe HTML (cho embed type) |
+| `icon` | | lucide-react icon name |
+| `language` | | `en`, `de`, `all` (default: `all`) |
+| `excerpt` | | Mô tả ngắn |
+| `is_featured` | | Default: `false` |
+| `is_published` | | Default: `true` |
+| `cover_image_url` | | URL ảnh bìa |
+| `auto_placeholder` | | Default: `true` |
+| `meta_title` | | SEO title |
+| `meta_description` | | SEO description |
+| `skip_seo_validation` | | Default: `false` (áp dụng cho article type) |
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "tool": {
+    "id": 3,
+    "name": "Từ điển Deutsch-Vietnamesisch",
+    "slug": "tu-dien-deutsch-vietnamesisch",
+    "tool_type": "external",
+    "language": "de",
+    "url": "/cong-cu/tu-dien-deutsch-vietnamesisch",
+    "is_published": true,
+    "cover_image": null,
+    "created_at": "2026-02-25T12:00:00Z"
+  },
+  "image_source": "none",
+  "message": "Đã tạo công cụ thành công"
+}
+```
+
+### 5.2 Danh sách
+
+```http
+GET /api/v1/n8n/tools/list/?tool_type=article&language=de&is_published=true
+```
+
+| Filter | Mô tả |
+|--------|-------|
+| `tool_type` | `internal`, `external`, `embed`, `article` |
+| `language` | `en`, `de`, `all` |
+| `is_published` | `true` / `false` |
+| `category` | Slug |
+| `search` | Tìm trong name |
+
+### 5.3 Cập nhật
+
+```http
+PUT/PATCH /api/v1/n8n/tools/<identifier>/
+```
+
+`identifier` = slug hoặc id. Body chứa bất kỳ field nào cần update.
+Hỗ trợ `regenerate_slug`, `cover_image_url`, tất cả text + boolean fields.
+
+---
+
+## 6. Resources — Tài liệu
+
+### 6.1 Tạo tài liệu
 
 ```http
 POST /api/v1/n8n/resources/
-```
-
-**Headers:**
-```
-X-API-Key: <your-api-key>
 Content-Type: application/json
 ```
 
-**Body (JSON):**
+| Field | Bắt buộc | Mô tả |
+|-------|----------|-------|
+| `title` | ✅ | Tên tài liệu |
+| `description` | ✅ | Mô tả |
+| `category` | | Slug hoặc ID |
+| `resource_type` | | `ebook`, `book`, `pdf`, `audio`, `video`, `document`, `flashcard` |
+| `external_url` | | URL file |
+| `youtube_url` | | YouTube URL |
+| `author` | | Tác giả (text) |
+| `is_featured` | | Default: `false` |
+| `source_url`, `source_id`, `workflow_id`... | | N8N tracking |
+
+### 6.2 Danh sách
+
+```http
+GET /api/v1/n8n/resources/list/?resource_type=ebook&category=sach
+```
+
+Filter: `resource_type`, `category`, `search`, `source`.
+
+### 6.3 Cập nhật
+
+```http
+PUT/PATCH /api/v1/n8n/resources/<identifier>/
+```
+
+`identifier` = slug, id, hoặc source_id. Hỗ trợ tất cả fields, `regenerate_slug`, `cover_image_url`, N8N tracking.
+
+---
+
+## 7. Videos — YouTube
+
+### 7.1 Tạo video
+
+```http
+POST /api/v1/n8n/videos/
+Content-Type: application/json
+```
+
+| Field | Bắt buộc | Mô tả |
+|-------|----------|-------|
+| `youtube_id` | ✅ | YouTube video ID hoặc full URL |
+| `title` | | Auto-fetch từ YouTube nếu bỏ qua |
+| `description` | | |
+| `language` | | `en` (default), `de`, `all` |
+| `level` | | `A1`-`C2`, `all` (default) |
+| `is_featured` | | Default: `false` |
+| `source_url`, `source_id`... | | N8N tracking |
+
+Auto duplicate check theo `youtube_id` và `source_id`. Nếu trùng, trả 200 + `action: "skipped"`.
+
+### 7.2 Danh sách
+
+```http
+GET /api/v1/n8n/videos/list/?language=de&level=B1&search=keyword
+```
+
+Filter: `language`, `level`, `search`, `source`.
+
+---
+
+## 8. Flashcards — Bộ thẻ từ vựng
+
+### 8.1 Tạo bộ flashcard (deck + cards)
+
+```http
+POST /api/v1/n8n/flashcards/
+Content-Type: application/json
+```
+
 ```json
 {
-  "title": "Ebook Goethe A1",
-  "description": "Tài liệu ôn thi Goethe A1 đầy đủ",
-  "category": "goethe",
+  "name": "500 từ vựng B1 tiếng Đức",
+  "description": "Bộ từ vựng cơ bản cho trình độ B1",
   "language": "de",
-  "level": "A1",
-  "resource_type": "ebook",
-  "external_url": "https://example.com/file.pdf",
-  "is_published": true,
-  "is_ai_generated": false,
-  "workflow_id": "workflow-123"
+  "level": "B1",
+  "is_public": true,
+  "is_featured": false,
+  "cards": [
+    {
+      "front": "der Hund",
+      "back": "con chó",
+      "example": "Der Hund ist groß.",
+      "pronunciation": "/hʊnt/",
+      "audio_url": "https://..."
+    },
+    {
+      "front": "die Katze",
+      "back": "con mèo",
+      "example": "Die Katze schläft."
+    }
+  ]
 }
 ```
 
-**Required fields:** `title`, `description`
+| Field | Bắt buộc | Mô tả |
+|-------|----------|-------|
+| `name` | ✅ | Tên bộ flashcard |
+| `language` | ✅ | `en` hoặc `de` |
+| `level` | ✅ | `A1`-`C2` |
+| `description` | | Mô tả |
+| `is_public` | | Default: `true` |
+| `is_featured` | | Default: `false` |
+| `cards` | | Mảng các thẻ (mỗi thẻ cần `front` + `back`) |
 
-**Resource types:** `ebook`, `pdf`, `audio`, `video`, `document`, `other`
+Auto duplicate check theo `name + language + level`.
 
-**Response:**
+**Card fields:**
+
+| Field | Bắt buộc | Mô tả |
+|-------|----------|-------|
+| `front` | ✅ | Mặt trước (từ vựng) |
+| `back` | ✅ | Mặt sau (nghĩa) |
+| `example` | | Câu ví dụ |
+| `pronunciation` | | Phiên âm |
+| `audio_url` | | URL file audio |
+
+**Response (201):**
 ```json
 {
   "success": true,
-  "resource": {
-    "id": 25,
-    "title": "Ebook Goethe A1",
-    "slug": "ebook-goethe-a1",
-    "resource_type": "ebook",
-    "url": "/tai-lieu/ebook-goethe-a1",
-    "created_at": "2024-01-25T00:00:00Z"
+  "deck": {
+    "id": 5,
+    "name": "500 từ vựng B1 tiếng Đức",
+    "slug": "500-tu-vung-b1-tieng-duc",
+    "language": "de",
+    "level": "B1",
+    "url": "/cong-cu/flashcards/500-tu-vung-b1-tieng-duc",
+    "created_at": "2026-02-25T12:00:00Z"
   },
-  "message": "Đã tạo tài liệu thành công"
+  "cards_created": 2,
+  "message": "Đã tạo bộ flashcard với 2 thẻ",
+  "action": "created"
+}
+```
+
+### 8.2 Cập nhật bộ flashcard
+
+```http
+PUT/PATCH /api/v1/n8n/flashcards/<identifier>/
+```
+
+`identifier` = slug hoặc id.
+
+| Field | Mô tả |
+|-------|-------|
+| `name` | Đổi tên |
+| `description` | Đổi mô tả |
+| `language` | `en` / `de` |
+| `level` | `A1`-`C2` |
+| `is_public` | Boolean |
+| `is_featured` | Boolean |
+| `add_cards` | Mảng thẻ mới — thêm vào cuối |
+| `replace_cards` | Mảng thẻ mới — XOÁ HẾT thẻ cũ, thay bằng mới |
+
+**Lưu ý:** `add_cards` và `replace_cards` không dùng đồng thời. Nếu cả 2 được gửi, `replace_cards` có ưu tiên.
+
+---
+
+## 9. Stream Media — Video GDrive
+
+### 9.1 Tạo video streaming
+
+```http
+POST /api/v1/n8n/stream-media/
+Content-Type: application/json
+```
+
+```json
+{
+  "title": "Phim Đức - Tschick",
+  "description": "Phim Đức hay cho trình độ B1",
+  "media_type": "video",
+  "storage_type": "gdrive",
+  "gdrive_url": "https://drive.google.com/file/d/1ABC.../view",
+  "category": "phim-duc",
+  "language": "de",
+  "level": "B1",
+  "tags": "phim, đức, B1",
+  "transcript": "Nội dung transcript...",
+  "is_public": true,
+  "requires_login": false
+}
+```
+
+| Field | Bắt buộc | Mô tả |
+|-------|----------|-------|
+| `title` | ✅ | Tiêu đề video |
+| `gdrive_url` | ✅ (gdrive) | Google Drive URL (auto trích xuất file ID) |
+| `description` | | Mô tả |
+| `media_type` | | `video` (default) hoặc `audio` |
+| `storage_type` | | `gdrive` (default) hoặc `local` |
+| `category` | | Slug hoặc ID (auto-create) |
+| `language` | | `vi`, `en`, `de`, `all` (default: `all`) |
+| `level` | | `A1`-`C2`, `all` (default: `all`) |
+| `tags` | | Comma-separated tags |
+| `transcript` | | Transcript nội dung |
+| `is_public` | | Default: `true` |
+| `requires_login` | | Default: `false` |
+
+Auto duplicate check theo `gdrive_url`.
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "media": {
+    "id": 3,
+    "uid": "a1b2c3d4-...",
+    "title": "Phim Đức - Tschick",
+    "slug": "phim-duc-tschick",
+    "storage_type": "gdrive",
+    "gdrive_file_id": "1ABC...",
+    "media_type": "video",
+    "stream_url": "/media-stream/play/a1b2c3d4-.../",
+    "language": "de",
+    "level": "B1",
+    "created_at": "2026-02-25T12:00:00Z"
+  },
+  "message": "Đã tạo stream media thành công",
+  "action": "created"
 }
 ```
 
 ---
 
-### 8. Create Video
-
-Tạo video từ YouTube (auto fetch metadata)
+## 10. Delete — Xoá nội dung
 
 ```http
-POST /api/v1/n8n/videos/
+DELETE /api/v1/n8n/<content_type>/<identifier>/delete/
 ```
 
-**Headers:**
-```
-X-API-Key: <your-api-key>
-Content-Type: application/json
-```
+| Param | Mô tả |
+|-------|-------|
+| `content_type` | `news`, `knowledge`, `resources`, `tools`, `videos`, `stream-media`, `flashcards` |
+| `identifier` | slug, id, uid (stream-media), hoặc source_id |
 
-**Body (JSON):**
-```json
-{
-  "youtube_url": "https://www.youtube.com/watch?v=VIDEO_ID",
-  "title": "Tiêu đề video (tùy chọn, auto lấy từ YouTube)",
-  "description": "Mô tả (tùy chọn)",
-  "category": "tieng-duc",
-  "language": "de",
-  "level": "A1",
-  "is_published": true,
-  "workflow_id": "workflow-123"
-}
-```
+**Query params:**
+- `?hard=true` — Xoá vĩnh viễn (KHÔNG THỂ HOÀN TÁC)
 
-**Required fields:** `youtube_url`
+**Soft delete (mặc định):**
+- News/Knowledge: `is_published = False`
+- Resources/Tools/Videos/StreamMedia: `is_active = False`
+- Flashcards: `is_public = False`
 
 **Response:**
 ```json
 {
   "success": true,
-  "video": {
-    "id": 10,
-    "title": "Video title",
-    "slug": "video-title",
-    "youtube_id": "VIDEO_ID",
-    "url": "/video/video-title",
-    "created_at": "2024-01-25T00:00:00Z"
-  },
-  "message": "Đã tạo video thành công"
+  "action": "soft_delete",
+  "field_changed": "is_published",
+  "message": "Đã ẩn \"Tiêu đề bài viết\" (soft delete: is_published=False)"
 }
 ```
 
-**Note:** Nếu video đã tồn tại (cùng youtube_id), API sẽ trả về lỗi duplicate.
+Hard delete:
+```json
+{
+  "success": true,
+  "action": "hard_delete",
+  "message": "Đã xoá vĩnh viễn \"Tiêu đề bài viết\""
+}
+```
+
+---
+
+## 11. Bulk — Tạo hàng loạt
+
+```http
+POST /api/v1/n8n/bulk/
+Content-Type: application/json
+```
+
+```json
+{
+  "content_type": "news",
+  "skip_seo_validation": true,
+  "items": [
+    {"title": "Bài 1", "content": "<p>...</p>", "category": "hoc-tieng-duc"},
+    {"title": "Bài 2", "content": "<p>...</p>", "category": "doi-song"},
+    {"title": "Bài 3", "content": "<p>...</p>"}
+  ]
+}
+```
+
+| Field | Bắt buộc | Mô tả |
+|-------|----------|-------|
+| `content_type` | ✅ | `news`, `knowledge`, `tools`, `resources`, `videos`, `flashcards`, `stream-media` |
+| `items` | ✅ | Mảng items (max 50), mỗi item cùng format endpoint CREATE tương ứng |
+| `skip_seo_validation` | | Default: `true` cho bulk |
+
+**Auto dedup:** Skip duplicate theo slug (hoặc youtube_id, gdrive_url, name+language+level).
+
+**Response:**
+```json
+{
+  "success": true,
+  "content_type": "news",
+  "total": 3,
+  "created": 2,
+  "skipped": 1,
+  "failed": 0,
+  "results": [
+    {"index": 0, "status": "created", "id": 15, "title": "Bài 1", "slug": "bai-1"},
+    {"index": 1, "status": "skipped", "reason": "duplicate", "id": 8, "title": "Bài 2"},
+    {"index": 2, "status": "created", "id": 16, "title": "Bài 3", "slug": "bai-3"}
+  ]
+}
+```
 
 ---
 
 ## N8N Tracking Fields
 
-Tất cả các content đều hỗ trợ các fields theo dõi:
+Các model hỗ trợ tracking (News, Knowledge, Resources, Videos):
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `source` | string | Nguồn tạo: `manual`, `n8n`, `api`, `rss`, `scraper` |
-| `source_url` | string | URL nguồn gốc (nếu import) |
-| `source_id` | string | ID từ hệ thống nguồn (để tránh duplicate) |
-| `workflow_id` | string | N8N Workflow ID |
-| `execution_id` | string | N8N Execution ID |
-| `is_ai_generated` | boolean | Content được tạo bởi AI |
-| `ai_model` | string | Model AI đã sử dụng (GPT-4, Claude, etc.) |
+| Field | Mô tả |
+|-------|--------|
+| `source_url` | URL nguồn gốc nội dung |
+| `source_id` | ID từ nguồn — dùng để tìm lại khi update |
+| `workflow_id` | N8N workflow ID |
+| `execution_id` | N8N execution ID |
+| `is_ai_generated` | Boolean — nội dung do AI tạo |
+| `ai_model` | Model AI đã dùng (gpt-4, gemini...) |
+
+**Lưu ý:** Tools, Flashcards, Stream Media KHÔNG có N8N tracking fields.
 
 ---
 
 ## Error Handling
 
-**401 Unauthorized:**
-```json
-{
-  "detail": "API Key không hợp lệ"
-}
-```
+### Status codes
 
-**400 Bad Request:**
+| Code | Ý nghĩa |
+|------|---------|
+| 200 | Thành công (update, list, skip duplicate) |
+| 201 | Tạo mới thành công |
+| 400 | Thiếu field bắt buộc / SEO validation fail / invalid data |
+| 401 | API Key sai hoặc không có |
+| 404 | Không tìm thấy object |
+| 500 | Internal server error |
+
+### Error Response Format
+
 ```json
 {
   "success": false,
-  "error": "Thiếu trường \"title\""
+  "error": "Mô tả lỗi bằng tiếng Việt",
+  "seo_errors": ["..."],
+  "seo_warnings": ["..."],
+  "hint": "Gửi skip_seo_validation=true để bỏ qua"
 }
 ```
 
-**409 Conflict (Duplicate):**
+### SEO Validation Errors (HTTP 400)
+
 ```json
 {
   "success": false,
-  "error": "Video này đã tồn tại",
-  "existing_video": {...}
+  "error": "Nội dung không đạt chuẩn SEO",
+  "seo_errors": [
+    "Nội dung cần ít nhất 600 từ (hiện có 150 từ)",
+    "Nội dung KHÔNG được chứa thẻ <h1>",
+    "Cần ít nhất 3 thẻ <h2> có id"
+  ],
+  "seo_warnings": ["Title nên dài 40-65 ký tự"],
+  "hint": "Gửi skip_seo_validation=true để bỏ qua"
 }
 ```
 
 ---
 
-## N8N Workflow Examples
+## Image Pipeline
 
-### Example 1: Auto post news from RSS
+Áp dụng cho News, Knowledge, Tools, Resources.
 
-```javascript
-// HTTP Request node
+**3 phương thức (theo thứ tự ưu tiên):**
+1. `cover_image` (file upload): multipart/form-data
+2. `cover_image_url` (URL): Auto download + convert
+3. `auto_placeholder` (boolean): Tạo placeholder từ title
+
+**Pipeline xử lý:**
+1. Download/upload → convert WebP (chất lượng cao)
+2. Tạo thumbnail 400×267px
+3. Tạo responsive sizes: 480w, 768w, 1200w, 1920w (cho srcset)
+4. Copy sang og_image cho social media
+5. Nếu không có ảnh + `auto_placeholder=true` → tạo placeholder gradient
+
+---
+
+## Ví dụ N8N Workflow
+
+### 1. Thu thập tin tức → Đăng bài tự động
+
+```
+RSS Feed → Extract Content → AI Rewrite → HTTP Request (POST /news/)
+```
+
+```json
 {
   "method": "POST",
   "url": "https://unstressvn.com/api/v1/n8n/news/",
-  "headers": {
-    "X-API-Key": "your-api-key",
-    "Content-Type": "application/json"
-  },
+  "headers": {"X-API-Key": "{{$env.API_KEY}}"},
   "body": {
     "title": "{{$json.title}}",
-    "content": "{{$json.content}}",
+    "content": "{{$json.ai_content}}",
     "source_url": "{{$json.link}}",
     "source_id": "{{$json.guid}}",
     "workflow_id": "{{$workflow.id}}",
     "execution_id": "{{$execution.id}}",
-    "is_ai_generated": false
+    "is_ai_generated": true,
+    "ai_model": "gpt-4"
   }
 }
 ```
 
-### Example 2: AI-generated content
+### 2. Tạo flashcard từ AI
 
-```javascript
-// HTTP Request node (sau khi OpenAI generate content)
+```
+Topic Input → Gemini Generate → Parse JSON → HTTP Request (POST /flashcards/)
+```
+
+```json
 {
   "method": "POST",
-  "url": "https://unstressvn.com/api/v1/n8n/knowledge/",
-  "headers": {
-    "X-API-Key": "your-api-key",
-    "Content-Type": "application/json"
-  },
+  "url": "https://unstressvn.com/api/v1/n8n/flashcards/",
+  "headers": {"X-API-Key": "{{$env.API_KEY}}"},
   "body": {
-    "title": "{{$json.title}}",
-    "content": "{{$json.ai_content}}",
+    "name": "Từ vựng chủ đề {{$json.topic}}",
     "language": "de",
-    "level": "A1",
-    "category": "ngu-phap",
-    "is_ai_generated": true,
-    "ai_model": "gpt-4",
-    "workflow_id": "{{$workflow.id}}",
-    "is_published": false
+    "level": "B1",
+    "cards": "{{$json.generated_cards}}"
   }
 }
+```
+
+### 3. Bulk import từ CSV
+
+```
+Read CSV → Split Batches (50) → HTTP Request (POST /bulk/)
+```
+
+```json
+{
+  "method": "POST",
+  "url": "https://unstressvn.com/api/v1/n8n/bulk/",
+  "headers": {"X-API-Key": "{{$env.API_KEY}}"},
+  "body": {
+    "content_type": "knowledge",
+    "skip_seo_validation": true,
+    "items": "{{$json.batch}}"
+  }
+}
+```
+
+### 4. Google Drive → Stream Media
+
+```
+Google Drive Trigger → Get File Info → HTTP Request (POST /stream-media/)
+```
+
+```json
+{
+  "method": "POST",
+  "url": "https://unstressvn.com/api/v1/n8n/stream-media/",
+  "headers": {"X-API-Key": "{{$env.API_KEY}}"},
+  "body": {
+    "title": "{{$json.name}}",
+    "gdrive_url": "{{$json.webViewLink}}",
+    "category": "phim-duc",
+    "language": "de"
+  }
+}
+```
+
+### 5. Kiểm tra + Update nội dung
+
+```
+Schedule Trigger → List News → Check Quality → Update Bad Articles
+```
+
+```json
+// Step 1: List
+{"method": "GET", "url": "https://unstressvn.com/api/v1/n8n/news/list/?source=n8n&is_published=true"}
+
+// Step 2: Update
+{"method": "PATCH", "url": "https://unstressvn.com/api/v1/n8n/news/{{$json.slug}}/",
+ "body": {"content": "{{$json.improved_content}}", "skip_seo_validation": true}}
 ```
 
 ---
 
 ## API Key Management
 
-API Keys được quản lý qua Django Admin:
-- URL: `/admin/core/apikey/`
-- Tạo key mới với name `n8n_api_key`
-- Có thể tạm ngưng (deactivate) key khi cần
+API Keys quản lý qua Django Admin:
+- URL: `https://unstressvn.com/admin/core/apikey/`
+- Tạo key với name: `n8n_api_key`
+- Có thể deactivate khi cần
 
 ---
 
 ## Rate Limits
 
-Hiện tại không có rate limit. Tuy nhiên nên giới hạn:
-- Tối đa 100 requests/phút cho automation
-- Delay 1-2 giây giữa các requests
+Hiện tại không có rate limit. Khuyến nghị:
+- Tối đa 100 requests/phút
+- Delay 1-2 giây giữa requests
+- Dùng `/bulk/` cho batch operations thay vì gọi từng endpoint
 
 ---
 
