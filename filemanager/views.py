@@ -369,8 +369,8 @@ def disk_usage(request):
     # Check MinIO storage
     minio_info = None
     try:
-        from core.models import SiteSettings
-        minio_config = SiteSettings.get_minio_config()
+        from core.models import SiteConfiguration
+        minio_config = SiteConfiguration.get_instance().get_minio_config()
         if minio_config and minio_config.get('endpoint_url'):
             import boto3
             from botocore.config import Config

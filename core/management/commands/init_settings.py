@@ -1,13 +1,13 @@
 """
 Management command để khởi tạo default settings
-Bao gồm MinIO, Database, Email settings
+Tạo SiteConfiguration singleton và API Keys mặc định
 """
 from django.core.management.base import BaseCommand
-from core.models import SiteSettings, APIKey
+from core.models import SiteConfiguration, APIKey
 
 
 class Command(BaseCommand):
-    help = 'Khởi tạo default settings cho website (MinIO, Database, Email, API Keys)'
+    help = 'Khởi tạo default settings cho website (SiteConfiguration singleton + API Keys)'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -19,21 +19,19 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.NOTICE('🔧 Khởi tạo default settings...'))
         
-        # Init Site Settings
-        self.stdout.write('  → Tạo Site Settings (Database, Email, MinIO)...')
-        SiteSettings.init_default_settings()
+        # Init SiteConfiguration (singleton — tự tạo nếu chưa có)
+        self.stdout.write('  → Tạo SiteConfiguration singleton...')
+        config = SiteConfiguration.get_instance()
+        self.stdout.write(self.style.SUCCESS(f'    ✓ SiteConfiguration: {config.site_name}'))
         
-        # Count settings
-        count = SiteSettings.objects.count()
-        self.stdout.write(self.style.SUCCESS(f'    ✓ {count} settings đã được tạo'))
-        
-        # List MinIO settings
-        minio_settings = SiteSettings.objects.filter(setting_type='storage')
-        if minio_settings.exists():
-            self.stdout.write('\n  📦 MinIO Storage Settings:')
-            for s in minio_settings:
-                value = '●●●●●●●●' if s.is_secret else (s.value if s.value else '(chưa cấu hình)')
-                self.stdout.write(f'    • {s.name}: {value}')
+        # Show MinIO status
+        minio_config = config.get_minio_config()
+        if minio_config:
+            self.stdout.write(f'\n  📦 MinIO Storage:')
+            self.stdout.write(f'    • Endpoint: {minio_config["endpoint_url"]}')
+            self.stdout.write(f'    • Bucket: {minio_config["bucket"]}')
+        else:
+            self.stdout.write(f'\n  📦 MinIO Storage: (chưa cấu hình — local storage)')
         
         # Init API Keys
         self.stdout.write('\n  → Tạo API Keys...')
@@ -44,5 +42,5 @@ class Command(BaseCommand):
             self.stdout.write('    ✓ API Keys đã tồn tại')
         
         self.stdout.write(self.style.SUCCESS('\n✅ Hoàn tất! Truy cập Admin Panel để cấu hình chi tiết.'))
-        self.stdout.write(self.style.NOTICE('   /admin/core/sitesettings/ - Site Settings'))
+        self.stdout.write(self.style.NOTICE('   /admin/core/siteconfiguration/ - Cấu hình hệ thống'))
         self.stdout.write(self.style.NOTICE('   /admin/core/apikey/ - API Keys'))

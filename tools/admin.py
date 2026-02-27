@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ToolCategory, Tool, FlashcardDeck, Flashcard
+from .models import ToolCategory, Tool, FlashcardDeck, Flashcard  # Flashcard used by FlashcardInline
 
 
 @admin.register(ToolCategory)
@@ -38,11 +38,3 @@ class FlashcardDeckAdmin(admin.ModelAdmin):
     def card_count(self, obj):
         return obj.card_count
     card_count.short_description = 'Số thẻ'
-
-
-@admin.register(Flashcard)
-class FlashcardAdmin(admin.ModelAdmin):
-    list_display = ['front', 'back', 'deck', 'order']
-    list_filter = ['deck', 'deck__language', 'deck__level']
-    search_fields = ['front', 'back', 'example']
-    ordering = ['deck', 'order']

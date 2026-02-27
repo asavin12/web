@@ -118,7 +118,7 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'resources.apps.ResourcesConfig',
     'api.apps.ApiConfig',  # REST API
-    'search.apps.SearchConfig',  # Search
+    # 'search.apps.SearchConfig',  # Search — placeholder, chưa triển khai
     'news.apps.NewsConfig',  # News/Blog
     'knowledge.apps.KnowledgeConfig',  # Knowledge Base
     'tools.apps.ToolsConfig',  # Learning Tools

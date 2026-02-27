@@ -3,12 +3,8 @@ Admin cho File Manager
 Quản lý media files trên server
 """
 
-import os
 from django.contrib import admin
 from django.utils.html import format_html
-from django.urls import path
-from django.shortcuts import render
-from django.conf import settings
 from .models import MediaFile, SiteLogo
 
 
@@ -128,47 +124,3 @@ class SiteLogoAdmin(admin.ModelAdmin):
             return f"{obj.width} x {obj.height}"
         return '-'
     dimensions.short_description = 'Kích thước'
-
-
-# Custom admin view for file browser
-class FileManagerAdminSite(admin.AdminSite):
-    """Extended admin site with file manager"""
-    
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path('file-browser/', self.admin_view(self.file_browser_view), name='file-browser'),
-        ]
-        return custom_urls + urls
-    
-    def file_browser_view(self, request):
-        """View to browse media files"""
-        media_root = settings.MEDIA_ROOT
-        current_path = request.GET.get('path', '')
-        
-        # Security: prevent directory traversal
-        full_path = os.path.normpath(os.path.join(media_root, current_path))
-        if not full_path.startswith(media_root):
-            full_path = media_root
-        
-        # List files and directories
-        items = []
-        if os.path.isdir(full_path):
-            for item in os.listdir(full_path):
-                item_path = os.path.join(full_path, item)
-                items.append({
-                    'name': item,
-                    'is_dir': os.path.isdir(item_path),
-                    'size': os.path.getsize(item_path) if os.path.isfile(item_path) else 0,
-                    'path': os.path.join(current_path, item) if current_path else item,
-                })
-        
-        context = {
-            'items': sorted(items, key=lambda x: (not x['is_dir'], x['name'].lower())),
-            'current_path': current_path,
-            'parent_path': os.path.dirname(current_path) if current_path else None,
-            'media_url': settings.MEDIA_URL,
-            **self.each_context(request),
-        }
-        
-        return render(request, 'admin/filemanager/file_browser.html', context)

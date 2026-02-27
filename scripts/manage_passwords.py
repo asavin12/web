@@ -3,8 +3,8 @@
 Script tạo và quản lý password bảo mật cao cho UnstressVN
 Usage:
     python scripts/manage_passwords.py generate           # Tạo password mới
-    python scripts/manage_passwords.py init               # Khởi tạo default settings
-    python scripts/manage_passwords.py show               # Hiển thị settings (ẩn secret)
+    python scripts/manage_passwords.py init               # Khởi tạo SiteConfiguration + API Keys
+    python scripts/manage_passwords.py show               # Hiển thị config (ẩn secret)
     python scripts/manage_passwords.py export             # Export settings ra file .env.example
     python scripts/manage_passwords.py update-postgres    # Cập nhật password PostgreSQL
 """
@@ -12,7 +12,7 @@ Usage:
 import os
 import sys
 import string
-import random
+import secrets
 import argparse
 
 # Setup Django
@@ -22,11 +22,11 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unstressvn_settings.settings')
 import django
 django.setup()
 
-from core.models import SiteSettings, APIKey
+from core.models import SiteConfiguration, APIKey
 
 
 def generate_secure_password(length=32, include_special=True):
-    """Tạo password bảo mật cao"""
+    """Tạo password bảo mật cao bằng secrets module (cryptographically secure)"""
     if length < 16:
         length = 16
     
@@ -37,20 +37,24 @@ def generate_secure_password(length=32, include_special=True):
     
     # Ensure at least one of each type
     password = [
-        random.choice(lowercase),
-        random.choice(uppercase),
-        random.choice(digits),
+        secrets.choice(lowercase),
+        secrets.choice(uppercase),
+        secrets.choice(digits),
     ]
     
     if include_special:
-        password.append(random.choice(special))
+        password.append(secrets.choice(special))
     
     # Fill the rest
     all_chars = lowercase + uppercase + digits + special
     remaining = length - len(password)
-    password.extend(random.choice(all_chars) for _ in range(remaining))
+    password.extend(secrets.choice(all_chars) for _ in range(remaining))
     
-    random.shuffle(password)
+    # Secure shuffle using secrets
+    for i in range(len(password) - 1, 0, -1):
+        j = secrets.randbelow(i + 1)
+        password[i], password[j] = password[j], password[i]
+    
     return ''.join(password)
 
 
@@ -73,13 +77,13 @@ def cmd_generate(args):
 
 
 def cmd_init(args):
-    """Khởi tạo default settings"""
-    print("\n⚙️ Khởi tạo Site Settings")
+    """Khởi tạo SiteConfiguration + API Keys"""
+    print("\n⚙️ Khởi tạo SiteConfiguration")
     print("=" * 50)
     
-    # Init site settings
-    SiteSettings.init_default_settings()
-    print("✅ Đã khởi tạo Site Settings")
+    # Init SiteConfiguration singleton
+    config = SiteConfiguration.get_instance()
+    print(f"✅ SiteConfiguration: {config.site_name}")
     
     # Init API keys
     created = APIKey.create_default_keys()
@@ -88,32 +92,58 @@ def cmd_init(args):
     else:
         print("ℹ️ API Keys đã tồn tại")
     
-    print("\n📋 Settings hiện tại:")
-    for setting in SiteSettings.objects.all():
-        value = "●●●●●●●●" if setting.is_secret else setting.value
-        print(f"  • {setting.name}: {value}")
+    print(f"\n📋 Cấu hình hiện tại:")
+    print(f"  • Site: {config.site_name}")
+    print(f"  • Debug: {'ON' if config.debug_mode else 'OFF'}")
+    print(f"  • Email: {config.email_host or '(chưa cấu hình)'}")
+    minio = config.get_minio_config()
+    if minio:
+        print(f"  • MinIO: {minio['endpoint_url']}")
+    else:
+        print(f"  • MinIO: (chưa cấu hình — local storage)")
     
     print()
 
 
 def cmd_show(args):
-    """Hiển thị tất cả settings"""
-    print("\n📋 Site Settings - UnstressVN")
+    """Hiển thị cấu hình hiện tại"""
+    print("\n📋 SiteConfiguration - UnstressVN")
     print("=" * 50)
     
-    # Group by type
-    for setting_type, type_name in SiteSettings.SETTING_TYPE_CHOICES:
-        settings = SiteSettings.objects.filter(setting_type=setting_type)
-        if settings.exists():
-            print(f"\n🔹 {type_name}:")
-            for s in settings:
-                if s.is_secret and not args.show_secrets:
-                    value = "●●●●●●●●"
-                else:
-                    value = s.value
-                print(f"   {s.name}: {value}")
+    config = SiteConfiguration.get_instance()
     
-    print("\n🔹 API Keys:")
+    print(f"\n🔹 Website:")
+    print(f"   site_name: {config.site_name}")
+    print(f"   site_description: {config.site_description or '(trống)'}")
+    print(f"   contact_email: {config.contact_email or '(trống)'}")
+    
+    print(f"\n🔹 Chế độ:")
+    print(f"   debug_mode: {'ON' if config.debug_mode else 'OFF'}")
+    print(f"   maintenance_mode: {'ON' if config.maintenance_mode else 'OFF'}")
+    
+    print(f"\n🔹 Email SMTP:")
+    print(f"   email_host: {config.email_host or '(trống)'}")
+    print(f"   email_port: {config.email_port}")
+    if args.show_secrets:
+        print(f"   email_host_password: {config.email_host_password or '(trống)'}")
+    else:
+        print(f"   email_host_password: {'●●●●●●●●' if config.email_host_password else '(trống)'}")
+    
+    print(f"\n🔹 MinIO Storage:")
+    minio = config.get_minio_config()
+    if minio:
+        print(f"   endpoint: {minio['endpoint_url']}")
+        print(f"   bucket: {minio['bucket']}")
+        if args.show_secrets:
+            print(f"   access_key: {minio['access_key']}")
+            print(f"   secret_key: {minio['secret_key']}")
+        else:
+            print(f"   access_key: {'●●●●●●●●' if minio['access_key'] else '(trống)'}")
+            print(f"   secret_key: {'●●●●●●●●' if minio['secret_key'] else '(trống)'}")
+    else:
+        print(f"   (chưa cấu hình — local storage)")
+    
+    print(f"\n🔹 API Keys:")
     for key in APIKey.objects.filter(is_active=True):
         if args.show_secrets:
             print(f"   {key.name}: {key.key}")
@@ -126,41 +156,42 @@ def cmd_show(args):
 
 
 def cmd_export(args):
-    """Export settings ra file .env.example"""
+    """Export settings ra file .env"""
     print("\n📤 Export Settings to .env")
     print("=" * 50)
     
     output_file = args.output or '.env.generated'
+    config = SiteConfiguration.get_instance()
     
     lines = [
         "# UnstressVN Environment Variables",
         "# Generated by manage_passwords.py",
         f"# Date: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "",
-        "# ============ Database ============",
+        "# ============ Site ============",
+        f"SITE_NAME={config.site_name}",
+        f"DEBUG={'True' if config.debug_mode else 'False'}",
+        "",
+        "# ============ Email ============",
+        f"EMAIL_HOST={config.email_host or ''}",
+        f"EMAIL_PORT={config.email_port}",
+        f"EMAIL_USE_TLS={'True' if config.email_use_tls else 'False'}",
+        f"EMAIL_HOST_USER={config.email_host_user or ''}",
+        f"EMAIL_HOST_PASSWORD={config.email_host_password or ''}",
+        "",
+        "# ============ MinIO ============",
+        f"MINIO_ENDPOINT_URL={config.minio_endpoint_url or ''}",
+        f"MINIO_ACCESS_KEY={config.minio_access_key or ''}",
+        f"MINIO_SECRET_KEY={config.minio_secret_key or ''}",
+        f"MINIO_MEDIA_BUCKET={config.minio_media_bucket}",
+        "",
+        "# ============ API Keys ============",
     ]
     
-    # Database settings
-    db_settings = SiteSettings.objects.filter(setting_type='database')
-    for s in db_settings:
-        env_name = s.name.upper()
-        lines.append(f"{env_name}={s.value}")
-    
-    lines.append("")
-    lines.append("# ============ API Keys ============")
-    
     for key in APIKey.objects.filter(is_active=True):
-        env_name = key.name.upper()
+        env_name = key.name.upper().replace(' ', '_').replace('-', '_')
         lines.append(f"{env_name}={key.key}")
-    
-    lines.append("")
-    lines.append("# ============ Email ============")
-    
-    email_settings = SiteSettings.objects.filter(setting_type='email')
-    for s in email_settings:
-        env_name = s.name.upper()
-        lines.append(f"{env_name}={s.value}")
-    
+
     # Write to file
     with open(output_file, 'w') as f:
         f.write('\n'.join(lines))
@@ -171,7 +202,7 @@ def cmd_export(args):
 
 
 def cmd_update_postgres(args):
-    """Cập nhật password PostgreSQL mới"""
+    """Tạo password PostgreSQL mới"""
     print("\n🐘 Update PostgreSQL Password")
     print("=" * 50)
     
@@ -189,20 +220,6 @@ def cmd_update_postgres(args):
     print()
     print("   3. Restart server:")
     print("      ./stop.sh && ./start.sh")
-    print()
-    
-    # Update in database if confirmed
-    if args.apply:
-        SiteSettings.set(
-            name='postgres_password',
-            value=new_password,
-            setting_type='database',
-            is_secret=True,
-            description='PostgreSQL Password'
-        )
-        print("✅ Đã cập nhật password trong SiteSettings")
-    else:
-        print("💡 Thêm --apply để lưu password vào database")
     print()
 
 
@@ -232,8 +249,7 @@ def main():
     export_parser.add_argument('-o', '--output', help='Output file', default='.env.generated')
     
     # update-postgres command
-    pg_parser = subparsers.add_parser('update-postgres', help='Tạo password PostgreSQL mới')
-    pg_parser.add_argument('--apply', action='store_true', help='Lưu password vào database')
+    subparsers.add_parser('update-postgres', help='Tạo password PostgreSQL mới')
     
     args = parser.parse_args()
     

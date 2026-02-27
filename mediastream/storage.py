@@ -1,7 +1,7 @@
 """
 MinIO/S3 Storage Configuration cho MediaStream
 Sử dụng django-storages với boto3 để upload/stream từ MinIO trên Coolify
-Đọc config từ Admin Panel (SiteSettings) hoặc environment variables
+Đọc config từ Admin Panel (SiteConfiguration) hoặc environment variables
 """
 
 from storages.backends.s3boto3 import S3Boto3Storage
@@ -10,12 +10,12 @@ from django.conf import settings
 
 def get_minio_config():
     """
-    Lấy MinIO config từ database (SiteSettings) hoặc env
+    Lấy MinIO config từ database (SiteConfiguration) hoặc env
     Ưu tiên database > env variables > defaults
     """
     try:
-        from core.models import SiteSettings
-        config = SiteSettings.get_minio_config()
+        from core.models import SiteConfiguration
+        config = SiteConfiguration.get_instance().get_minio_config()
         if config:
             return config
     except Exception:

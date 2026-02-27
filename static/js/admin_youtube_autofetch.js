@@ -1,58 +1,57 @@
 /**
  * YouTube Auto-fetch — Admin helper script
- * Tự động lấy thông tin video khi nhập YouTube URL
+ * Tự động lấy thông tin video khi nhập YouTube ID/URL
+ * Hoạt động với field youtube_id (id_youtube_id trong DOM)
  */
 (function() {
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function() {
-        var urlInput = document.getElementById('id_youtube_url');
-        if (!urlInput) return;
+        var idInput = document.getElementById('id_youtube_id');
+        if (!idInput) return;
 
         var fetchBtn = document.createElement('button');
         fetchBtn.type = 'button';
         fetchBtn.textContent = '🔄 Lấy thông tin YouTube';
         fetchBtn.style.cssText = 'margin-left: 10px; padding: 6px 12px; background: #417690; color: white; border: none; border-radius: 4px; cursor: pointer;';
         fetchBtn.addEventListener('click', function() {
-            var url = urlInput.value.trim();
-            if (!url) {
-                alert('Vui lòng nhập YouTube URL trước');
+            var rawValue = idInput.value.trim();
+            if (!rawValue) {
+                alert('Vui lòng nhập YouTube URL hoặc Video ID trước');
                 return;
             }
-            fetchBtn.textContent = '⏳ Đang lấy...';
+            fetchBtn.textContent = '⏳ Đang xử lý...';
             fetchBtn.disabled = true;
 
-            // Extract video ID
-            var videoId = '';
-            var match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?\s]+)/);
-            if (match) videoId = match[1];
+            // Extract video ID from URL or use raw value as ID
+            var videoId = rawValue;
+            var match = rawValue.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?\s]+)/);
+            if (match) {
+                videoId = match[1];
+                // Update the field with clean ID
+                idInput.value = videoId;
+            }
 
-            if (!videoId) {
-                alert('Không tìm thấy Video ID trong URL');
+            if (!videoId || videoId.length < 5) {
+                alert('Video ID không hợp lệ');
                 fetchBtn.textContent = '🔄 Lấy thông tin YouTube';
                 fetchBtn.disabled = false;
                 return;
             }
 
-            // Set youtube_id field if exists
-            var idInput = document.getElementById('id_youtube_id');
-            if (idInput && !idInput.value) {
-                idInput.value = videoId;
-            }
-
-            // Set thumbnail if exists
+            // Set thumbnail if exists and empty
             var thumbInput = document.getElementById('id_thumbnail');
             if (thumbInput && !thumbInput.value) {
                 thumbInput.value = 'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg';
             }
 
-            fetchBtn.textContent = '✅ Đã lấy thông tin';
+            fetchBtn.textContent = '✅ Đã xử lý ID';
             fetchBtn.disabled = false;
             setTimeout(function() {
                 fetchBtn.textContent = '🔄 Lấy thông tin YouTube';
             }, 2000);
         });
 
-        urlInput.parentNode.appendChild(fetchBtn);
+        idInput.parentNode.appendChild(fetchBtn);
     });
 })();

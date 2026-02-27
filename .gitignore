@@ -71,3 +71,4 @@ Desktop.ini
 *.bak
 backups/*.tar.gz
 media/gdrive_cache/
+cookies.txt
