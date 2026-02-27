@@ -153,16 +153,86 @@ def postgres_tables(request):
 
 @staff_member_required
 def postgres_table_schema(request, table_name):
-    """Chi tiết schema của một table"""
+    """Chi tiết schema của một table — enriched with PK/FK/UNIQUE/INDEX badges, constraints, SQL, sample data"""
+    import re as _re
     columns = []
     indexes = []
     foreign_keys = []
-    
+    constraints = []
+    create_sql = ''
+    sample_data = []
+    sample_headers = []
+    row_count = 0
+    table_size = '-'
+
     try:
         with connection.cursor() as cursor:
-            # Get columns
+            # ── Row count & size ──
+            try:
+                cursor.execute(f'SELECT COUNT(*) FROM "{table_name}";')
+                row_count = cursor.fetchone()[0]
+            except Exception:
+                row_count = 0
+
+            try:
+                cursor.execute("SELECT pg_size_pretty(pg_total_relation_size(quote_ident(%s)::text));", [table_name])
+                table_size = cursor.fetchone()[0]
+            except Exception:
+                table_size = '-'
+
+            # ── Primary key columns ──
+            pk_columns = set()
             cursor.execute("""
-                SELECT 
+                SELECT a.attname
+                FROM pg_index i
+                JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                WHERE i.indrelid = %s::regclass AND i.indisprimary;
+            """, [table_name])
+            for r in cursor.fetchall():
+                pk_columns.add(r[0])
+
+            # ── Unique columns (from unique constraints, not PK) ──
+            unique_columns = set()
+            cursor.execute("""
+                SELECT a.attname
+                FROM pg_index i
+                JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                WHERE i.indrelid = %s::regclass AND i.indisunique AND NOT i.indisprimary;
+            """, [table_name])
+            for r in cursor.fetchall():
+                unique_columns.add(r[0])
+
+            # ── Indexed columns ──
+            indexed_columns = set()
+            cursor.execute("""
+                SELECT a.attname
+                FROM pg_index i
+                JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                WHERE i.indrelid = %s::regclass AND NOT i.indisprimary AND NOT i.indisunique;
+            """, [table_name])
+            for r in cursor.fetchall():
+                indexed_columns.add(r[0])
+
+            # ── Foreign key map: column → ref_table.ref_column ──
+            fk_map = {}
+            cursor.execute("""
+                SELECT
+                    kcu.column_name,
+                    ccu.table_name AS foreign_table,
+                    ccu.column_name AS foreign_column
+                FROM information_schema.table_constraints AS tc
+                JOIN information_schema.key_column_usage AS kcu
+                    ON tc.constraint_name = kcu.constraint_name
+                JOIN information_schema.constraint_column_usage AS ccu
+                    ON ccu.constraint_name = tc.constraint_name
+                WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = %s;
+            """, [table_name])
+            for r in cursor.fetchall():
+                fk_map[r[0]] = f'{r[1]}.{r[2]}'
+
+            # ── Columns with badges ──
+            cursor.execute("""
+                SELECT
                     column_name,
                     data_type,
                     character_maximum_length,
@@ -172,30 +242,49 @@ def postgres_table_schema(request, table_name):
                 WHERE table_schema = 'public' AND table_name = %s
                 ORDER BY ordinal_position;
             """, [table_name])
-            
+
             for row in cursor.fetchall():
+                col_name = row[0]
                 columns.append({
-                    'name': row[0],
+                    'name': col_name,
                     'type': row[1],
                     'max_length': row[2],
                     'nullable': row[3],
                     'default': row[4],
+                    'is_primary': col_name in pk_columns,
+                    'is_foreign_key': col_name in fk_map,
+                    'fk_ref': fk_map.get(col_name, ''),
+                    'is_unique': col_name in unique_columns,
+                    'is_indexed': col_name in indexed_columns,
                 })
-            
-            # Get indexes
+
+            # ── Indexes (parsed) ──
             cursor.execute("""
-                SELECT indexname, indexdef
-                FROM pg_indexes
-                WHERE tablename = %s;
+                SELECT
+                    i.relname AS index_name,
+                    ix.indisprimary,
+                    ix.indisunique,
+                    pg_get_indexdef(ix.indexrelid) AS indexdef,
+                    array_agg(a.attname ORDER BY array_position(ix.indkey, a.attnum)) AS columns
+                FROM pg_class t
+                JOIN pg_index ix ON t.oid = ix.indrelid
+                JOIN pg_class i ON i.oid = ix.indexrelid
+                JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
+                WHERE t.relname = %s AND t.relkind = 'r'
+                GROUP BY i.relname, ix.indisprimary, ix.indisunique, ix.indexrelid
+                ORDER BY i.relname;
             """, [table_name])
-            
+
             for row in cursor.fetchall():
                 indexes.append({
                     'name': row[0],
-                    'definition': row[1],
+                    'is_primary': row[1],
+                    'is_unique': row[2],
+                    'definition': row[3],
+                    'columns': row[4] if row[4] else [],
                 })
-            
-            # Get foreign keys
+
+            # ── Foreign keys ──
             cursor.execute("""
                 SELECT
                     tc.constraint_name,
@@ -209,7 +298,7 @@ def postgres_table_schema(request, table_name):
                     ON ccu.constraint_name = tc.constraint_name
                 WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = %s;
             """, [table_name])
-            
+
             for row in cursor.fetchall():
                 foreign_keys.append({
                     'name': row[0],
@@ -217,24 +306,107 @@ def postgres_table_schema(request, table_name):
                     'ref_table': row[2],
                     'ref_column': row[3],
                 })
-                
+
+            # ── Constraints (CHECK, EXCLUDE, etc.) ──
+            cursor.execute("""
+                SELECT
+                    conname,
+                    contype,
+                    pg_get_constraintdef(oid) AS definition
+                FROM pg_constraint
+                WHERE conrelid = %s::regclass
+                ORDER BY contype, conname;
+            """, [table_name])
+
+            type_map = {'c': 'CHECK', 'f': 'FOREIGN KEY', 'p': 'PRIMARY KEY', 'u': 'UNIQUE', 'x': 'EXCLUDE'}
+            for row in cursor.fetchall():
+                constraints.append({
+                    'name': row[0],
+                    'type': type_map.get(row[1], row[1]),
+                    'definition': row[2],
+                })
+
+            # ── CREATE TABLE SQL ──
+            try:
+                col_defs = []
+                for c in columns:
+                    parts = [f'    "{c["name"]}"', c['type'].upper()]
+                    if c['max_length']:
+                        parts[-1] = f'{parts[-1]}({c["max_length"]})'
+                    if c['nullable'] != 'YES':
+                        parts.append('NOT NULL')
+                    if c['default']:
+                        parts.append(f'DEFAULT {c["default"]}')
+                    col_defs.append(' '.join(parts))
+
+                if pk_columns:
+                    col_defs.append(f'    PRIMARY KEY ({", ".join(sorted(pk_columns))})')
+
+                for fk in foreign_keys:
+                    col_defs.append(
+                        f'    FOREIGN KEY ("{fk["column"]}") REFERENCES "{fk["ref_table"]}" ("{fk["ref_column"]}")'
+                    )
+
+                create_sql = f'CREATE TABLE "{table_name}" (\n' + ',\n'.join(col_defs) + '\n);'
+            except Exception:
+                create_sql = ''
+
+            # ── Sample data (first 10 rows) ──
+            try:
+                cursor.execute(f'SELECT * FROM "{table_name}" LIMIT 10;')
+                sample_headers = [desc[0] for desc in cursor.description]
+                sample_data = cursor.fetchall()
+            except Exception:
+                sample_data = []
+                sample_headers = []
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-    
-    if request.headers.get('Accept') == 'application/json':
-        return JsonResponse({
+
+    # JSON export
+    if request.GET.get('format') == 'json' or request.headers.get('Accept') == 'application/json':
+        import datetime
+        def _json_safe(obj):
+            if isinstance(obj, (datetime.datetime, datetime.date)):
+                return obj.isoformat()
+            if isinstance(obj, bytes):
+                return obj.hex()
+            return str(obj)
+
+        data = {
             'table': table_name,
+            'row_count': row_count,
+            'table_size': table_size,
             'columns': columns,
             'indexes': indexes,
             'foreign_keys': foreign_keys,
-        })
-    
+            'constraints': constraints,
+            'create_sql': create_sql,
+            'sample_headers': sample_headers,
+            'sample_data': [[_json_safe(c) for c in row] for row in sample_data],
+        }
+        if request.GET.get('format') == 'json':
+            response = HttpResponse(
+                json.dumps(data, indent=2, ensure_ascii=False, default=_json_safe),
+                content_type='application/json'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{table_name}_schema.json"'
+            return response
+        return JsonResponse(data, json_dumps_params={'default': _json_safe})
+
     return render(request, 'admin/postgres/table_schema.html', {
-        'title': f'Table: {table_name}',
+        'title': f'{table_name} — Schema',
         'table_name': table_name,
         'columns': columns,
         'indexes': indexes,
         'foreign_keys': foreign_keys,
+        'constraints': constraints,
+        'create_sql': create_sql,
+        'sample_data': sample_data,
+        'sample_headers': sample_headers,
+        'sample_count': len(sample_data),
+        'row_count': row_count,
+        'table_size': table_size,
     })
 
 

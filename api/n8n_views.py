@@ -2890,11 +2890,19 @@ def _bulk_create_stream_media(item, user, skip_validation):
 @permission_classes([AllowAny])
 def n8n_diagnostic(request):
     """
-    Endpoint chẩn đoán — kiểm tra admin, models, migrations, encryption.
-    Không cần auth. Trả về trạng thái chi tiết.
+    Endpoint chẩn đoán — kiểm tra trạng thái hệ thống.
+    Yêu cầu API key qua header X-API-Key hoặc query param ?key=.
+    Không trả về thông tin nhạy cảm (keys, secrets, gateway URLs).
 
     GET /api/v1/n8n/diagnostic/
+    Headers: X-API-Key: <n8n_api_key>
     """
+    # Authenticate
+    from core.models import APIKey
+    api_key = request.META.get('HTTP_X_API_KEY', '') or request.query_params.get('key', '')
+    if not api_key or not APIKey.verify_key('n8n_api_key', api_key):
+        return Response({'error': 'Authentication required. Provide X-API-Key header.'}, status=status.HTTP_401_UNAUTHORIZED)
+
     import sys
     from django.conf import settings
     from django.db import connection
@@ -2992,318 +3000,22 @@ def n8n_diagnostic(request):
 
 
 # ============================================================================
-# API KEY INFO — Lấy API key qua admin secret
+# API KEY INFO — REMOVED (security risk)
 # ============================================================================
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def n8n_api_key_info(request):
-    """
-    Lấy thông tin API key cho N8N — xác thực bằng admin_secret_key.
-
-    GET /api/v1/n8n/api-key-info/?secret=<admin_secret_key>
-
-    Trả về API key value (nếu secret đúng).
-    """
-    from core.models import APIKey
-
-    secret = request.query_params.get('secret', '')
-
-    if not secret:
-        return Response(
-            {'success': False, 'error': 'Thiếu tham số ?secret=<admin_secret_key>'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    # Verify admin secret
-    if not APIKey.verify_key('admin_secret_key', secret):
-        return Response(
-            {'success': False, 'error': 'Admin secret không hợp lệ'},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
-
-    # Return all API keys info
-    keys = []
-    for k in APIKey.objects.filter(is_active=True):
-        keys.append({
-            'name': k.name,
-            'key': k.key,
-            'key_type': k.key_type,
-            'usage_count': k.usage_count,
-            'last_used_at': k.last_used_at.isoformat() if k.last_used_at else None,
-        })
-
-    return Response({
-        'success': True,
-        'keys': keys,
-        'hint': 'Dùng key có key_type=n8n_api cho header X-API-Key',
-    })
+    """Endpoint removed for security. Use admin panel to view API keys."""
+    return Response({'error': 'Endpoint removed. Use admin panel.'}, status=status.HTTP_410_GONE)
 
 
 # ============================================================================
-# ADMIN DEBUG — Bắt lỗi chi tiết admin 500
+# ADMIN DEBUG — REMOVED (security risk — exposed keys, gateway URLs, secrets)
 # ============================================================================
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def n8n_admin_debug(request):
-    """
-    Debug chi tiết admin 500 error.
-    Kiểm tra từng bước mà admin panel phải đi qua.
-
-    GET /api/v1/n8n/admin-debug/
-    """
-    import traceback
-    import sys
-
-    results = {}
-
-    # 1. Check SECRET_KEY consistency
-    try:
-        from django.conf import settings as dj_settings
-        sk = dj_settings.SECRET_KEY
-        results['secret_key_len'] = len(sk) if sk else 0
-        results['secret_key_first8'] = sk[:8] + '...' if sk else 'MISSING'
-
-        # Check if .secret_key file exists in container
-        from pathlib import Path
-        sk_file = Path(dj_settings.BASE_DIR) / '.secret_key'
-        results['secret_key_file_exists'] = sk_file.exists()
-        if sk_file.exists():
-            file_key = sk_file.read_text().strip()
-            results['secret_key_file_matches'] = (file_key == sk)
-            results['secret_key_file_len'] = len(file_key)
-    except Exception as e:
-        results['secret_key'] = f'error: {traceback.format_exc()}'
-
-    # 2. Check encryption with EXISTING data (not just round-trip)
-    try:
-        from core.models import SiteConfiguration
-        config = SiteConfiguration.get_instance()
-        encrypted_fields = [
-            'email_host_password', 'youtube_api_key', 'gemini_api_key',
-            'minio_access_key', 'minio_secret_key'
-        ]
-        enc_results = {}
-        for field_name in encrypted_fields:
-            try:
-                # Read raw value from DB (encrypted)
-                from django.db import connection
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        f'SELECT {field_name} FROM core_siteconfiguration WHERE id = 1'
-                    )
-                    row = cursor.fetchone()
-                    raw_val = row[0] if row else None
-
-                # Read via model (decrypted)
-                model_val = getattr(config, field_name, None)
-                enc_results[field_name] = {
-                    'raw_len': len(raw_val) if raw_val else 0,
-                    'raw_empty': not bool(raw_val),
-                    'decrypted_len': len(model_val) if model_val else 0,
-                    'decrypted_empty': not bool(model_val),
-                    'looks_encrypted': bool(raw_val and raw_val.startswith('gAAAAA')),
-                }
-            except Exception as e:
-                enc_results[field_name] = f'error: {e}'
-        results['encrypted_fields'] = enc_results
-    except Exception as e:
-        results['encrypted_fields'] = f'error: {traceback.format_exc()}'
-
-    # 3. Check APIKey model operations
-    try:
-        from core.models import APIKey
-        keys = list(APIKey.objects.all().values('id', 'name', 'key_type', 'is_active'))
-        results['api_keys'] = keys
-
-        admin_key = APIKey.get_key('admin_secret_key')
-        results['admin_secret_key_available'] = bool(admin_key)
-        results['admin_secret_key_len'] = len(admin_key) if admin_key else 0
-
-        # TEMPORARY: Show full keys for initial setup (remove after setup!)
-        full_keys = {}
-        for k in APIKey.objects.filter(is_active=True):
-            full_keys[k.name] = k.key
-        results['api_keys_full'] = full_keys
-    except Exception as e:
-        results['api_keys'] = f'error: {traceback.format_exc()}'
-
-    # 3b. Generate admin gateway URL
-    try:
-        from rest_framework.authtoken.models import Token
-        from core.models import APIKey
-        admin_key = APIKey.get_key('admin_secret_key')
-        tokens = Token.objects.select_related('user').filter(
-            user__is_superuser=True
-        )
-        gateway_urls = []
-        for t in tokens:
-            url = f'/admin-gateway/?key={admin_key}&token={t.key}'
-            gateway_urls.append({
-                'user': t.user.username,
-                'gateway_url': url,
-                'full_url': f'https://unstressvn.com{url}',
-            })
-        results['admin_gateway_urls'] = gateway_urls
-    except Exception as e:
-        results['admin_gateway'] = f'error: {traceback.format_exc()}'
-
-    # 4. Test admin imports and class instantiation
-    try:
-        from core.admin import APIKeyAdmin
-        results['admin_class'] = {
-            'list_display': list(APIKeyAdmin.list_display),
-            'fieldsets_count': len(APIKeyAdmin.fieldsets),
-        }
-    except Exception as e:
-        results['admin_class'] = f'error: {traceback.format_exc()}'
-
-    # 5. Test AdminAccessMiddleware._generate_token
-    try:
-        from unstressvn_settings.middleware import AdminAccessMiddleware
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        superusers = User.objects.filter(is_superuser=True).values_list('username', flat=True)
-        results['superusers'] = list(superusers)
-
-        if superusers:
-            su = User.objects.filter(is_superuser=True).first()
-            token = AdminAccessMiddleware._generate_token(su)
-            results['token_generation'] = 'ok' if token else 'empty'
-            results['token_len'] = len(token) if token else 0
-    except Exception as e:
-        results['token_generation'] = f'error: {traceback.format_exc()}'
-
-    # 6. Test admin changelist queryset
-    try:
-        from core.models import APIKey
-        qs = APIKey.objects.all()
-        items = []
-        for obj in qs:
-            try:
-                items.append({
-                    'name': obj.name,
-                    'key_preview': obj.key[:8] + '...' if obj.key else 'no-key',
-                    'key_type': obj.key_type,
-                    'is_active': obj.is_active,
-                })
-            except Exception as e:
-                items.append({'error': str(e)})
-        results['admin_queryset'] = items
-    except Exception as e:
-        results['admin_queryset'] = f'error: {traceback.format_exc()}'
-
-    # 7. Test 404 template rendering
-    try:
-        from django.template.loader import get_template
-        tmpl = get_template('404.html')
-        results['template_404'] = 'ok'
-    except Exception as e:
-        results['template_404'] = f'error: {e}'
-
-    # 8. Test admin template rendering
-    try:
-        from django.template.loader import get_template
-        tmpl = get_template('admin/base.html')
-        results['template_admin_base'] = 'ok'
-    except Exception as e:
-        results['template_admin_base'] = f'error: {e}'
-
-    # 9. Check Django auth token table
-    try:
-        from rest_framework.authtoken.models import Token
-        token_count = Token.objects.count()
-        results['auth_tokens_count'] = token_count
-    except Exception as e:
-        results['auth_tokens'] = f'error: {e}'
-
-    # 10. Check sessions table
-    try:
-        from django.contrib.sessions.models import Session
-        session_count = Session.objects.count()
-        results['sessions_count'] = session_count
-    except Exception as e:
-        results['sessions'] = f'error: {e}'
-
-    # 11. Test admin URL resolution
-    try:
-        from django.urls import reverse
-        url = reverse('admin:core_apikey_changelist')
-        results['admin_url_resolve'] = url
-    except Exception as e:
-        results['admin_url_resolve'] = f'error: {e}'
-
-    # 12. Check CSRF settings
-    try:
-        from django.conf import settings as dj_settings
-        results['csrf_trusted_origins'] = getattr(dj_settings, 'CSRF_TRUSTED_ORIGINS', [])
-        results['secure_proxy_ssl_header'] = getattr(dj_settings, 'SECURE_PROXY_SSL_HEADER', None)
-        results['session_cookie_secure'] = getattr(dj_settings, 'SESSION_COOKIE_SECURE', False)
-        results['csrf_cookie_secure'] = getattr(dj_settings, 'CSRF_COOKIE_SECURE', False)
-        results['session_engine'] = getattr(dj_settings, 'SESSION_ENGINE', 'default')
-    except Exception as e:
-        results['csrf_settings'] = f'error: {e}'
-
-    # 13. Check ALLOWED_HOSTS
-    try:
-        from django.conf import settings as dj_settings
-        results['allowed_hosts'] = getattr(dj_settings, 'ALLOWED_HOSTS', [])
-        results['debug'] = getattr(dj_settings, 'DEBUG', None)
-    except Exception as e:
-        results['allowed_hosts'] = f'error: {e}'
-
-    # 14. Check admin collectstatic (admin CSS/JS exists)
-    try:
-        import os
-        from django.conf import settings as dj_settings
-        staticfiles_dir = dj_settings.STATIC_ROOT
-        admin_css = os.path.join(staticfiles_dir, 'admin', 'css', 'base.css')
-        admin_js = os.path.join(staticfiles_dir, 'admin', 'js', 'core.js')
-        results['static_admin_css'] = os.path.exists(admin_css)
-        results['static_admin_js'] = os.path.exists(admin_js)
-        results['staticfiles_dir'] = str(staticfiles_dir)
-        results['staticfiles_exists'] = os.path.isdir(str(staticfiles_dir))
-    except Exception as e:
-        results['static_files'] = f'error: {e}'
-
-    # 15. Simulate admin page load — test ALL registered admin models
-    admin_simulations = {}
-    try:
-        from django.test import RequestFactory
-        from django.contrib.admin.sites import site as default_admin_site
-        from django.contrib.auth import get_user_model
-        from django.contrib.messages.storage.fallback import FallbackStorage
-        from django.contrib.sessions.backends.db import SessionStore
-        User = get_user_model()
-
-        factory = RequestFactory()
-        su = User.objects.filter(is_superuser=True).first()
-        if su:
-            for model, model_admin in default_admin_site._registry.items():
-                model_name = f'{model._meta.app_label}.{model._meta.model_name}'
-                try:
-                    fake_request = factory.get(f'/admin/{model._meta.app_label}/{model._meta.model_name}/')
-                    fake_request.user = su
-                    fake_request.session = SessionStore()
-                    fake_request.META['SERVER_NAME'] = 'unstressvn.com'
-                    fake_request.META['SERVER_PORT'] = '443'
-                    setattr(fake_request, '_messages', FallbackStorage(fake_request))
-
-                    response = model_admin.changelist_view(fake_request)
-                    if hasattr(response, 'render'):
-                        response.render()
-                    admin_simulations[model_name] = response.status_code
-                except Exception as e:
-                    admin_simulations[model_name] = f'error: {str(e)[:500]}'
-        else:
-            admin_simulations['_status'] = 'no superuser found'
-    except Exception as e:
-        admin_simulations['_status'] = f'error: {traceback.format_exc()[:500]}'
-    results['admin_simulations'] = admin_simulations
-
-    return Response({
-        'status': 'admin_debug',
-        'timestamp': timezone.now().isoformat(),
-        'results': results,
-    })
+    """Endpoint removed for security. Use admin panel for diagnostics."""
+    return Response({'error': 'Endpoint removed. Use admin panel.'}, status=status.HTTP_410_GONE)

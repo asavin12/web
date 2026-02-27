@@ -6,6 +6,8 @@ from django.core.cache import cache
 from django.utils import timezone
 import logging
 import secrets
+import hashlib
+import hmac
 
 # Import từ module youtube utility
 from .youtube import extract_youtube_id, fetch_youtube_info
@@ -15,10 +17,23 @@ from .fields import EncryptedTextField
 logger = logging.getLogger(__name__)
 
 
+def _hash_api_key(raw_key: str) -> str:
+    """
+    Hash API key bằng HMAC-SHA256 với SECRET_KEY.
+    Trả về hex digest. Dùng để lưu key_hash thay vì plain text.
+    """
+    secret = getattr(settings, 'SECRET_KEY', 'fallback-key')
+    return hmac.new(
+        secret.encode('utf-8'),
+        raw_key.encode('utf-8'),
+        hashlib.sha256,
+    ).hexdigest()
+
+
 class APIKey(models.Model):
     """
-    Lưu trữ các API Keys và Secret Keys trong database
-    Thay vì lưu trong .env file
+    Lưu trữ các API Keys và Secret Keys trong database.
+    Key plain text chỉ hiển thị trong admin. key_hash dùng để verify.
     """
     KEY_TYPE_CHOICES = [
         ('n8n_api', 'N8N Automation API Key'),
@@ -32,14 +47,27 @@ class APIKey(models.Model):
                            help_text='Tên định danh (VD: n8n_api_key, admin_secret)')
     key = models.CharField(max_length=255, verbose_name='API Key',
                           help_text='Giá trị key (tự động tạo nếu để trống)')
+    key_hash = models.CharField(max_length=128, blank=True, default='', verbose_name='Key Hash',
+                                help_text='HMAC-SHA256 hash — auto-generated on save')
+    key_prefix = models.CharField(max_length=12, blank=True, default='', verbose_name='Key Prefix',
+                                  help_text='First 8 chars for identification')
     key_type = models.CharField(max_length=20, choices=KEY_TYPE_CHOICES, default='other',
                                 verbose_name='Loại key')
     description = models.TextField(blank=True, verbose_name='Mô tả')
     
     is_active = models.BooleanField(default=True, verbose_name='Đang hoạt động')
     
+    # Security fields
+    allowed_ips = models.TextField(blank=True, default='', verbose_name='Allowed IPs',
+                                   help_text='Comma-separated IPs (empty = allow all)')
+    rate_limit = models.PositiveIntegerField(default=0, verbose_name='Rate limit/min',
+                                              help_text='0 = unlimited')
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name='Hết hạn',
+                                       help_text='Key hết hạn tự động (blank = không hết hạn)')
+    
     # Tracking
     last_used_at = models.DateTimeField(null=True, blank=True, verbose_name='Sử dụng lần cuối')
+    last_used_ip = models.GenericIPAddressField(null=True, blank=True, verbose_name='IP lần cuối')
     usage_count = models.PositiveIntegerField(default=0, verbose_name='Số lần sử dụng')
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -57,9 +85,37 @@ class APIKey(models.Model):
         # Tự động tạo key nếu để trống
         if not self.key:
             self.key = secrets.token_urlsafe(32)
+        # Always recompute hash + prefix on save
+        self.key_hash = _hash_api_key(self.key)
+        self.key_prefix = self.key[:8] if self.key else ''
         super().save(*args, **kwargs)
         # Clear cache khi update
         cache.delete(f'api_key_{self.name}')
+    
+    @property
+    def is_expired(self):
+        """Check if key has expired"""
+        if self.expires_at and timezone.now() > self.expires_at:
+            return True
+        return False
+
+    def check_ip(self, ip):
+        """Check if IP is allowed"""
+        if not self.allowed_ips:
+            return True
+        allowed = [x.strip() for x in self.allowed_ips.split(',') if x.strip()]
+        return ip in allowed
+
+    def check_rate_limit(self):
+        """Check rate limit using cache counter"""
+        if self.rate_limit <= 0:
+            return True
+        cache_key = f'api_rate_{self.name}'
+        count = cache.get(cache_key, 0)
+        if count >= self.rate_limit:
+            return False
+        cache.set(cache_key, count + 1, timeout=60)
+        return True
     
     @classmethod
     def get_key(cls, name, default=None):
@@ -73,6 +129,8 @@ class APIKey(models.Model):
         if key is None:
             try:
                 api_key = cls.objects.get(name=name, is_active=True)
+                if api_key.is_expired:
+                    return default
                 key = api_key.key
                 cache.set(cache_key, key, timeout=3600)  # Cache 1 hour
             except cls.DoesNotExist:
@@ -81,25 +139,50 @@ class APIKey(models.Model):
         return key
     
     @classmethod
-    def verify_key(cls, name, provided_key):
+    def verify_key(cls, name, provided_key, request=None):
         """
-        Xác thực API key
+        Xác thực API key bằng HMAC constant-time comparison.
+        Supports IP check, rate limit, expiry.
         Returns: True nếu key hợp lệ
         """
-        from django.utils import timezone
-        
-        expected_key = cls.get_key(name)
-        if expected_key and expected_key == provided_key:
-            # Update usage stats
-            try:
-                api_key = cls.objects.get(name=name)
-                api_key.last_used_at = timezone.now()
-                api_key.usage_count += 1
-                api_key.save(update_fields=['last_used_at', 'usage_count'])
-            except cls.DoesNotExist:
-                pass
-            return True
-        return False
+        try:
+            api_key_obj = cls.objects.get(name=name, is_active=True)
+        except cls.DoesNotExist:
+            return False
+
+        # Expiry check
+        if api_key_obj.is_expired:
+            return False
+
+        # HMAC verification (constant-time)
+        provided_hash = _hash_api_key(provided_key)
+        if not hmac.compare_digest(provided_hash, api_key_obj.key_hash):
+            # Fallback: direct compare for keys saved before hash migration
+            if api_key_obj.key != provided_key:
+                return False
+
+        # IP check
+        if request:
+            client_ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR', '')
+            if not api_key_obj.check_ip(client_ip):
+                logger.warning(f'API key {name} blocked from IP {client_ip}')
+                return False
+
+        # Rate limit
+        if not api_key_obj.check_rate_limit():
+            logger.warning(f'API key {name} rate limited')
+            return False
+
+        # Update usage stats
+        update_fields = ['last_used_at', 'usage_count']
+        api_key_obj.last_used_at = timezone.now()
+        api_key_obj.usage_count += 1
+        if request:
+            client_ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR', '')
+            api_key_obj.last_used_ip = client_ip
+            update_fields.append('last_used_ip')
+        api_key_obj.save(update_fields=update_fields)
+        return True
     
     @classmethod
     def create_default_keys(cls):

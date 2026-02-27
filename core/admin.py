@@ -14,11 +14,11 @@ import secrets
 @admin.register(APIKey)
 class APIKeyAdmin(admin.ModelAdmin):
     """Admin quản lý API Keys với tính năng tạo key tự động"""
-    list_display = ('name', 'key_type', 'key_preview', 'is_active', 'usage_count', 'last_used_at')
+    list_display = ('name', 'key_type', 'key_preview', 'is_active', 'security_status', 'usage_count', 'last_used_at', 'last_used_ip')
     list_filter = ('key_type', 'is_active')
     search_fields = ('name', 'description')
     list_editable = ('is_active',)
-    readonly_fields = ('key_preview_full', 'usage_count', 'last_used_at', 'created_at', 'updated_at', 'generate_key_button')
+    readonly_fields = ('key_preview_full', 'key_hash', 'key_prefix', 'usage_count', 'last_used_at', 'last_used_ip', 'created_at', 'updated_at', 'generate_key_button')
     ordering = ['key_type', 'name']
     actions = ['regenerate_keys', 'reset_usage_count']
     
@@ -27,14 +27,15 @@ class APIKeyAdmin(admin.ModelAdmin):
             'fields': ('name', 'key_type', 'description'),
         }),
         ('API Key', {
-            'fields': ('key', 'generate_key_button', 'key_preview_full'),
-            'description': '💡 Để trống trường "key" để hệ thống tự động tạo key bảo mật cao.'
+            'fields': ('key', 'generate_key_button', 'key_preview_full', 'key_hash', 'key_prefix'),
+            'description': '💡 Để trống trường "key" để hệ thống tự động tạo key bảo mật cao. Key tự động hash bằng HMAC-SHA256.'
         }),
-        ('Trạng thái', {
-            'fields': ('is_active',),
+        ('Bảo mật', {
+            'fields': ('is_active', 'allowed_ips', 'rate_limit', 'expires_at'),
+            'description': '🛡️ Giới hạn IP, rate limit, và thời hạn key.'
         }),
         ('Thống kê sử dụng', {
-            'fields': ('usage_count', 'last_used_at', 'created_at', 'updated_at'),
+            'fields': ('usage_count', 'last_used_at', 'last_used_ip', 'created_at', 'updated_at'),
             'classes': ('collapse',),
         }),
     )
@@ -52,6 +53,24 @@ class APIKeyAdmin(admin.ModelAdmin):
             )
         return '-'
     key_preview.short_description = 'Key'
+
+    def security_status(self, obj):
+        """Show security indicators"""
+        badges = []
+        if obj.key_hash:
+            badges.append('<span style="background:#d1fae5;color:#065f46;padding:2px 6px;border-radius:3px;font-size:11px;">🔒 Hashed</span>')
+        else:
+            badges.append('<span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:3px;font-size:11px;">⚠️ No Hash</span>')
+        if obj.allowed_ips:
+            badges.append('<span style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:3px;font-size:11px;">🌐 IP Lock</span>')
+        if obj.rate_limit > 0:
+            badges.append(f'<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:3px;font-size:11px;">⏱ {obj.rate_limit}/min</span>')
+        if obj.is_expired:
+            badges.append('<span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:3px;font-size:11px;">❌ Expired</span>')
+        elif obj.expires_at:
+            badges.append('<span style="background:#e0e7ff;color:#3730a3;padding:2px 6px;border-radius:3px;font-size:11px;">📅 Expiry Set</span>')
+        return format_html(' '.join(badges)) if badges else '-'
+    security_status.short_description = 'Security'
     
     def key_preview_full(self, obj):
         """Hiển thị full key với nút copy"""

@@ -5,68 +5,93 @@
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
-    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    <a href="{% url 'admin:index' %}">{% trans 'Trang chủ' %}</a>
     &rsaquo; <a href="/admin/postgres/">PostgreSQL</a>
     &rsaquo; Tables
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Summary -->
-<div class="module">
-    <h2>Tổng quan</h2>
-    <table>
-        <tbody>
-            <tr>
-                <th scope="row">Tổng số tables:</th>
-                <td><strong>{{ tables|length }}</strong></td>
-            </tr>
-            <tr>
-                <th scope="row">Database Size:</th>
-                <td><strong>{{ total_size|default:"-" }}</strong></td>
-            </tr>
-        </tbody>
-    </table>
+<style>
+.search-bar { display: flex; gap: 10px; margin-bottom: 14px; }
+.search-bar input { flex:1; padding: 8px 14px; border: 1px solid var(--hairline-color,#ccc); border-radius: 6px; font-size: 14px; }
+.schema-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat-card { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #fff; border-radius: 8px; border: 1px solid var(--hairline-color, #ccc); }
+.stat-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.stat-value { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+.row-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:600; }
+</style>
+
+<!-- Stats -->
+<div class="schema-stats">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#dbeafe;">🗄️</div>
+        <div><div class="stat-value">{{ tables|length }}</div><div class="stat-label">Tables</div></div>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="search-bar">
+    <input type="text" id="tableSearch" placeholder="🔍 Tìm kiếm table..." onkeyup="filterTables()">
 </div>
 
 <!-- Tables List -->
 <div class="module">
-    <h2>Danh sách Tables</h2>
-    <table id="result_list">
+    <h2>📊 Danh sách Tables ({{ tables|length }})</h2>
+    <table id="result_list" style="width:100%;">
         <thead>
             <tr>
-                <th scope="col">Table Name</th>
-                <th scope="col">Rows</th>
-                <th scope="col">Size</th>
-                <th scope="col">Actions</th>
+                <th style="width:30px;">#</th>
+                <th>Table Name</th>
+                <th style="text-align:right;">Columns</th>
+                <th style="text-align:right;">Rows</th>
+                <th style="text-align:right;">Size</th>
+                <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="tableBody">
             {% for table in tables %}
-            <tr class="{% cycle 'row1' 'row2' %}">
-                <td>
-                    <strong>{{ table.name }}</strong>
+            <tr class="{% cycle 'row1' 'row2' %} table-row">
+                <td style="color:#999;">{{ forloop.counter }}</td>
+                <td><strong><a href="/admin/postgres/tables/{{ table.name }}/">{{ table.name }}</a></strong></td>
+                <td style="text-align:right;">{{ table.columns|default:"-" }}</td>
+                <td style="text-align:right;">
+                    {% if table.rows > 1000 %}
+                        <span class="row-badge" style="background:#dbeafe;color:#1e40af;">{{ table.rows }}</span>
+                    {% elif table.rows > 0 %}
+                        <span class="row-badge" style="background:#d1fae5;color:#065f46;">{{ table.rows }}</span>
+                    {% else %}
+                        <span style="color:#ccc;">0</span>
+                    {% endif %}
                 </td>
-                <td>{{ table.row_count|default:"-" }}</td>
-                <td>{{ table.size|default:"-" }}</td>
-                <td>
-                    <a href="/admin/postgres/table/{{ table.name }}/" class="viewlink">View Schema</a>
-                </td>
+                <td style="text-align:right;">{{ table.size|default:"-" }}</td>
+                <td><a href="/admin/postgres/tables/{{ table.name }}/" class="viewlink">View Schema</a></td>
             </tr>
             {% empty %}
-            <tr>
-                <td colspan="4">Không có tables</td>
-            </tr>
+            <tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">Không có tables</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<!-- Quick Links -->
+<!-- Actions -->
 <div class="module">
-    <h2>Liên kết</h2>
-    <ul class="object-tools" style="margin: 10px 0; padding: 0;">
-        <li><a href="/admin/postgres/">← Back to Dashboard</a></li>
-    </ul>
+    <h2>🔧 Actions</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;padding:14px;">
+        <a href="/admin/postgres/" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#fff !important;background:var(--primary,#5D5A2F);">← Dashboard</a>
+        <a href="/admin/postgres/export-schema/?format=json" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#fff !important;background:#059669;">📥 Export All Schema</a>
+        <a href="/admin/postgres/backup/" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;color:#fff !important;background:#6366f1;">💾 Backup</a>
+    </div>
 </div>
+
+<script>
+function filterTables() {
+    const q = document.getElementById('tableSearch').value.toLowerCase();
+    document.querySelectorAll('.table-row').forEach(row => {
+        const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        row.style.display = name.includes(q) ? '' : 'none';
+    });
+}
+</script>
 {% endblock %}

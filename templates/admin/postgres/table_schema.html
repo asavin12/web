@@ -1,11 +1,11 @@
 {% extends "admin/base_site.html" %}
 {% load i18n static %}
 
-{% block title %}Table: {{ table_name }}{% endblock %}
+{% block title %}{{ table_name }} — Schema{% endblock %}
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
-    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    <a href="{% url 'admin:index' %}">{% trans 'Trang chủ' %}</a>
     &rsaquo; <a href="/admin/postgres/">PostgreSQL</a>
     &rsaquo; <a href="/admin/postgres/tables/">Tables</a>
     &rsaquo; {{ table_name }}
@@ -13,88 +13,103 @@
 {% endblock %}
 
 {% block content %}
-<!-- Table Info -->
-<div class="module">
-    <h2>Thông tin Table</h2>
-    <table>
-        <tbody>
-            <tr>
-                <th scope="row">Table Name:</th>
-                <td><code>{{ table_name }}</code></td>
-            </tr>
-            <tr>
-                <th scope="row">Row Count:</th>
-                <td>{{ row_count|default:"-" }}</td>
-            </tr>
-            <tr>
-                <th scope="row">Size:</th>
-                <td>{{ table_size|default:"-" }}</td>
-            </tr>
-        </tbody>
-    </table>
+<style>
+.schema-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat-card { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #fff; border-radius: 8px; border: 1px solid var(--hairline-color, #ccc); }
+.stat-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.stat-value { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; font-family: 'Fira Code', monospace; }
+.b-pk { background: #fef3c7; color: #92400e; }
+.b-fk { background: #dbeafe; color: #1e40af; }
+.b-idx { background: #d1fae5; color: #065f46; }
+.b-type { background: #ede9fe; color: #5b21b6; }
+.b-unique { background: #fce7f3; color: #9d174d; }
+.b-nn { background: #fee2e2; color: #991b1b; }
+.b-null { background: #f3f4f6; color: #6b7280; }
+.fk-arrow { color: #6366f1; font-weight: 700; margin: 0 3px; }
+.sql-block { background: #1e293b; color: #e2e8f0; padding: 16px 20px; border-radius: 8px; font-family: 'Fira Code', monospace; font-size: 12.5px; line-height: 1.7; overflow-x: auto; white-space: pre; position: relative; }
+.copy-btn { position: absolute; top: 8px; right: 8px; padding: 4px 10px; background: rgba(255,255,255,.15); border: none; border-radius: 4px; cursor: pointer; font-size: 12px; color: #94a3b8; }
+.copy-btn:hover { background: rgba(255,255,255,.25); color: #fff; }
+.action-bar { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px; }
+.action-bar a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; color: #fff !important; }
+</style>
+
+<!-- Stats -->
+<div class="schema-stats">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#dbeafe;">📊</div>
+        <div><div class="stat-value">{{ row_count|default:"0" }}</div><div class="stat-label">Rows</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#d1fae5;">📐</div>
+        <div><div class="stat-value">{{ columns|length }}</div><div class="stat-label">Columns</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef3c7;">⚡</div>
+        <div><div class="stat-value">{{ indexes|length }}</div><div class="stat-label">Indexes</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fce7f3;">🔗</div>
+        <div><div class="stat-value">{{ foreign_keys|length }}</div><div class="stat-label">Foreign Keys</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#e0e7ff;">💾</div>
+        <div><div class="stat-value">{{ table_size|default:"-" }}</div><div class="stat-label">Size</div></div>
+    </div>
 </div>
 
 <!-- Columns -->
 <div class="module">
-    <h2>Columns ({{ columns|length }})</h2>
-    <table id="result_list">
+    <h2>📋 Columns ({{ columns|length }})</h2>
+    <table id="result_list" style="width:100%;">
         <thead>
             <tr>
-                <th scope="col">#</th>
-                <th scope="col">Column Name</th>
-                <th scope="col">Data Type</th>
-                <th scope="col">Nullable</th>
-                <th scope="col">Default</th>
+                <th style="width:30px;">#</th>
+                <th>Column</th>
+                <th>Type</th>
+                <th>Nullable</th>
+                <th>Default</th>
+                <th>Info</th>
             </tr>
         </thead>
         <tbody>
             {% for col in columns %}
             <tr class="{% cycle 'row1' 'row2' %}">
-                <td>{{ forloop.counter }}</td>
-                <td><strong>{{ col.column_name }}</strong></td>
-                <td><code>{{ col.data_type }}</code></td>
-                <td>
-                    {% if col.is_nullable == 'YES' %}
-                        <img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes">
-                    {% else %}
-                        <img src="{% static 'admin/img/icon-no.svg' %}" alt="No">
-                    {% endif %}
+                <td style="color:#999;">{{ forloop.counter }}</td>
+                <td><strong>{{ col.name }}</strong></td>
+                <td><span class="badge b-type">{{ col.type }}{% if col.max_length %}({{ col.max_length }}){% endif %}</span></td>
+                <td style="text-align:center;">
+                    {% if col.nullable == 'YES' %}<span class="badge b-null">NULL ✓</span>{% else %}<span class="badge b-nn">NOT NULL</span>{% endif %}
                 </td>
-                <td>{{ col.column_default|default:"-"|truncatechars:30 }}</td>
+                <td>{% if col.default %}<code style="font-size:12px;color:#666;">{{ col.default|truncatechars:40 }}</code>{% else %}<span style="color:#ccc;">—</span>{% endif %}</td>
+                <td>
+                    {% if col.is_primary %}<span class="badge b-pk">🔑 PK</span> {% endif %}
+                    {% if col.is_foreign_key %}<span class="badge b-fk">🔗 FK → {{ col.fk_ref }}</span> {% endif %}
+                    {% if col.is_unique %}<span class="badge b-unique">UNIQUE</span> {% endif %}
+                    {% if col.is_indexed %}<span class="badge b-idx">INDEX</span> {% endif %}
+                </td>
             </tr>
             {% empty %}
-            <tr>
-                <td colspan="5">Không có columns</td>
-            </tr>
+            <tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">Không có columns</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<!-- Primary Key & Indexes -->
+<!-- Indexes -->
 {% if indexes %}
 <div class="module">
-    <h2>Indexes</h2>
-    <table id="result_list">
-        <thead>
-            <tr>
-                <th scope="col">Index Name</th>
-                <th scope="col">Columns</th>
-                <th scope="col">Unique</th>
-            </tr>
-        </thead>
+    <h2>⚡ Indexes ({{ indexes|length }})</h2>
+    <table id="result_list" style="width:100%;">
+        <thead><tr><th>Name</th><th>Columns</th><th>Type</th><th>Definition</th></tr></thead>
         <tbody>
             {% for idx in indexes %}
             <tr class="{% cycle 'row1' 'row2' %}">
-                <td>{{ idx.name }}</td>
-                <td><code>{{ idx.columns }}</code></td>
-                <td>
-                    {% if idx.is_unique %}
-                        <img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes">
-                    {% else %}
-                        <img src="{% static 'admin/img/icon-no.svg' %}" alt="No">
-                    {% endif %}
-                </td>
+                <td><strong style="font-size:13px;">{{ idx.name }}</strong></td>
+                <td>{% for c in idx.columns %}<span class="badge b-idx">{{ c }}</span> {% endfor %}</td>
+                <td>{% if idx.is_primary %}<span class="badge b-pk">PRIMARY</span>{% elif idx.is_unique %}<span class="badge b-unique">UNIQUE</span>{% else %}<span class="badge" style="background:#f3f4f6;color:#374151;">INDEX</span>{% endif %}</td>
+                <td><div style="font-size:12px;color:#666;max-width:500px;word-break:break-all;">{{ idx.definition }}</div></td>
             </tr>
             {% endfor %}
         </tbody>
@@ -105,19 +120,15 @@
 <!-- Foreign Keys -->
 {% if foreign_keys %}
 <div class="module">
-    <h2>Foreign Keys</h2>
-    <table id="result_list">
-        <thead>
-            <tr>
-                <th scope="col">Column</th>
-                <th scope="col">References</th>
-            </tr>
-        </thead>
+    <h2>🔗 Foreign Keys ({{ foreign_keys|length }})</h2>
+    <table id="result_list" style="width:100%;">
+        <thead><tr><th>Constraint</th><th>Column</th><th>References</th></tr></thead>
         <tbody>
             {% for fk in foreign_keys %}
             <tr class="{% cycle 'row1' 'row2' %}">
-                <td>{{ fk.column }}</td>
-                <td><code>{{ fk.references }}</code></td>
+                <td style="font-size:12px;color:#666;">{{ fk.name }}</td>
+                <td><span class="badge b-fk">{{ fk.column }}</span></td>
+                <td><a href="/admin/postgres/tables/{{ fk.ref_table }}/" style="font-weight:600;">{{ fk.ref_table }}</a><span class="fk-arrow">→</span><span class="badge b-pk">{{ fk.ref_column }}</span></td>
             </tr>
             {% endfor %}
         </tbody>
@@ -125,12 +136,77 @@
 </div>
 {% endif %}
 
-<!-- Quick Links -->
+<!-- Constraints -->
+{% if constraints %}
 <div class="module">
-    <h2>Liên kết</h2>
-    <ul class="object-tools" style="margin: 10px 0; padding: 0;">
-        <li><a href="/admin/postgres/tables/">← Back to Tables</a></li>
-        <li><a href="/admin/postgres/">Dashboard</a></li>
-    </ul>
+    <h2>🛡️ Constraints ({{ constraints|length }})</h2>
+    <table id="result_list" style="width:100%;">
+        <thead><tr><th>Name</th><th>Type</th><th>Definition</th></tr></thead>
+        <tbody>
+            {% for c in constraints %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+                <td style="font-size:12px;">{{ c.name }}</td>
+                <td><span class="badge" style="background:#fef3c7;color:#92400e;">{{ c.type }}</span></td>
+                <td><code style="font-size:12px;">{{ c.definition|truncatechars:120 }}</code></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
+{% endif %}
+
+<!-- SQL -->
+{% if create_sql %}
+<div class="module">
+    <h2>📝 CREATE TABLE SQL</h2>
+    <div style="padding:16px;position:relative;">
+        <button type="button" class="copy-btn" onclick="copySql()">📋 Copy</button>
+        <pre class="sql-block" id="createSql">{{ create_sql }}</pre>
+    </div>
+</div>
+{% endif %}
+
+<!-- Sample Data -->
+{% if sample_data %}
+<div class="module">
+    <h2>📄 Sample Data ({{ sample_count }} / {{ row_count }} rows)</h2>
+    <div style="overflow-x:auto;">
+        <table id="result_list" style="width:100%;font-size:13px;">
+            <thead><tr>{% for h in sample_headers %}<th style="white-space:nowrap;">{{ h }}</th>{% endfor %}</tr></thead>
+            <tbody>
+                {% for row in sample_data %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    {% for cell in row %}
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        {% if cell == None %}<span style="color:#ccc;">NULL</span>{% else %}{{ cell|truncatechars:60 }}{% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Actions -->
+<div class="module">
+    <h2>🔧 Actions</h2>
+    <div class="action-bar">
+        <a href="/admin/postgres/tables/" style="background:var(--primary);">← Quay lại Tables</a>
+        <a href="/admin/postgres/tables/{{ table_name }}/?format=json" style="background:#059669;">📥 Export JSON</a>
+        <a href="/admin/postgres/" style="background:#6366f1;">🏠 Dashboard</a>
+    </div>
+</div>
+
+<script>
+function copySql() {
+    const el = document.getElementById('createSql');
+    navigator.clipboard.writeText(el.textContent).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = '📋 Copy', 2000);
+    });
+}
+</script>
 {% endblock %}
