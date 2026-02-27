@@ -3267,42 +3267,40 @@ def n8n_admin_debug(request):
     except Exception as e:
         results['static_files'] = f'error: {e}'
 
-    # 15. Simulate admin page load (with superuser)
+    # 15. Simulate admin page load — test ALL registered admin models
+    admin_simulations = {}
     try:
         from django.test import RequestFactory
-        from django.contrib.admin.sites import AdminSite
-        from core.admin import APIKeyAdmin
-        from core.models import APIKey
+        from django.contrib.admin.sites import site as default_admin_site
         from django.contrib.auth import get_user_model
+        from django.contrib.messages.storage.fallback import FallbackStorage
+        from django.contrib.sessions.backends.db import SessionStore
         User = get_user_model()
 
         factory = RequestFactory()
         su = User.objects.filter(is_superuser=True).first()
         if su:
-            fake_request = factory.get('/admin/core/apikey/')
-            fake_request.user = su
+            for model, model_admin in default_admin_site._registry.items():
+                model_name = f'{model._meta.app_label}.{model._meta.model_name}'
+                try:
+                    fake_request = factory.get(f'/admin/{model._meta.app_label}/{model._meta.model_name}/')
+                    fake_request.user = su
+                    fake_request.session = SessionStore()
+                    fake_request.META['SERVER_NAME'] = 'unstressvn.com'
+                    fake_request.META['SERVER_PORT'] = '443'
+                    setattr(fake_request, '_messages', FallbackStorage(fake_request))
 
-            # Add session mock
-            from django.contrib.sessions.backends.db import SessionStore
-            fake_request.session = SessionStore()
-            fake_request.META['SERVER_NAME'] = 'unstressvn.com'
-            fake_request.META['SERVER_PORT'] = '443'
-
-            from django.contrib.messages.storage.fallback import FallbackStorage
-            setattr(fake_request, '_messages', FallbackStorage(fake_request))
-
-            site = AdminSite()
-            admin_instance = APIKeyAdmin(APIKey, site)
-            response = admin_instance.changelist_view(fake_request)
-            results['admin_changelist_simulation'] = {
-                'status_code': response.status_code,
-                'content_type': response.get('Content-Type', 'unknown'),
-                'content_len': len(response.content) if hasattr(response, 'content') else 0,
-            }
+                    response = model_admin.changelist_view(fake_request)
+                    if hasattr(response, 'render'):
+                        response.render()
+                    admin_simulations[model_name] = response.status_code
+                except Exception as e:
+                    admin_simulations[model_name] = f'error: {str(e)[:500]}'
         else:
-            results['admin_changelist_simulation'] = 'no superuser found'
+            admin_simulations['_status'] = 'no superuser found'
     except Exception as e:
-        results['admin_changelist_simulation'] = f'error: {traceback.format_exc()}'
+        admin_simulations['_status'] = f'error: {traceback.format_exc()[:500]}'
+    results['admin_simulations'] = admin_simulations
 
     return Response({
         'status': 'admin_debug',
