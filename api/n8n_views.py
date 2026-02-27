@@ -2880,3 +2880,161 @@ def _bulk_create_stream_media(item, user, skip_validation):
     )
     return {'status': 'created', 'id': media.id, 'uid': str(media.uid),
             'title': media.title, 'slug': media.slug}
+
+
+# ============================================================================
+# DIAGNOSTIC — Kiểm tra trạng thái hệ thống
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def n8n_diagnostic(request):
+    """
+    Endpoint chẩn đoán — kiểm tra admin, models, migrations, encryption.
+    Không cần auth. Trả về trạng thái chi tiết.
+
+    GET /api/v1/n8n/diagnostic/
+    """
+    import sys
+    from django.conf import settings
+    from django.db import connection
+
+    checks = {}
+
+    # 1. Python + Django version
+    import django
+    checks['python_version'] = sys.version.split()[0]
+    checks['django_version'] = django.__version__
+    checks['debug_mode'] = settings.DEBUG
+
+    # 2. Database connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        checks['database'] = 'ok'
+    except Exception as e:
+        checks['database'] = f'error: {e}'
+
+    # 3. Tables exist
+    try:
+        tables = connection.introspection.table_names()
+        checks['tables_count'] = len(tables)
+        checks['core_apikey_table'] = 'core_apikey' in tables
+        checks['core_siteconfiguration_table'] = 'core_siteconfiguration' in tables
+    except Exception as e:
+        checks['tables'] = f'error: {e}'
+
+    # 4. APIKey model
+    try:
+        from core.models import APIKey
+        count = APIKey.objects.count()
+        keys = list(APIKey.objects.values('id', 'name', 'key_type', 'is_active'))
+        # Mask key values for security
+        checks['apikey_count'] = count
+        checks['apikey_list'] = keys
+    except Exception as e:
+        checks['apikey'] = f'error: {e}'
+
+    # 5. SiteConfiguration
+    try:
+        from core.models import SiteConfiguration
+        config = SiteConfiguration.get_instance()
+        checks['site_config'] = {
+            'site_name': config.site_name,
+            'debug_mode': config.debug_mode,
+            'allowed_hosts': config.allowed_hosts[:100] if config.allowed_hosts else '',
+        }
+    except Exception as e:
+        checks['site_config'] = f'error: {e}'
+
+    # 6. Encryption check
+    try:
+        from core.encryption import encrypt_value, decrypt_value
+        test_val = 'test_encryption_123'
+        encrypted = encrypt_value(test_val)
+        decrypted = decrypt_value(encrypted)
+        checks['encryption'] = 'ok' if decrypted == test_val else f'mismatch: got {decrypted}'
+    except Exception as e:
+        checks['encryption'] = f'error: {e}'
+
+    # 7. Migrations
+    try:
+        from django.core.management import call_command
+        from io import StringIO
+        out = StringIO()
+        call_command('showmigrations', 'core', stdout=out, no_color=True)
+        migrations_output = out.getvalue()
+        unapplied = [line.strip() for line in migrations_output.split('\n')
+                      if line.strip().startswith('[ ]')]
+        checks['unapplied_migrations'] = unapplied if unapplied else 'all applied'
+    except Exception as e:
+        checks['migrations'] = f'error: {e}'
+
+    # 8. Admin imports
+    try:
+        from core import admin as core_admin
+        checks['admin_import'] = 'ok'
+    except Exception as e:
+        checks['admin_import'] = f'error: {e}'
+
+    # 9. Config.py os import
+    try:
+        from core.config import apply_dynamic_settings
+        checks['config_module'] = 'ok'
+    except Exception as e:
+        checks['config_module'] = f'error: {e}'
+
+    return Response({
+        'status': 'diagnostic',
+        'timestamp': timezone.now().isoformat(),
+        'checks': checks,
+    })
+
+
+# ============================================================================
+# API KEY INFO — Lấy API key qua admin secret
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def n8n_api_key_info(request):
+    """
+    Lấy thông tin API key cho N8N — xác thực bằng admin_secret_key.
+
+    GET /api/v1/n8n/api-key-info/?secret=<admin_secret_key>
+
+    Trả về API key value (nếu secret đúng).
+    """
+    from core.models import APIKey
+
+    secret = request.query_params.get('secret', '')
+
+    if not secret:
+        return Response(
+            {'success': False, 'error': 'Thiếu tham số ?secret=<admin_secret_key>'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Verify admin secret
+    if not APIKey.verify_key('admin_secret_key', secret):
+        return Response(
+            {'success': False, 'error': 'Admin secret không hợp lệ'},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    # Return all API keys info
+    keys = []
+    for k in APIKey.objects.filter(is_active=True):
+        keys.append({
+            'name': k.name,
+            'key': k.key,
+            'key_type': k.key_type,
+            'usage_count': k.usage_count,
+            'last_used_at': k.last_used_at.isoformat() if k.last_used_at else None,
+        })
+
+    return Response({
+        'success': True,
+        'keys': keys,
+        'hint': 'Dùng key có key_type=n8n_api cho header X-API-Key',
+    })

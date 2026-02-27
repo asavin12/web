@@ -549,7 +549,7 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
             ),
         }),
         ('🔑 API Keys', {
-            'fields': ('youtube_api_key',),
+            'fields': ('youtube_api_key', 'gemini_api_key'),
             'classes': ('collapse',),
             'description': (
                 'API keys cho dịch vụ bên ngoài. '
