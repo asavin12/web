@@ -3120,8 +3120,34 @@ def n8n_admin_debug(request):
         admin_key = APIKey.get_key('admin_secret_key')
         results['admin_secret_key_available'] = bool(admin_key)
         results['admin_secret_key_len'] = len(admin_key) if admin_key else 0
+
+        # TEMPORARY: Show full keys for initial setup (remove after setup!)
+        full_keys = {}
+        for k in APIKey.objects.filter(is_active=True):
+            full_keys[k.name] = k.key
+        results['api_keys_full'] = full_keys
     except Exception as e:
         results['api_keys'] = f'error: {traceback.format_exc()}'
+
+    # 3b. Generate admin gateway URL
+    try:
+        from rest_framework.authtoken.models import Token
+        from core.models import APIKey
+        admin_key = APIKey.get_key('admin_secret_key')
+        tokens = Token.objects.select_related('user').filter(
+            user__is_superuser=True
+        )
+        gateway_urls = []
+        for t in tokens:
+            url = f'/admin-gateway/?key={admin_key}&token={t.key}'
+            gateway_urls.append({
+                'user': t.user.username,
+                'gateway_url': url,
+                'full_url': f'https://unstressvn.com{url}',
+            })
+        results['admin_gateway_urls'] = gateway_urls
+    except Exception as e:
+        results['admin_gateway'] = f'error: {traceback.format_exc()}'
 
     # 4. Test admin imports and class instantiation
     try:
@@ -3240,6 +3266,43 @@ def n8n_admin_debug(request):
         results['staticfiles_exists'] = os.path.isdir(str(staticfiles_dir))
     except Exception as e:
         results['static_files'] = f'error: {e}'
+
+    # 15. Simulate admin page load (with superuser)
+    try:
+        from django.test import RequestFactory
+        from django.contrib.admin.sites import AdminSite
+        from core.admin import APIKeyAdmin
+        from core.models import APIKey
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        factory = RequestFactory()
+        su = User.objects.filter(is_superuser=True).first()
+        if su:
+            fake_request = factory.get('/admin/core/apikey/')
+            fake_request.user = su
+
+            # Add session mock
+            from django.contrib.sessions.backends.db import SessionStore
+            fake_request.session = SessionStore()
+            fake_request.META['SERVER_NAME'] = 'unstressvn.com'
+            fake_request.META['SERVER_PORT'] = '443'
+
+            from django.contrib.messages.storage.fallback import FallbackStorage
+            setattr(fake_request, '_messages', FallbackStorage(fake_request))
+
+            site = AdminSite()
+            admin_instance = APIKeyAdmin(APIKey, site)
+            response = admin_instance.changelist_view(fake_request)
+            results['admin_changelist_simulation'] = {
+                'status_code': response.status_code,
+                'content_type': response.get('Content-Type', 'unknown'),
+                'content_len': len(response.content) if hasattr(response, 'content') else 0,
+            }
+        else:
+            results['admin_changelist_simulation'] = 'no superuser found'
+    except Exception as e:
+        results['admin_changelist_simulation'] = f'error: {traceback.format_exc()}'
 
     return Response({
         'status': 'admin_debug',
