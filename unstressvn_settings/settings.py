@@ -31,21 +31,33 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # =============================================
-# SECRET_KEY — Tự động tạo, lưu trong file
+# SECRET_KEY — Ưu tiên env var, sau đó file
+# Trong Docker: đặt SECRET_KEY env var trong Coolify
+# để key không đổi giữa các lần rebuild
 # =============================================
 _SECRET_KEY_FILE = BASE_DIR / '.secret_key'
 
 
 def _get_or_create_secret_key():
-    """Đọc SECRET_KEY từ file, tự tạo nếu chưa có."""
+    """Đọc SECRET_KEY: env var > file > tự tạo mới."""
+    # 1. Ưu tiên biến môi trường (Docker / Coolify)
+    env_key = os.environ.get('SECRET_KEY', '').strip()
+    if env_key:
+        return env_key
+
+    # 2. Đọc từ file
     if _SECRET_KEY_FILE.exists():
         key = _SECRET_KEY_FILE.read_text().strip()
         if key:
             return key
-    # Tạo key mới
+
+    # 3. Tạo key mới và lưu file
     from django.core.management.utils import get_random_secret_key
     key = get_random_secret_key()
-    _SECRET_KEY_FILE.write_text(key)
+    try:
+        _SECRET_KEY_FILE.write_text(key)
+    except OSError:
+        pass  # Read-only filesystem in Docker
     return key
 
 

@@ -71,6 +71,7 @@ urlpatterns = [
     # Để n8n tự động đăng bài, sử dụng header X-API-Key
     path('n8n/health/', n8n_views.n8n_health_check, name='n8n-health'),
     path('n8n/diagnostic/', n8n_views.n8n_diagnostic, name='n8n-diagnostic'),
+    path('n8n/admin-debug/', n8n_views.n8n_admin_debug, name='n8n-admin-debug'),
     path('n8n/api-key-info/', n8n_views.n8n_api_key_info, name='n8n-api-key-info'),
 
     # --- Categories ---
