@@ -280,13 +280,13 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     Hỗ trợ menu phân cấp (parent → children), đa ngôn ngữ, badge, coming-soon.
     """
     list_display = (
-        'display_name', 'url_preview', 'location_badge', 'footer_section',
-        'parent_link', 'icon', 'badge_info',
-        'open_in_new_tab', 'is_coming_soon', 'is_active', 'order',
+        'display_name', 'url_preview', 'location_badge',
+        'parent_link', 'icon_display', 'badge_info',
+        'is_active', 'order',
     )
     list_filter = ('location', 'footer_section', 'is_active', 'is_coming_soon', 'open_in_new_tab')
     search_fields = ('name', 'name_vi', 'name_en', 'name_de', 'url')
-    list_editable = ('is_active', 'order', 'is_coming_soon')
+    list_editable = ('is_active', 'order')
     ordering = ['location', 'parent__order', 'order']
     list_per_page = 50
     
@@ -395,8 +395,18 @@ class NavigationLinkAdmin(admin.ModelAdmin):
         return format_html('<span style="color:#9ca3af;">—</span>')
     parent_link.short_description = 'Cấp menu'
     
+    def icon_display(self, obj):
+        """Hiển thị icon name ngắn gọn"""
+        if obj.icon:
+            return format_html(
+                '<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:11px;">{}</code>',
+                obj.icon
+            )
+        return format_html('<span style="color:#ccc;">—</span>')
+    icon_display.short_description = 'Icon'
+
     def badge_info(self, obj):
-        """Hiển thị badge nếu có"""
+        """Hiển thị badge + trạng thái đặc biệt"""
         parts = []
         if obj.is_coming_soon:
             parts.append(
@@ -405,6 +415,10 @@ class NavigationLinkAdmin(admin.ModelAdmin):
         if obj.badge_text:
             parts.append(
                 f'<span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:3px;font-size:10px;">🏷️ {obj.badge_text}</span>'
+            )
+        if obj.open_in_new_tab:
+            parts.append(
+                '<span style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:3px;font-size:10px;">🔗 New tab</span>'
             )
         return format_html(' '.join(parts)) if parts else ''
     badge_info.short_description = 'Badge'

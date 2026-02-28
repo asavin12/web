@@ -97,9 +97,12 @@ export default function Navbar() {
   // Fallback if API hasn't loaded yet
   const fallbackNavLinks = [
     { to: '/', label: t('nav.home', 'Trang chủ') },
-    { to: '/tai-lieu', label: t('nav.resources', 'Thư viện') },
     { to: '/video', label: t('nav.videos', 'Video') },
-    { to: '/stream', label: t('nav.stream', 'Stream') },
+    { to: '/tai-lieu', label: t('nav.resources', 'Thư viện') },
+    { to: '/tin-tuc', label: t('nav.news', 'Tin tức') },
+    { to: '/kien-thuc', label: t('nav.knowledge', 'Kiến thức') },
+    { to: '/cong-cu', label: t('nav.tools', 'Công cụ') },
+    { to: '/stream', label: t('nav.stream', 'Xem phim') },
   ];
 
   const displayNavLinks = navLinks.length > 0 ? navLinks : fallbackNavLinks;
