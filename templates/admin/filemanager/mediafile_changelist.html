@@ -4,12 +4,14 @@
 {% block object-tools-items %}
 {{ block.super }}
 <li>
-  <a href="{% url 'filemanager:unused_media' %}" class="button" style="background:#dc3545; padding: 6px 12px;">
+  <a href="{% url 'filemanager:unused_media' %}" class="button" 
+     style="background:#dc3545 !important; color:#ffffff !important; padding: 6px 12px; font-weight:600; text-decoration:none !important;">
     🗑️ Quét media không sử dụng
   </a>
 </li>
 <li>
-  <a href="{% url 'filemanager:file_browser' %}" class="button">
+  <a href="{% url 'filemanager:file_browser' %}" class="button"
+     style="color:#ffffff !important; text-decoration:none !important;">
     📁 File Browser
   </a>
 </li>
