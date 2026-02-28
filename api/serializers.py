@@ -207,18 +207,25 @@ class NavigationLinkChildSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = NavigationLink
-        fields = ['id', 'name', 'url', 'icon', 'open_in_new_tab', 'is_external']
+        fields = [
+            'id', 'name', 'name_vi', 'name_en', 'name_de',
+            'url', 'icon', 'open_in_new_tab', 'is_external',
+            'is_coming_soon', 'badge_text', 'order'
+        ]
 
 
 class NavigationLinkSerializer(serializers.ModelSerializer):
-    """Serializer cho NavigationLink model"""
+    """Serializer cho NavigationLink model — bao gồm children cho dropdown"""
     children = NavigationLinkChildSerializer(many=True, read_only=True)
     is_external = serializers.BooleanField(read_only=True)
+    has_children = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = NavigationLink
         fields = [
-            'id', 'name', 'url', 'icon', 'location', 'footer_section',
-            'open_in_new_tab', 'is_external', 'order', 'children'
+            'id', 'name', 'name_vi', 'name_en', 'name_de',
+            'url', 'icon', 'location', 'footer_section',
+            'open_in_new_tab', 'is_external', 'is_coming_soon',
+            'badge_text', 'has_children', 'order', 'children'
         ]
 

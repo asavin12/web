@@ -465,6 +465,7 @@ def video_detail(request, slug):
 # ============================================
 
 from core.models import NavigationLink
+from django.db import models
 from .serializers import NavigationLinkSerializer
 
 
@@ -472,18 +473,23 @@ from .serializers import NavigationLinkSerializer
 @permission_classes([AllowAny])
 def navigation_links(request):
     """
-    API lấy tất cả navigation links cho frontend
+    API lấy tất cả navigation links cho frontend.
     
     Returns:
-        navbar: list các link cho navbar
+        navbar: list các link cho navbar (parent-level, kèm active children)
         footer: dict các link cho footer, grouped by section
     """
-    # Lấy navbar links
+    # Lấy navbar links — chỉ parent-level, kèm children đã active
     navbar_links = NavigationLink.objects.filter(
         is_active=True,
         location__in=['navbar', 'both'],
         parent__isnull=True
-    ).prefetch_related('children').order_by('order')
+    ).prefetch_related(
+        models.Prefetch(
+            'children',
+            queryset=NavigationLink.objects.filter(is_active=True).order_by('order')
+        )
+    ).order_by('order')
     
     # Lấy footer links
     footer_links = NavigationLink.objects.filter(

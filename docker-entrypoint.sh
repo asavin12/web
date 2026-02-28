@@ -80,6 +80,10 @@ print('All sequences synced.')
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
+# Seed navigation data if empty
+echo "Seeding navigation data..."
+python manage.py seed_navigation 2>&1 || echo "Navigation seed skipped (may already exist)"
+
 # Start Gunicorn
 echo "Starting Gunicorn on port 8000..."
 exec gunicorn unstressvn_settings.wsgi:application \

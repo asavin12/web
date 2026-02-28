@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
-import { useClickOutside, useNotifications } from '@/hooks';
+import { useClickOutside, useNotifications, useNavigation, getIcon, getLocalizedName } from '@/hooks';
+import type { NavLink as NavLinkType, NavChild } from '@/hooks';
 import { changeLanguage, languages } from '@/i18n';
 import { Menu, X, Search, Bell, User, Settings, LogOut, Globe, Shield, ExternalLink, BellOff, Heart, MessageSquare, ChevronDown, Newspaper, BookOpen, FileText, GraduationCap, Languages, Users, Wrench } from 'lucide-react';
 import api from '@/api/client';
@@ -12,19 +13,19 @@ export default function Navbar() {
   const { t, i18n } = useTranslation();
   const { user, profile, isAuthenticated, logout } = useAuth();
   const { notifications, unreadCount: notificationUnreadCount, markAsRead, markAllRead, isLoading: notificationsLoading } = useNotifications();
+  const { navbar } = useNavigation();
   const { error: showError } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const lang = i18n.language;
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [isNewsDropdownOpen, setIsNewsDropdownOpen] = useState(false);
-  const [isKnowledgeDropdownOpen, setIsKnowledgeDropdownOpen] = useState(false);
-  const [isToolsDropdownOpen, setIsToolsDropdownOpen] = useState(false);
-  const [isCommunityDropdownOpen, setIsCommunityDropdownOpen] = useState(false);
+  // Dynamic dropdown states — keyed by NavLink id
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -32,29 +33,32 @@ export default function Navbar() {
   const langRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
-  const newsDropdownRef = useRef<HTMLDivElement>(null);
-  const knowledgeDropdownRef = useRef<HTMLDivElement>(null);
-  const toolsDropdownRef = useRef<HTMLDivElement>(null);
-  const communityDropdownRef = useRef<HTMLDivElement>(null);
+  // Dynamic dropdown refs — one per dropdown
+  const dropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   // Click outside handlers
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
   const closeLang = useCallback(() => setIsLangMenuOpen(false), []);
   const closeUserMenu = useCallback(() => setIsUserMenuOpen(false), []);
   const closeNotification = useCallback(() => setIsNotificationOpen(false), []);
-  const closeNewsDropdown = useCallback(() => setIsNewsDropdownOpen(false), []);
-  const closeKnowledgeDropdown = useCallback(() => setIsKnowledgeDropdownOpen(false), []);
-  const closeToolsDropdown = useCallback(() => setIsToolsDropdownOpen(false), []);
-  const closeCommunityDropdown = useCallback(() => setIsCommunityDropdownOpen(false), []);
 
   useClickOutside(searchRef, closeSearch, isSearchOpen);
   useClickOutside(langRef, closeLang, isLangMenuOpen);
   useClickOutside(userMenuRef, closeUserMenu, isUserMenuOpen);
   useClickOutside(notificationRef, closeNotification, isNotificationOpen);
-  useClickOutside(newsDropdownRef, closeNewsDropdown, isNewsDropdownOpen);
-  useClickOutside(knowledgeDropdownRef, closeKnowledgeDropdown, isKnowledgeDropdownOpen);
-  useClickOutside(toolsDropdownRef, closeToolsDropdown, isToolsDropdownOpen);
-  useClickOutside(communityDropdownRef, closeCommunityDropdown, isCommunityDropdownOpen);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (openDropdownId === null) return;
+    const handler = (e: MouseEvent) => {
+      const ref = dropdownRefs.current[openDropdownId];
+      if (ref && !ref.contains(e.target as Node)) {
+        setOpenDropdownId(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openDropdownId]);
 
   const handleLogout = async () => {
     await logout();
@@ -83,47 +87,179 @@ export default function Navbar() {
     }
   };
 
-  const navLinks = [
+  const navLinks = navbar.directLinks.map(link => ({
+    to: link.url,
+    label: getLocalizedName(link, lang),
+  }));
+
+  // Fallback if API hasn't loaded yet
+  const fallbackNavLinks = [
     { to: '/', label: t('nav.home', 'Trang chủ') },
     { to: '/tai-lieu', label: t('nav.resources', 'Thư viện') },
     { to: '/video', label: t('nav.videos', 'Video') },
     { to: '/stream', label: t('nav.stream', 'Stream') },
   ];
 
-  // Dropdown menus for News and Knowledge - Hierarchical structure
-  const newsMenuItems = [
-    { to: '/tin-tuc', label: t('nav.allNews', 'Tất cả tin tức'), icon: Newspaper, isParent: true },
-    { type: 'divider' as const },
-    { to: '/tin-tuc/hoc-tieng-duc', label: t('nav.germanNews', 'Học tiếng Đức'), icon: FileText },
-    { to: '/tin-tuc/hoc-tieng-anh', label: t('nav.englishNews', 'Học tiếng Anh'), icon: FileText },
-    { to: '/tin-tuc/du-hoc', label: t('nav.studyAbroad', 'Du học'), icon: GraduationCap },
-    { to: '/tin-tuc/su-kien', label: t('nav.events', 'Sự kiện'), icon: Users },
-  ];
+  const displayNavLinks = navLinks.length > 0 ? navLinks : fallbackNavLinks;
+  const displayDropdowns = navbar.dropdowns;
 
-  const knowledgeMenuItems = [
-    { to: '/kien-thuc', label: t('nav.allKnowledge', 'Tất cả kiến thức'), icon: BookOpen, isParent: true },
-    { type: 'divider' as const },
-    { to: '/kien-thuc/ngu-phap', label: t('nav.grammar', 'Ngữ pháp'), icon: FileText },
-    { to: '/kien-thuc/bai-giang', label: t('nav.lectures', 'Bài giảng'), icon: GraduationCap },
-    { to: '/kien-thuc/tu-vung', label: t('nav.vocabulary', 'Từ vựng'), icon: Languages },
-    { to: '/kien-thuc/luyen-thi', label: t('nav.examPrep', 'Luyện thi'), icon: BookOpen },
-    { to: '/kien-thuc/van-hoa', label: t('nav.culture', 'Văn hóa'), icon: Users },
-    { to: '/kien-thuc/meo-hoc', label: t('nav.tips', 'Mẹo học'), icon: FileText },
-  ];
+  // ── Render helper: dropdown child item ──
+  const renderChildItem = (child: NavChild, onClose: () => void) => {
+    const IconComp = getIcon(child.icon);
+    const label = getLocalizedName(child, lang);
+    const isFirstChild = child.order === 1; // "All" item = parent-style
 
-  const toolsMenuItems = [
-    { to: '/cong-cu', label: t('nav.allTools', 'Tất cả công cụ'), icon: Wrench, isParent: true },
-    { type: 'divider' as const },
-    { to: '/cong-cu/dich-thuat', label: t('nav.translation', 'Dịch thuật'), icon: Languages },
-    { to: '/cong-cu/tu-dien', label: t('nav.dictionary', 'Từ điển'), icon: BookOpen },
-    { to: '/cong-cu/luyen-tap', label: t('nav.practice', 'Luyện tập'), icon: GraduationCap },
-    { to: '/cong-cu/phan-mem', label: t('nav.software', 'Phần mềm hỗ trợ'), icon: Wrench },
-  ];
+    if (child.is_coming_soon) {
+      return (
+        <div
+          key={child.id}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-vintage-dark/50 cursor-not-allowed"
+        >
+          {IconComp && <IconComp className="h-4 w-4 text-vintage-olive/50" />}
+          {label}
+          <span className="ml-auto text-[10px] bg-vintage-tan/30 text-vintage-olive px-1.5 py-0.5 rounded-full">
+            {child.badge_text || t('common.soon', 'Soon')}
+          </span>
+        </div>
+      );
+    }
 
-  const communityMenuItems = [
-    { to: 'https://discord.gg/unstressvn', label: 'Discord', icon: Users, external: true },
-    { to: '/dien-dan', label: t('nav.forum', 'Diễn đàn'), icon: MessageSquare, comingSoon: true },
-  ];
+    if (child.is_external || child.open_in_new_tab) {
+      return (
+        <a
+          key={child.id}
+          href={child.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onClose}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-vintage-dark hover:bg-vintage-tan/20 transition-colors"
+        >
+          {IconComp && <IconComp className="h-4 w-4 text-vintage-olive" />}
+          {label}
+          <ExternalLink className="h-3 w-3 ml-auto text-vintage-tan" />
+        </a>
+      );
+    }
+
+    return (
+      <Link
+        key={child.id}
+        to={child.url}
+        onClick={onClose}
+        className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+          isFirstChild
+            ? 'text-vintage-olive font-semibold hover:bg-vintage-olive/10'
+            : 'text-vintage-dark hover:bg-vintage-tan/20 pl-6'
+        }`}
+      >
+        {IconComp && <IconComp className={`h-4 w-4 ${isFirstChild ? 'text-vintage-olive' : 'text-vintage-tan'}`} />}
+        {label}
+      </Link>
+    );
+  };
+
+  // ── Render helper: desktop dropdown ──
+  const renderDesktopDropdown = (dropdown: NavLinkType) => {
+    const isOpen = openDropdownId === dropdown.id;
+    const label = getLocalizedName(dropdown, lang);
+    const isActiveRoute = location.pathname.startsWith(dropdown.url);
+
+    return (
+      <div
+        key={dropdown.id}
+        className="relative"
+        ref={el => { dropdownRefs.current[dropdown.id] = el; }}
+      >
+        <button
+          onClick={() => setOpenDropdownId(isOpen ? null : dropdown.id)}
+          className={`${
+            isActiveRoute
+              ? 'text-vintage-brown border-vintage-brown'
+              : 'text-vintage-dark/60 border-transparent hover:text-vintage-olive hover:border-vintage-tan'
+          } inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-semibold tracking-wide transition-all duration-200 uppercase`}
+        >
+          {label}
+          <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {isOpen && (
+          <div className="absolute left-0 top-full mt-2 w-64 bg-vintage-cream rounded-xl shadow-xl py-2 z-50 border border-vintage-tan">
+            {dropdown.children.map((child, idx) => (
+              <div key={child.id}>
+                {idx === 1 && <div className="my-1 border-t border-vintage-tan/30" />}
+                {renderChildItem(child, () => setOpenDropdownId(null))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Render helper: mobile dropdown section ──
+  const renderMobileDropdownSection = (dropdown: NavLinkType) => {
+    const label = getLocalizedName(dropdown, lang);
+    return (
+      <div key={dropdown.id} className="pt-2">
+        <p className="px-4 py-2 text-xs font-bold text-vintage-tan uppercase tracking-wide">{label}</p>
+        {dropdown.children.map(child => renderMobileChildItem(child))}
+      </div>
+    );
+  };
+
+  const renderMobileChildItem = (child: NavChild) => {
+    const IconComp = getIcon(child.icon);
+    const label = getLocalizedName(child, lang);
+    const isFirstChild = child.order === 1;
+
+    if (child.is_coming_soon) {
+      return (
+        <div
+          key={child.id}
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-vintage-dark/50 cursor-not-allowed"
+        >
+          {IconComp && <IconComp className="h-4 w-4 text-vintage-olive/50" />}
+          {label}
+          <span className="ml-auto text-[10px] bg-vintage-tan/30 text-vintage-olive px-1.5 py-0.5 rounded-full">
+            {child.badge_text || t('common.soon', 'Soon')}
+          </span>
+        </div>
+      );
+    }
+
+    if (child.is_external || child.open_in_new_tab) {
+      return (
+        <a
+          key={child.id}
+          href={child.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-vintage-dark hover:bg-vintage-tan/20"
+        >
+          {IconComp && <IconComp className="h-4 w-4 text-vintage-olive" />}
+          {label}
+          <ExternalLink className="h-3 w-3 ml-auto text-vintage-tan" />
+        </a>
+      );
+    }
+
+    return (
+      <Link
+        key={child.id}
+        to={child.url}
+        onClick={() => setIsMobileMenuOpen(false)}
+        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm ${
+          isFirstChild
+            ? 'text-vintage-olive font-semibold hover:bg-vintage-olive/10'
+            : 'text-vintage-dark hover:bg-vintage-tan/20 pl-8'
+        }`}
+      >
+        {IconComp && <IconComp className={`h-4 w-4 ${isFirstChild ? 'text-vintage-olive' : 'text-vintage-tan'}`} />}
+        {label}
+      </Link>
+    );
+  };
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -177,7 +313,7 @@ export default function Navbar() {
             
             {/* Desktop Nav Links */}
             <div className="hidden sm:ml-12 sm:flex sm:items-center sm:space-x-6">
-              {navLinks.map((link) => (
+              {displayNavLinks.map((link) => (
                 <Link
                   key={link.to}
                   to={link.to}
@@ -191,183 +327,8 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              {/* News Dropdown */}
-              <div className="relative" ref={newsDropdownRef}>
-                <button
-                  onClick={() => setIsNewsDropdownOpen(!isNewsDropdownOpen)}
-                  className={`${
-                    location.pathname.startsWith('/tin-tuc')
-                      ? 'text-vintage-brown border-vintage-brown'
-                      : 'text-vintage-dark/60 border-transparent hover:text-vintage-olive hover:border-vintage-tan'
-                  } inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-semibold tracking-wide transition-all duration-200 uppercase`}
-                >
-                  {t('nav.news', 'Tin tức')}
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isNewsDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isNewsDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-64 bg-vintage-cream rounded-xl shadow-xl py-2 z-50 border border-vintage-tan">
-                    {newsMenuItems.map((item, index) => {
-                      if ('type' in item && item.type === 'divider') {
-                        return <div key={index} className="my-1 border-t border-vintage-tan/30" />;
-                      }
-                      const menuItem = item as { to: string; label: string; icon: React.ComponentType<{ className?: string }>; isParent?: boolean };
-                      return (
-                        <Link
-                          key={menuItem.to}
-                          to={menuItem.to}
-                          onClick={() => setIsNewsDropdownOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                            menuItem.isParent
-                              ? 'text-vintage-olive font-semibold hover:bg-vintage-olive/10'
-                              : 'text-vintage-dark hover:bg-vintage-tan/20 pl-6'
-                          }`}
-                        >
-                          <menuItem.icon className={`h-4 w-4 ${menuItem.isParent ? 'text-vintage-olive' : 'text-vintage-tan'}`} />
-                          {menuItem.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Knowledge Dropdown */}
-              <div className="relative" ref={knowledgeDropdownRef}>
-                <button
-                  onClick={() => setIsKnowledgeDropdownOpen(!isKnowledgeDropdownOpen)}
-                  className={`${
-                    location.pathname.startsWith('/kien-thuc')
-                      ? 'text-vintage-brown border-vintage-brown'
-                      : 'text-vintage-dark/60 border-transparent hover:text-vintage-olive hover:border-vintage-tan'
-                  } inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-semibold tracking-wide transition-all duration-200 uppercase`}
-                >
-                  {t('nav.knowledge', 'Kiến thức')}
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isKnowledgeDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isKnowledgeDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-64 bg-vintage-cream rounded-xl shadow-xl py-2 z-50 border border-vintage-tan">
-                    {knowledgeMenuItems.map((item, index) => {
-                      if ('type' in item && item.type === 'divider') {
-                        return <div key={index} className="my-1 border-t border-vintage-tan/30" />;
-                      }
-                      const menuItem = item as { to: string; label: string; icon: React.ComponentType<{ className?: string }>; isParent?: boolean };
-                      return (
-                        <Link
-                          key={menuItem.to}
-                          to={menuItem.to}
-                          onClick={() => setIsKnowledgeDropdownOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                            menuItem.isParent
-                              ? 'text-vintage-olive font-semibold hover:bg-vintage-olive/10'
-                              : 'text-vintage-dark hover:bg-vintage-tan/20 pl-6'
-                          }`}
-                        >
-                          <menuItem.icon className={`h-4 w-4 ${menuItem.isParent ? 'text-vintage-olive' : 'text-vintage-tan'}`} />
-                          {menuItem.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Tools Dropdown */}
-              <div className="relative" ref={toolsDropdownRef}>
-                <button
-                  onClick={() => setIsToolsDropdownOpen(!isToolsDropdownOpen)}
-                  className={`${
-                    location.pathname.startsWith('/cong-cu')
-                      ? 'text-vintage-brown border-vintage-brown'
-                      : 'text-vintage-dark/60 border-transparent hover:text-vintage-olive hover:border-vintage-tan'
-                  } inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-semibold tracking-wide transition-all duration-200 uppercase`}
-                >
-                  {t('nav.tools', 'Công cụ hỗ trợ')}
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isToolsDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isToolsDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-64 bg-vintage-cream rounded-xl shadow-xl py-2 z-50 border border-vintage-tan">
-                    {toolsMenuItems.map((item, index) => {
-                      if ('type' in item && item.type === 'divider') {
-                        return <div key={index} className="my-1 border-t border-vintage-tan/30" />;
-                      }
-                      const menuItem = item as { to: string; label: string; icon: React.ComponentType<{ className?: string }>; isParent?: boolean };
-                      return (
-                        <Link
-                          key={menuItem.to}
-                          to={menuItem.to}
-                          onClick={() => setIsToolsDropdownOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                            menuItem.isParent
-                              ? 'text-vintage-olive font-semibold hover:bg-vintage-olive/10'
-                              : 'text-vintage-dark hover:bg-vintage-tan/20 pl-6'
-                          }`}
-                        >
-                          <menuItem.icon className={`h-4 w-4 ${menuItem.isParent ? 'text-vintage-olive' : 'text-vintage-tan'}`} />
-                          {menuItem.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Community Dropdown */}
-              <div className="relative" ref={communityDropdownRef}>
-                <button
-                  onClick={() => setIsCommunityDropdownOpen(!isCommunityDropdownOpen)}
-                  className={`${
-                    location.pathname.startsWith('/dien-dan')
-                      ? 'text-vintage-brown border-vintage-brown'
-                      : 'text-vintage-dark/60 border-transparent hover:text-vintage-olive hover:border-vintage-tan'
-                  } inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-semibold tracking-wide transition-all duration-200 uppercase`}
-                >
-                  {t('nav.community', 'Cộng đồng')}
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isCommunityDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isCommunityDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-56 bg-vintage-cream rounded-xl shadow-xl py-2 z-50 border border-vintage-tan">
-                    {communityMenuItems.map((item) => (
-                      item.external ? (
-                        <a
-                          key={item.to}
-                          href={item.to}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => setIsCommunityDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-vintage-dark hover:bg-vintage-tan/20 transition-colors"
-                        >
-                          <item.icon className="h-4 w-4 text-vintage-olive" />
-                          {item.label}
-                          <ExternalLink className="h-3 w-3 ml-auto text-vintage-tan" />
-                        </a>
-                      ) : item.comingSoon ? (
-                        <div
-                          key={item.to}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-vintage-dark/50 cursor-not-allowed"
-                        >
-                          <item.icon className="h-4 w-4 text-vintage-olive/50" />
-                          {item.label}
-                          <span className="ml-auto text-[10px] bg-vintage-tan/30 text-vintage-olive px-1.5 py-0.5 rounded-full">{t('common.soon', 'Soon')}</span>
-                        </div>
-                      ) : (
-                        <Link
-                          key={item.to}
-                          to={item.to}
-                          onClick={() => setIsCommunityDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-vintage-dark hover:bg-vintage-tan/20 transition-colors"
-                        >
-                          <item.icon className="h-4 w-4 text-vintage-olive" />
-                          {item.label}
-                        </Link>
-                      )
-                    ))}
-                  </div>
-                )}
-              </div>
+              {/* Dynamic Dropdowns — rendered from NavigationLink API */}
+              {displayDropdowns.map(dropdown => renderDesktopDropdown(dropdown))}
             </div>
           </div>
           
@@ -686,7 +647,7 @@ export default function Navbar() {
           </div>
 
           <div className="px-4 pt-4 pb-3 space-y-1">
-            {navLinks.map((link) => (
+            {displayNavLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
@@ -701,123 +662,8 @@ export default function Navbar() {
               </Link>
             ))}
             
-            {/* News Section */}
-            <div className="pt-2">
-              <p className="px-4 py-2 text-xs font-bold text-vintage-tan uppercase tracking-wide">{t('nav.news', 'Tin tức')}</p>
-              {newsMenuItems.map((item, index) => {
-                if ('type' in item && item.type === 'divider') {
-                  return <div key={index} className="my-1 mx-4 border-t border-vintage-tan/30" />;
-                }
-                const menuItem = item as { to: string; label: string; icon: React.ComponentType<{ className?: string }>; isParent?: boolean };
-                return (
-                  <Link
-                    key={menuItem.to}
-                    to={menuItem.to}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm ${
-                      menuItem.isParent
-                        ? 'text-vintage-olive font-semibold hover:bg-vintage-olive/10'
-                        : 'text-vintage-dark hover:bg-vintage-tan/20 pl-8'
-                    }`}
-                  >
-                    <menuItem.icon className={`h-4 w-4 ${menuItem.isParent ? 'text-vintage-olive' : 'text-vintage-tan'}`} />
-                    {menuItem.label}
-                  </Link>
-                );
-              })}
-            </div>
-            
-            {/* Knowledge Section */}
-            <div className="pt-2">
-              <p className="px-4 py-2 text-xs font-bold text-vintage-tan uppercase tracking-wide">{t('nav.knowledge', 'Kiến thức')}</p>
-              {knowledgeMenuItems.map((item, index) => {
-                if ('type' in item && item.type === 'divider') {
-                  return <div key={index} className="my-1 mx-4 border-t border-vintage-tan/30" />;
-                }
-                const menuItem = item as { to: string; label: string; icon: React.ComponentType<{ className?: string }>; isParent?: boolean };
-                return (
-                  <Link
-                    key={menuItem.to}
-                    to={menuItem.to}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm ${
-                      menuItem.isParent
-                        ? 'text-vintage-olive font-semibold hover:bg-vintage-olive/10'
-                        : 'text-vintage-dark hover:bg-vintage-tan/20 pl-8'
-                    }`}
-                  >
-                    <menuItem.icon className={`h-4 w-4 ${menuItem.isParent ? 'text-vintage-olive' : 'text-vintage-tan'}`} />
-                    {menuItem.label}
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Tools Section */}
-            <div className="pt-2">
-              <p className="px-4 py-2 text-xs font-bold text-vintage-tan uppercase tracking-wide">{t('nav.tools', 'Công cụ hỗ trợ')}</p>
-              {toolsMenuItems.map((item, index) => {
-                if ('type' in item && item.type === 'divider') {
-                  return <div key={index} className="my-1 mx-4 border-t border-vintage-tan/30" />;
-                }
-                const menuItem = item as { to: string; label: string; icon: React.ComponentType<{ className?: string }>; isParent?: boolean };
-                return (
-                  <Link
-                    key={menuItem.to}
-                    to={menuItem.to}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm ${
-                      menuItem.isParent
-                        ? 'text-vintage-olive font-semibold hover:bg-vintage-olive/10'
-                        : 'text-vintage-dark hover:bg-vintage-tan/20 pl-8'
-                    }`}
-                  >
-                    <menuItem.icon className={`h-4 w-4 ${menuItem.isParent ? 'text-vintage-olive' : 'text-vintage-tan'}`} />
-                    {menuItem.label}
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Community Section */}
-            <div className="pt-2">
-              <p className="px-4 py-2 text-xs font-bold text-vintage-tan uppercase tracking-wide">{t('nav.community', 'Cộng đồng')}</p>
-              {communityMenuItems.map((item) => (
-                item.external ? (
-                  <a
-                    key={item.to}
-                    href={item.to}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-vintage-dark hover:bg-vintage-tan/20"
-                  >
-                    <item.icon className="h-4 w-4 text-vintage-olive" />
-                    {item.label}
-                    <ExternalLink className="h-3 w-3 ml-auto text-vintage-tan" />
-                  </a>
-                ) : item.comingSoon ? (
-                  <div
-                    key={item.to}
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-vintage-dark/50 cursor-not-allowed"
-                  >
-                    <item.icon className="h-4 w-4 text-vintage-olive/50" />
-                    {item.label}
-                    <span className="ml-auto text-[10px] bg-vintage-tan/30 text-vintage-olive px-1.5 py-0.5 rounded-full">{t('common.soon', 'Soon')}</span>
-                  </div>
-                ) : (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-vintage-dark hover:bg-vintage-tan/20"
-                  >
-                    <item.icon className="h-4 w-4 text-vintage-olive" />
-                    {item.label}
-                  </Link>
-                )
-              ))}
-            </div>
+            {/* Dynamic Dropdown Sections — rendered from NavigationLink API */}
+            {displayDropdowns.map(dropdown => renderMobileDropdownSection(dropdown))}
           </div>
 
           {/* Language Switcher - Mobile */}

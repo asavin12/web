@@ -619,8 +619,16 @@ class Video(N8NTrackingMixin, models.Model):
 
 class NavigationLink(models.Model):
     """
-    Model lưu trữ các link điều hướng cho navbar và footer
-    Quản lý hoàn toàn từ admin panel
+    Model lưu trữ các link điều hướng cho navbar và footer.
+    Quản lý hoàn toàn từ admin panel — hỗ trợ menu phân cấp (parent → children).
+    
+    Navbar structure:
+      - Menu chính (parent=None, location=navbar): Trang chủ, Thư viện, ...
+      - Dropdown menu (parent=None, location=navbar, có children): Tin tức, Kiến thức, ...
+      - Sub-menu (parent=<dropdown>, location=navbar): Học tiếng Đức, Ngữ pháp, ...
+    
+    Footer structure:
+      - Link footer (location=footer/both): nhóm theo footer_section
     """
     LOCATION_CHOICES = [
         ('navbar', 'Navbar'),
@@ -637,10 +645,17 @@ class NavigationLink(models.Model):
     ]
     
     name = models.CharField(max_length=100, verbose_name='Tên hiển thị')
+    name_vi = models.CharField(max_length=100, blank=True, verbose_name='Tên tiếng Việt',
+                               help_text='Tên hiển thị bằng tiếng Việt (fallback = name)')
+    name_en = models.CharField(max_length=100, blank=True, verbose_name='Tên tiếng Anh',
+                               help_text='Tên hiển thị bằng tiếng Anh (fallback = name)')
+    name_de = models.CharField(max_length=100, blank=True, verbose_name='Tên tiếng Đức',
+                               help_text='Tên hiển thị bằng tiếng Đức (fallback = name)')
+    
     url = models.CharField(max_length=500, verbose_name='URL',
-                          help_text='URL nội bộ (VD: /about) hoặc URL bên ngoài (VD: https://facebook.com)')
+                          help_text='URL nội bộ (VD: /tin-tuc) hoặc URL bên ngoài (VD: https://discord.gg/...)')
     icon = models.CharField(max_length=50, blank=True, verbose_name='Icon',
-                           help_text='Tên icon (VD: FaHome, FaFacebook, MdEmail)')
+                           help_text='Tên lucide icon (VD: Newspaper, BookOpen, Wrench, Users, GraduationCap)')
     
     location = models.CharField(max_length=10, choices=LOCATION_CHOICES, default='navbar',
                                 verbose_name='Vị trí')
@@ -650,10 +665,14 @@ class NavigationLink(models.Model):
     
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True,
                                related_name='children', verbose_name='Menu cha',
-                               help_text='Để trống nếu là menu chính')
+                               help_text='Để trống nếu là menu chính / dropdown')
     
     open_in_new_tab = models.BooleanField(default=False, verbose_name='Mở tab mới',
                                           help_text='Thường dùng cho link bên ngoài')
+    is_coming_soon = models.BooleanField(default=False, verbose_name='Sắp ra mắt',
+                                         help_text='Hiển thị badge "Soon" và vô hiệu hoá link')
+    badge_text = models.CharField(max_length=20, blank=True, verbose_name='Badge',
+                                  help_text='Text hiển thị trên badge (VD: New, Hot, Soon). Để trống = không badge')
     
     is_active = models.BooleanField(default=True, verbose_name='Hiển thị')
     order = models.PositiveIntegerField(default=0, verbose_name='Thứ tự')
@@ -667,23 +686,40 @@ class NavigationLink(models.Model):
         ordering = ['location', 'footer_section', 'order', 'name']
     
     def __str__(self):
+        prefix = ''
         if self.parent:
-            return f"{self.parent.name} → {self.name}"
-        return self.name
+            prefix = f"  └─ "
+        location_tag = f"[{self.get_location_display()}]"
+        return f"{prefix}{self.name} {location_tag}"
     
     @property
     def is_external(self):
         """Kiểm tra link có phải bên ngoài không"""
         return self.url.startswith('http://') or self.url.startswith('https://')
     
+    @property
+    def has_children(self):
+        """Kiểm tra có submenu không"""
+        return self.children.filter(is_active=True).exists()
+    
+    def get_localized_name(self, lang='vi'):
+        """Lấy tên theo ngôn ngữ"""
+        field = f'name_{lang}'
+        return getattr(self, field, '') or self.name
+    
     @classmethod
     def get_navbar_links(cls):
-        """Lấy tất cả link cho navbar"""
+        """Lấy tất cả link cho navbar (parent-level), kèm children active"""
         return cls.objects.filter(
             is_active=True,
             location__in=['navbar', 'both'],
             parent__isnull=True
-        ).prefetch_related('children')
+        ).prefetch_related(
+            models.Prefetch(
+                'children',
+                queryset=cls.objects.filter(is_active=True).order_by('order')
+            )
+        ).order_by('order')
     
     @classmethod
     def get_footer_links(cls):
@@ -692,7 +728,7 @@ class NavigationLink(models.Model):
             is_active=True,
             location__in=['footer', 'both'],
             parent__isnull=True
-        )
+        ).order_by('footer_section', 'order')
         
         # Nhóm theo footer_section
         grouped = {}

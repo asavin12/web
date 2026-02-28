@@ -275,41 +275,135 @@ class VideoAdmin(admin.ModelAdmin):
 
 @admin.register(NavigationLink)
 class NavigationLinkAdmin(admin.ModelAdmin):
-    """Admin quản lý links điều hướng cho navbar và footer"""
-    list_display = ('name', 'url_preview', 'location', 'footer_section', 'parent', 
-                    'icon', 'open_in_new_tab', 'is_active', 'order')
-    list_filter = ('location', 'footer_section', 'is_active', 'open_in_new_tab')
-    search_fields = ('name', 'url')
-    list_editable = ('is_active', 'order')
-    ordering = ['location', 'footer_section', 'order']
+    """
+    Admin quản lý chuyên nghiệp links điều hướng cho navbar và footer.
+    Hỗ trợ menu phân cấp (parent → children), đa ngôn ngữ, badge, coming-soon.
+    """
+    list_display = (
+        'display_name', 'url_preview', 'location_badge', 'footer_section',
+        'parent_link', 'icon', 'badge_info',
+        'open_in_new_tab', 'is_coming_soon', 'is_active', 'order',
+    )
+    list_filter = ('location', 'footer_section', 'is_active', 'is_coming_soon', 'open_in_new_tab')
+    search_fields = ('name', 'name_vi', 'name_en', 'name_de', 'url')
+    list_editable = ('is_active', 'order', 'is_coming_soon')
+    ordering = ['location', 'parent__order', 'order']
+    list_per_page = 50
     
     fieldsets = (
         ('Thông tin cơ bản', {
-            'fields': ('name', 'url', 'icon')
+            'fields': ('name', 'url', 'icon'),
+            'description': '📝 Tên chính (dùng cho admin) và URL đích.',
         }),
-        ('Vị trí', {
-            'fields': ('location', 'footer_section', 'parent')
+        ('🌐 Đa ngôn ngữ', {
+            'fields': ('name_vi', 'name_en', 'name_de'),
+            'description': 'Tên hiển thị theo ngôn ngữ. Nếu để trống sẽ dùng "Tên hiển thị" ở trên.',
+            'classes': ('collapse',),
         }),
-        ('Tuỳ chọn', {
-            'fields': ('open_in_new_tab', 'is_active', 'order')
+        ('📍 Vị trí & Phân cấp', {
+            'fields': ('location', 'footer_section', 'parent'),
+            'description': (
+                '• <b>Navbar</b>: link xuất hiện trên thanh nav.<br>'
+                '• <b>Footer</b>: link xuất hiện ở chân trang, chia nhóm theo "Phần trong Footer".<br>'
+                '• <b>Menu cha</b>: để trống nếu là menu gốc (dropdown header), chọn parent nếu là submenu.'
+            ),
+        }),
+        ('⚙️ Tuỳ chọn hiển thị', {
+            'fields': ('open_in_new_tab', 'is_coming_soon', 'badge_text', 'is_active', 'order'),
+            'description': (
+                '• <b>Sắp ra mắt</b>: vô hiệu hoá link, hiển thị badge "Soon".<br>'
+                '• <b>Badge</b>: text tuỳ chỉnh trên badge (VD: New, Hot). Để trống = không badge.'
+            ),
         }),
     )
+    
+    def display_name(self, obj):
+        """Hiển thị tên có indent cho children"""
+        if obj.parent:
+            return format_html(
+                '<span style="color:#888; margin-right:4px;">└─</span>'
+                '<span style="font-size:12px;">{}</span>',
+                obj.name
+            )
+        icon = obj.icon
+        if icon:
+            return format_html(
+                '<strong style="font-size:13px;">{}</strong>'
+                ' <span style="color:#888; font-size:11px;">({})</span>',
+                obj.name, icon
+            )
+        return format_html('<strong style="font-size:13px;">{}</strong>', obj.name)
+    display_name.short_description = 'Tên menu'
+    display_name.admin_order_field = 'name'
     
     def url_preview(self, obj):
         """Hiển thị URL với icon external nếu cần"""
         if obj.is_external:
             return format_html(
                 '<a href="{}" target="_blank" style="color: #417690;">{} 🔗</a>',
-                obj.url, obj.url[:50] + '...' if len(obj.url) > 50 else obj.url
+                obj.url, obj.url[:40] + '...' if len(obj.url) > 40 else obj.url
             )
-        return obj.url
+        return format_html(
+            '<code style="background:#f0f0f0; padding:2px 6px; border-radius:3px; font-size:12px;">{}</code>',
+            obj.url
+        )
     url_preview.short_description = 'URL'
+    
+    def location_badge(self, obj):
+        """Badge màu cho location"""
+        colors = {
+            'navbar': ('#dbeafe', '#1e40af', '📌'),
+            'footer': ('#f3e8ff', '#6b21a8', '📄'),
+            'both': ('#dcfce7', '#166534', '🔗'),
+        }
+        bg, fg, emoji = colors.get(obj.location, ('#f3f4f6', '#374151', ''))
+        return format_html(
+            '<span style="background:{};color:{};padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">'
+            '{} {}</span>',
+            bg, fg, emoji, obj.get_location_display()
+        )
+    location_badge.short_description = 'Vị trí'
+    location_badge.admin_order_field = 'location'
+    
+    def parent_link(self, obj):
+        """Hiển thị parent menu"""
+        if obj.parent:
+            return format_html(
+                '<span style="color:#059669; font-weight:500;">↑ {}</span>',
+                obj.parent.name
+            )
+        children_count = obj.children.filter(is_active=True).count()
+        if children_count > 0:
+            return format_html(
+                '<span style="color:#6366f1; font-weight:500;">📂 {} mục con</span>',
+                children_count
+            )
+        return format_html('<span style="color:#9ca3af;">—</span>')
+    parent_link.short_description = 'Cấp menu'
+    
+    def badge_info(self, obj):
+        """Hiển thị badge nếu có"""
+        parts = []
+        if obj.is_coming_soon:
+            parts.append(
+                '<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:3px;font-size:10px;">⏳ Soon</span>'
+            )
+        if obj.badge_text:
+            parts.append(
+                f'<span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:3px;font-size:10px;">🏷️ {obj.badge_text}</span>'
+            )
+        return format_html(' '.join(parts)) if parts else ''
+    badge_info.short_description = 'Badge'
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Lọc parent chỉ hiển thị menu không có parent (menu gốc)"""
         if db_field.name == "parent":
-            kwargs["queryset"] = NavigationLink.objects.filter(parent__isnull=True)
+            kwargs["queryset"] = NavigationLink.objects.filter(parent__isnull=True).order_by('location', 'order')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    
+    def get_queryset(self, request):
+        """Optimise queries — prefetch parent + children count"""
+        return super().get_queryset(request).select_related('parent').prefetch_related('children')
 
 
 # ============ Site Configuration Admin (Singleton) ============
