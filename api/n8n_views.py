@@ -2985,6 +2985,19 @@ def n8n_diagnostic(request):
     except Exception as e:
         checks['admin_import'] = f'error: {e}'
 
+    # 8b. Recent error log (last 50 lines)
+    try:
+        import pathlib
+        log_file = pathlib.Path(settings.BASE_DIR) / 'logs' / 'django.log'
+        if log_file.exists():
+            lines = log_file.read_text(errors='replace').strip().split('\n')
+            checks['error_log_lines'] = len(lines)
+            checks['error_log_tail'] = lines[-50:] if len(lines) > 50 else lines
+        else:
+            checks['error_log'] = 'file not found'
+    except Exception as e:
+        checks['error_log'] = f'error: {e}'
+
     # 9. Config.py os import
     try:
         from core.config import apply_dynamic_settings
