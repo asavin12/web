@@ -3,7 +3,7 @@
 > **Tài liệu này dành cho AI đọc.** Chứa toàn bộ thông tin cần thiết để AI (GPT-4, Claude, Gemini...)
 > có thể tạo script automation đăng bài đúng form, đúng mục cho website UnstressVN.
 >
-> **Cập nhật:** 2026-02-28
+> **Cập nhật:** 2026-02-28 (v2 — đồng bộ navigation, tags, categories thực tế)
 
 ---
 
@@ -119,6 +119,7 @@ print(r.json())  # {"status": "ok", "service": "UnstressVN API", ...}
 | `meta_title` | CharField(70) | | SEO title (50-60 ký tự). **Auto-truncate** nếu > 70 |
 | `meta_description` | CharField(160) | | SEO description (120-155 ký tự). **Auto-truncate** nếu > 160 |
 | `meta_keywords` | CharField(255) | | 3-7 keywords, comma-separated. **Auto-truncate** nếu > 255 |
+| `tags` | CharField(255) | | Tags SEO, comma-separated (VD: "học bổng, DAAD, du học Đức"). **Auto-generate** nếu để trống |
 | `og_image` | ImageField | Auto | Copy từ cover_image |
 | **N8N Tracking:** | | | |
 | `source` | CharField(20) | Auto | `n8n` (auto set) |
@@ -131,7 +132,7 @@ print(r.json())  # {"status": "ok", "service": "UnstressVN API", ...}
 
 ### 3.2 Knowledge Article (`knowledge.KnowledgeArticle`)
 
-Giống News Article, **thêm:**
+Giống News Article (bao gồm `tags`), **thêm:**
 
 | Field | Type | Mô tả |
 |-------|------|-------|
@@ -395,6 +396,7 @@ API sẽ **tự động kiểm tra** (gửi `skip_seo_validation: true` để b�
   "meta_title": "Học bổng DAAD 2026 — Đăng ký du học Đức | UnstressVN",
   "meta_description": "Hướng dẫn chi tiết cách đăng ký học bổng DAAD 2026 cho sinh viên Việt Nam. Điều kiện, hạn nộp, hồ sơ cần thiết. Đọc ngay!",
   "meta_keywords": "học bổng DAAD 2026, du học Đức miễn phí, điều kiện DAAD, đăng ký DAAD",
+  "tags": "học bổng, DAAD, du học Đức, 2026",
   "cover_image_url": "https://example.com/daad-scholarship.jpg",
   "skip_seo_validation": false,
   "is_ai_generated": true,
@@ -418,9 +420,13 @@ API sẽ **tự động kiểm tra** (gửi `skip_seo_validation: true` để b�
   "meta_title": "Ngữ pháp Perfekt tiếng Đức A2 | UnstressVN",
   "meta_description": "Học thì Perfekt tiếng Đức A2: cách chia động từ, haben vs sein, ví dụ thực tế. Bài giảng chi tiết cho người mới.",
   "meta_keywords": "Perfekt tiếng Đức, quá khứ kép, ngữ pháp A2, haben sein",
+  "tags": "Perfekt, ngữ pháp A2, tiếng Đức, haben sein",
   "is_ai_generated": true,
   "ai_model": "gpt-4o"
 }
+```
+
+> **❗ Auto-tag:** Nếu `tags` để trống hoặc không gửi, API sẽ **tự động sinh tags** từ `title` + `category` + `meta_keywords` (tối đa 5 tags). Gửi `tags` nếu muốn kiểm soát chính xác.
 ```
 
 ### 5.4 JSON mẫu — Tool (article type)
@@ -637,40 +643,55 @@ Khi tạo bài viết, nếu `category` slug không tồn tại → API **tự �
 | `tools` | tools.ToolCategory | Tools |
 | `media` | mediastream.MediaCategory | Stream Media |
 
-### 7.5 Categories gợi ý cho website học ngôn ngữ
+### 7.5 Categories THỰC TẾ trong Database (cập nhật 2026-02-28)
 
-**News:**
-- `du-hoc-duc` — Du học Đức
-- `hoc-bong` — Học bổng
-- `doi-song-duc` — Đời sống Đức
-- `kinh-nghiem` — Kinh nghiệm
-- `tin-tuc-tong-hop` — Tổng hợp
+**News (30 bài):**
+- `hoc-tieng-duc` — Học tiếng Đức (11 bài)
+- `du-hoc` — Du học (7 bài)
+- `hoc-tieng-anh` — Học tiếng Anh (6 bài)
+- `thi-cu` — Thi cử (3 bài)
+- `du-hoc-duc` — Du học Đức (1 bài)
+- `kinh-nghiem` — Kinh nghiệm (1 bài)
+- `doi-song-duc` — Đời sống Đức (1 bài)
+- `tin-tuc-chung` — Tin tức chung
+- `su-kien` — Sự kiện
 
-**Knowledge:**
-- `ngu-phap` — Ngữ pháp
-- `tu-vung` — Từ vựng  
-- `ky-nang-nghe` — Kỹ năng nghe
-- `ky-nang-noi` — Kỹ năng nói
-- `ky-nang-doc` — Kỹ năng đọc
-- `ky-nang-viet` — Kỹ năng viết
-- `luyen-thi` — Luyện thi (Goethe, TestDaF...)
-- `van-hoa-duc` — Văn hóa Đức
+**Knowledge (45 bài):**
+- `ngu-phap` — Ngữ pháp (15 bài)
+- `tu-vung` — Từ vựng (10 bài)
+- `luyen-thi` — Luyện thi (7 bài)
+- `bai-giang` — Bài giảng (5 bài)
+- `ngu-phap-tieng-duc` — Ngữ pháp tiếng Đức (3 bài)
+- `phat-am` — Phát âm (2 bài)
+- `tu-vung-tieng-duc` — Từ vựng tiếng Đức (1 bài)
+- `kinh-nghiem-du-hoc` — Kinh nghiệm du học (1 bài)
+- `meo-hoc-ngoai-ngu` — Mẹo học ngoại ngữ (1 bài)
+- `van-hoa` — Văn hóa
+- `meo-hoc` — Mẹo học
 
-**Resources:**
-- `giao-trinh` — Giáo trình
-- `sach-luyen-thi` — Sách luyện thi
-- `tai-lieu-nghe` — Tài liệu nghe
-- `tu-dien` — Từ điển
+**Tools (39 công cụ):**
+- `tu-dien` — Từ điển (9)
+- `luyen-tap` — Luyện tập (6)
+- `hoc-tu-vung` — Học từ vựng (4)
+- `dich-thuat` — Dịch thuật (4)
+- `phat-am` — Phát âm (3)
+- `luyen-nghe` — Luyện nghe (3)
+- `phan-mem` — Phần mềm hỗ trợ (3)
+- `ngu-phap` — Ngữ pháp (3)
+- `flashcard` — Flashcard (2)
+- `luyen-noi` — Luyện nói (2)
 
-**Tools:**
-- `tu-dien` — Từ điển trực tuyến
-- `luyen-tap` — Bài luyện tập
-- `tham-khao` — Tài liệu tham khảo
+**Resources (24 tài liệu):**
+- `tieng-duc` — Tiếng Đức (7)
+- `ielts` — IELTS (6)
+- `goethe` — Goethe (4)
+- `tieng-anh` — Tiếng Anh (4)
+- `tong-hop` — Tổng hợp (3)
 
-**Media:**
-- `phim-duc` — Phim Đức
-- `podcast` — Podcast tiếng Đức
-- `bai-giang` — Bài giảng video
+**Stream Media (1 video):**
+- `thu-gian` — Thư giãn (1)
+
+> **Lưu ý:** Dùng `GET /api/v1/n8n/categories/?type=all` để lấy danh sách realtime.
 
 ---
 

@@ -2,6 +2,8 @@
 
 > Tài liệu hướng dẫn chi tiết cách thiết lập n8n workflow để tự động tạo bài viết
 > theo **form chuẩn SEO bắt buộc** của UnstressVN.
+>
+> **Cập nhật:** 2026-02-28 (v2 — thêm tags, stream media, đồng bộ categories)
 
 ---
 
@@ -13,10 +15,11 @@
 4. [Workflow 1: Đăng bài Tin tức](#4-workflow-1-đăng-bài-tin-tức-news)
 5. [Workflow 2: Đăng bài Kiến thức](#5-workflow-2-đăng-bài-kiến-thức-knowledge)
 6. [Workflow 3: Đăng tài liệu](#6-workflow-3-đăng-tài-liệu-resource)
-7. [Workflow 4: Đăng video](#7-workflow-4-đăng-video)
-8. [Prompt AI tạo nội dung chuẩn SEO](#8-prompt-ai-tạo-nội-dung-chuẩn-seo)
-9. [Xử lý lỗi và debug](#9-xử-lý-lỗi-và-debug)
-10. [Danh sách Categories có sẵn](#10-danh-sách-categories)
+7. [Workflow 4: Đăng video YouTube](#7-workflow-4-đăng-video)
+8. [Workflow 5: Đăng video Stream (GDrive)](#7b-workflow-5-đăng-video-stream-google-drive)
+9. [Prompt AI tạo nội dung chuẩn SEO](#8-prompt-ai-tạo-nội-dung-chuẩn-seo)
+10. [Xử lý lỗi và debug](#9-xử-lý-lỗi-và-debug)
+11. [Danh sách Categories có sẵn](#10-danh-sách-categories)
 
 ---
 
@@ -36,10 +39,19 @@
 |----------|--------|-----------|
 | `/api/v1/n8n/health/` | GET | Kiểm tra API hoạt động (không cần auth) |
 | `/api/v1/n8n/categories/?type=news` | GET | Lấy danh sách categories |
+| `/api/v1/n8n/categories/create/` | POST | Tạo category mới |
 | `/api/v1/n8n/news/` | POST | Tạo bài viết Tin tức |
+| `/api/v1/n8n/news/list/` | GET | Danh sách tin tức |
+| `/api/v1/n8n/news/<identifier>/` | PUT/PATCH | Cập nhật tin tức |
 | `/api/v1/n8n/knowledge/` | POST | Tạo bài viết Kiến thức |
+| `/api/v1/n8n/knowledge/list/` | GET | Danh sách kiến thức |
+| `/api/v1/n8n/tools/` | POST | Tạo công cụ |
 | `/api/v1/n8n/resources/` | POST | Tạo tài liệu |
-| `/api/v1/n8n/videos/` | POST | Tạo video |
+| `/api/v1/n8n/videos/` | POST | Tạo video YouTube |
+| `/api/v1/n8n/flashcards/` | POST | Tạo bộ flashcard |
+| `/api/v1/n8n/stream-media/` | POST | Tạo video stream (GDrive) |
+| `/api/v1/n8n/bulk/` | POST | Tạo hàng loạt (max 50) |
+| `/api/v1/n8n/<type>/<id>/delete/` | DELETE | Xoá nội dung |
 
 ### Xác thực
 
@@ -222,7 +234,8 @@ Trả về JSON với cấu trúc:
   "content": "HTML theo cấu trúc trên, ≥ 600 từ",
   "meta_title": "50-60 ký tự — [Từ khóa] | UnstressVN",
   "meta_description": "120-155 ký tự, từ khóa + CTA",
-  "meta_keywords": "3-7 từ khóa, cách nhau dấu phẩy"
+  "meta_keywords": "3-7 từ khóa, cách nhau dấu phẩy",
+  "tags": "3-5 tags SEO ngắn gọn, cách nhau dấu phẩy"
 }
 ```
 
@@ -252,6 +265,7 @@ Map dữ liệu từ AI response sang format API:
   "meta_title": {{ $json.meta_title }},
   "meta_description": {{ $json.meta_description }},
   "meta_keywords": {{ $json.meta_keywords }},
+  "tags": {{ $json.tags || '' }},
   "is_ai_generated": true,
   "ai_model": "gpt-4o",
   "workflow_id": "news_auto_publish",
@@ -393,6 +407,48 @@ POST https://unstressvn.com/api/v1/n8n/videos/
 
 ---
 
+## 7b. WORKFLOW 5: ĐĂNG VIDEO STREAM (Google Drive)
+
+### Endpoint
+```
+POST https://unstressvn.com/api/v1/n8n/stream-media/
+```
+
+### Body
+
+```json
+{
+  "title": "Phim Đức: Tschick (2016)",
+  "gdrive_url": "https://drive.google.com/file/d/FILE_ID/view",
+  "media_type": "video",
+  "description": "Phim điện ảnh Đức phụ đề tiếng Việt",
+  "category": "phim-duc",
+  "language": "de",
+  "level": "B1",
+  "tags": "phim Đức, Tschick, học tiếng Đức qua phim",
+  "is_public": true,
+  "requires_login": false
+}
+```
+
+### Giá trị `media_type` hợp lệ:
+| Giá trị | Ý nghĩa |
+|---------|--------|
+| `video` | Video (mặc định) |
+| `audio` | Audio/Podcast |
+
+### Giá trị `language` cho Stream Media:
+| Giá trị | Ý nghĩa |
+|---------|--------|
+| `vi` | Tiếng Việt |
+| `de` | Tiếng Đức |
+| `en` | Tiếng Anh |
+| `all` | Tất cả (mặc định) |
+
+> **Lưu ý:** `gdrive_url` có thể là link xem (`/view`) hoặc link embed (`/preview`). API sẽ tự trích xuất `file_id`.
+
+---
+
 ## 8. PROMPT AI TẠO NỘI DUNG CHUẨN SEO
 
 ### 8.1. System Prompt đầy đủ (Copy vào n8n)
@@ -446,6 +502,7 @@ Bạn là chuyên gia viết bài SEO cho website UnstressVN (unstressvn.com) �
    - meta_description: 120-155 ký tự, chứa từ khóa + CTA
    - excerpt: 80-200 ký tự
    - meta_keywords: 3-7 từ khóa, dấu phẩy ngăn cách
+   - tags: 3-5 tags SEO ngắn gọn (tự động nếu để trống)
    - Mật độ từ khóa chính: 1-2%
 
 5. ĐỘ DÀI: content ≥ 600 từ (tối ưu 1200-2000 từ)
@@ -459,7 +516,8 @@ Trả về JSON hợp lệ (không có markdown code block):
   "content": "...",
   "meta_title": "...",
   "meta_description": "...",
-  "meta_keywords": "..."
+  "meta_keywords": "...",
+  "tags": "..."
 }
 ```
 
@@ -556,23 +614,50 @@ GET https://unstressvn.com/api/v1/n8n/categories/?type=all
 Headers: X-API-Key: <API_KEY>
 ```
 
-### Categories phổ biến (tham khảo)
+### Categories THỰC TẾ trong Database (cập nhật 2026-02-28)
 
-**News:**
-| Slug | Tên |
-|------|-----|
-| `hoc-tieng-duc` | Học tiếng Đức |
-| `du-hoc-duc` | Du học Đức |
-| `hoc-tieng-anh` | Học tiếng Anh |
-| `tin-tuc-tong-hop` | Tin tức tổng hợp |
+**News (30 bài):**
+| Slug | Tên | Số bài |
+|------|-----|--------|
+| `hoc-tieng-duc` | Học tiếng Đức | 11 |
+| `du-hoc` | Du học | 7 |
+| `hoc-tieng-anh` | Học tiếng Anh | 6 |
+| `thi-cu` | Thi cử | 3 |
+| `du-hoc-duc` | Du học Đức | 1 |
+| `kinh-nghiem` | Kinh nghiệm | 1 |
+| `doi-song-duc` | Đời sống Đức | 1 |
 
-**Knowledge:**
-| Slug | Tên |
-|------|-----|
-| `ngu-phap` | Ngữ pháp |
-| `tu-vung` | Từ vựng |
-| `ky-nang-nghe` | Kỹ năng nghe |
-| `ky-nang-noi` | Kỹ năng nói |
+**Knowledge (45 bài):**
+| Slug | Tên | Số bài |
+|------|-----|--------|
+| `ngu-phap` | Ngữ pháp | 15 |
+| `tu-vung` | Từ vựng | 10 |
+| `luyen-thi` | Luyện thi | 7 |
+| `bai-giang` | Bài giảng | 5 |
+| `ngu-phap-tieng-duc` | Ngữ pháp tiếng Đức | 3 |
+| `phat-am` | Phát âm | 2 |
+
+**Resources (24 tài liệu):**
+| Slug | Tên | Số tài liệu |
+|------|-----|----------|
+| `tieng-duc` | Tiếng Đức | 7 |
+| `ielts` | IELTS | 6 |
+| `goethe` | Goethe | 4 |
+| `tieng-anh` | Tiếng Anh | 4 |
+| `tong-hop` | Tổng hợp | 3 |
+
+**Tools (39 công cụ):**
+| Slug | Tên | Số công cụ |
+|------|-----|----------|
+| `tu-dien` | Từ điển | 9 |
+| `luyen-tap` | Luyện tập | 6 |
+| `hoc-tu-vung` | Học từ vựng | 4 |
+| `dich-thuat` | Dịch thuật | 4 |
+
+**Stream Media:**
+| Slug | Tên | Số video |
+|------|-----|----------|
+| `thu-gian` | Thư giãn | 1 |
 
 > **Lưu ý:** Nếu gửi slug category không tồn tại, API sẽ **tự động tạo** category mới với tên = slug.
 
@@ -645,6 +730,7 @@ return [{
     meta_title: parsed.meta_title || '',
     meta_description: parsed.meta_description || '',
     meta_keywords: parsed.meta_keywords || '',
+    tags: parsed.tags || '',
     category: $input.first().json.category || 'tin-tuc-tong-hop',
     is_published: true,
     is_featured: false,
