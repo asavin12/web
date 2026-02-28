@@ -223,10 +223,10 @@ export default function ArticleDetailPage({ contentType }: ArticleDetailPageProp
   
   const getAuthorInfo = () => {
     if (isTool && toolArticle) {
-      return toolArticle.author_name ? {
-        username: toolArticle.author_name,
+      return {
+        username: 'UnstressVN',
         avatar: toolArticle.author_avatar || null
-      } : null;
+      };
     }
     return (article as NewsArticle | KnowledgeArticle).author;
   };
@@ -398,17 +398,6 @@ export default function ArticleDetailPage({ contentType }: ArticleDetailPageProp
                 </>
               )}
               
-              {/* Category badge */}
-              {article.category && (
-                <Link
-                  to={`${config.basePath}/${article.category.slug}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-vintage-tan/20 text-vintage-dark rounded-full text-sm font-medium hover:bg-vintage-tan/30 transition-colors"
-                >
-                  <Tag className="h-4 w-4" />
-                  {article.category.name}
-                </Link>
-              )}
-              
               {/* Featured badge */}
               {article.is_featured && (
                 <span className="px-3 py-1.5 bg-vintage-brown text-white rounded-full text-sm font-medium">
@@ -522,6 +511,77 @@ export default function ArticleDetailPage({ contentType }: ArticleDetailPageProp
               </div>
             </div>
           )}
+
+          {/* Tags Section - displayed at bottom of article */}
+          {(() => {
+            // Gather tags from article.tags (comma-separated) + category
+            const allTags: { label: string; link?: string }[] = [];
+            
+            // Add category as first tag
+            if (article.category) {
+              allTags.push({
+                label: article.category.name,
+                link: `${config.basePath}/${article.category.slug}`
+              });
+            }
+            
+            // Add article tags
+            const articleTags = 'tags' in article && (article as NewsArticle | KnowledgeArticle).tags;
+            if (articleTags && typeof articleTags === 'string') {
+              articleTags.split(',').map(tag => tag.trim()).filter(Boolean).forEach(tag => {
+                allTags.push({ label: tag });
+              });
+            }
+            
+            if (allTags.length === 0) return null;
+            
+            // Show 3-4 random tags (always include category if present)
+            const maxTags = 4;
+            let displayTags = allTags;
+            if (allTags.length > maxTags) {
+              // Keep category (first item), shuffle the rest, take up to maxTags-1
+              const categoryTag = article.category ? [allTags[0]] : [];
+              const otherTags = article.category ? allTags.slice(1) : [...allTags];
+              // Deterministic shuffle based on article id to stay consistent per article
+              const shuffled = otherTags.sort((a, b) => {
+                const hashA = a.label.split('').reduce((acc, c) => acc + c.charCodeAt(0), article.id);
+                const hashB = b.label.split('').reduce((acc, c) => acc + c.charCodeAt(0), article.id);
+                return hashA - hashB;
+              });
+              displayTags = [...categoryTag, ...shuffled.slice(0, maxTags - categoryTag.length)];
+            }
+            
+            return (
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-3">
+                  <Tag className="h-4 w-4 text-vintage-olive" />
+                  <span className="text-sm font-medium text-vintage-dark/70">
+                    {t('common.tags', 'Thẻ')}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {displayTags.map((tag, idx) => (
+                    tag.link ? (
+                      <Link
+                        key={idx}
+                        to={tag.link}
+                        className="inline-flex items-center px-3 py-1.5 bg-vintage-tan/15 text-vintage-dark/80 rounded-full text-sm font-medium hover:bg-vintage-olive/15 hover:text-vintage-olive transition-colors border border-vintage-tan/20"
+                      >
+                        #{tag.label}
+                      </Link>
+                    ) : (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center px-3 py-1.5 bg-vintage-tan/15 text-vintage-dark/80 rounded-full text-sm font-medium border border-vintage-tan/20"
+                      >
+                        #{tag.label}
+                      </span>
+                    )
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Action Buttons */}
           <div className="flex items-center justify-between py-6 border-t border-b border-vintage-tan/20">

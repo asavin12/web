@@ -37,6 +37,7 @@ export interface KnowledgeArticle {
   language_display: string;
   level: string;
   level_display: string;
+  tags?: string;
   is_featured: boolean;
   is_published: boolean;
   view_count: number;

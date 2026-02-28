@@ -107,6 +107,10 @@ class Article(WebPImageMixin, N8NTrackingMixin, models.Model):
     is_featured = models.BooleanField(default=False, verbose_name='Nổi bật')
     published_at = models.DateTimeField(null=True, blank=True, verbose_name='Ngày xuất bản')
     
+    # Tags (comma-separated, Vietnamese with diacritics)
+    tags = models.CharField(max_length=500, blank=True, verbose_name='Tags',
+                            help_text='Các tag cách nhau bởi dấu phẩy (VD: kinh nghiệm, du học Đức, TestDaF)')
+    
     # Thống kê
     view_count = models.PositiveIntegerField(default=0, verbose_name='Lượt xem')
     
@@ -156,6 +160,12 @@ class Article(WebPImageMixin, N8NTrackingMixin, models.Model):
     
     def get_absolute_url(self):
         return f"/tin-tuc/{self.slug}"
+    
+    def get_tags_list(self):
+        """Trả về list các tags"""
+        if not self.tags:
+            return []
+        return [tag.strip() for tag in self.tags.split(',') if tag.strip()]
     
     def increment_views(self):
         """Tăng lượt xem"""

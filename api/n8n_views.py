@@ -406,6 +406,7 @@ def n8n_create_news_article(request):
             "content": "Nội dung HTML của bài viết",
             "excerpt": "Mô tả ngắn (tùy chọn)",
             "category": "slug-category hoặc id",
+            "tags": "tag1, tag2, tag3 (tùy chọn, SEO tags phân cách bằng dấu phẩy)",
             "cover_image_url": "https://example.com/image.jpg (tùy chọn)",
             "auto_placeholder": true,
             "is_featured": false,
@@ -480,6 +481,22 @@ def n8n_create_news_article(request):
             'hint': 'Gửi skip_seo_validation=true để bỏ qua kiểm tra (không khuyến nghị)'
         }, status=status.HTTP_400_BAD_REQUEST)
     
+    # Vietnamese category name mapping (slug → proper name with diacritics)
+    SLUG_TO_CATEGORY_NAME = {
+        'doi-song-duc': 'Đời sống Đức',
+        'du-hoc-duc': 'Du học Đức',
+        'kinh-nghiem': 'Kinh nghiệm',
+        'tin-tuc-chung': 'Tin tức chung',
+        'hoc-tieng-duc': 'Học tiếng Đức',
+        'hoc-tieng-anh': 'Học tiếng Anh',
+        'du-hoc': 'Du học',
+        'thi-cu': 'Thi cử',
+        'su-kien': 'Sự kiện',
+        'viec-lam': 'Việc làm',
+        'van-hoa': 'Văn hóa',
+        'cong-nghe': 'Công nghệ',
+    }
+
     # Get or create category
     category_input = request.data.get('category')
     category = None
@@ -492,10 +509,12 @@ def n8n_create_news_article(request):
             else:
                 category = Category.objects.get(slug=category_input)
         except Category.DoesNotExist:
-            # Create new category
+            # Create new category — use Vietnamese name if available
+            cat_slug = vietnamese_slugify(category_input)
+            cat_name = SLUG_TO_CATEGORY_NAME.get(cat_slug, category_input)
             category = Category.objects.create(
-                name=category_input,
-                slug=vietnamese_slugify(category_input)
+                name=cat_name,
+                slug=cat_slug
             )
     
     # Generate unique slug
@@ -523,6 +542,7 @@ def n8n_create_news_article(request):
             is_featured=request.data.get('is_featured', False),
             is_published=request.data.get('is_published', True),
             published_at=timezone.now() if request.data.get('is_published', True) else None,
+            tags=safe_truncate(request.data.get('tags', ''), 500),
             meta_title=safe_truncate(request.data.get('meta_title', ''), 70),
             meta_description=safe_truncate(request.data.get('meta_description', ''), 160),
             meta_keywords=safe_truncate(request.data.get('meta_keywords', ''), 255),
@@ -675,15 +695,27 @@ def n8n_create_knowledge_article(request):
     category = None
     
     if category_input:
+        # Vietnamese category name mapping for knowledge
+        SLUG_TO_CATEGORY_NAME_K = {
+            'hoc-tieng-duc': 'Học tiếng Đức',
+            'hoc-tieng-anh': 'Học tiếng Anh',
+            'ngu-phap': 'Ngữ pháp',
+            'tu-vung': 'Từ vựng',
+            'luyen-thi': 'Luyện thi',
+            'giao-tiep': 'Giao tiếp',
+            'van-hoa': 'Văn hóa',
+        }
         try:
             if isinstance(category_input, int) or category_input.isdigit():
                 category = Category.objects.get(id=int(category_input))
             else:
                 category = Category.objects.get(slug=category_input)
         except Category.DoesNotExist:
+            cat_slug = vietnamese_slugify(category_input)
+            cat_name = SLUG_TO_CATEGORY_NAME_K.get(cat_slug, category_input)
             category = Category.objects.create(
-                name=category_input,
-                slug=vietnamese_slugify(category_input)
+                name=cat_name,
+                slug=cat_slug
             )
     
     # Generate unique slug
@@ -722,6 +754,7 @@ def n8n_create_knowledge_article(request):
             is_featured=request.data.get('is_featured', False),
             is_published=request.data.get('is_published', True),
             published_at=timezone.now() if request.data.get('is_published', True) else None,
+            tags=safe_truncate(request.data.get('tags', ''), 500),
             meta_title=safe_truncate(request.data.get('meta_title', ''), 70),
             meta_description=safe_truncate(request.data.get('meta_description', ''), 160),
             meta_keywords=safe_truncate(request.data.get('meta_keywords', ''), 255),

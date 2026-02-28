@@ -31,6 +31,7 @@ export interface NewsArticle {
     username: string;
     avatar: string | null;
   };
+  tags?: string;
   is_featured: boolean;
   is_published: boolean;
   view_count: number;

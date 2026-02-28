@@ -155,6 +155,15 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
   const toolCategories: ToolCategory[] = toolCategoriesData;
   const displayCategories = contentType === 'tools' ? toolCategories : categories;
   
+  // Limit visible category tabs to 4 (prioritize categories with articles)
+  const visibleCategories = displayCategories
+    .filter(cat => {
+      if ('article_count' in cat) return (cat as NewsCategory | KnowledgeCategory).article_count > 0;
+      if ('tool_count' in cat) return (cat as ToolCategory).tool_count > 0;
+      return true;
+    })
+    .slice(0, 4);
+  
   const articles: (NewsArticle | KnowledgeArticle)[] = contentType === 'news' 
     ? (newsData?.results || []) 
     : (knowledgeData?.results || []);
@@ -257,7 +266,7 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
           </header>
 
           {/* Category Pills */}
-          {displayCategories.length > 0 && (
+          {visibleCategories.length > 0 && (
             <div className="mb-6 overflow-x-auto pb-2 scrollbar-hide">
               <div className="flex gap-2 min-w-max">
                 <button
@@ -270,7 +279,7 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
                 >
                   {t(config.allKey, config.defaultAll)}
                 </button>
-                {displayCategories.map((cat) => (
+                {visibleCategories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => handleCategoryClick(cat.slug)}

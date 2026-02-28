@@ -128,6 +128,10 @@ class KnowledgeArticle(WebPImageMixin, N8NTrackingMixin, models.Model):
     is_featured = models.BooleanField(default=False, verbose_name='Nổi bật')
     published_at = models.DateTimeField(null=True, blank=True)
     
+    # Tags (comma-separated, Vietnamese with diacritics)
+    tags = models.CharField(max_length=500, blank=True, verbose_name='Tags',
+                            help_text='Các tag cách nhau bởi dấu phẩy (VD: ngữ pháp, tiếng Đức, A1)')
+    
     # Thống kê
     view_count = models.PositiveIntegerField(default=0)
     

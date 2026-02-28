@@ -29,17 +29,17 @@ class KnowledgeArticleListSerializer(serializers.ModelSerializer):
                 avatar = obj.author.profile.avatar.url
             return {
                 'id': obj.author.id,
-                'username': obj.author.username,
+                'username': 'UnstressVN',
                 'avatar': avatar
             }
-        return None
+        return {'id': 0, 'username': 'UnstressVN', 'avatar': None}
     
     class Meta:
         model = KnowledgeArticle
         fields = ['id', 'title', 'slug', 'excerpt', 'category', 'author', 'author_name',
                   'language', 'language_display', 'level', 'level_display',
                   'featured_image', 'cover_image', 'thumbnail', 'cover_image_srcset',
-                  'is_featured', 'published_at',
+                  'is_featured', 'published_at', 'tags',
                   'view_count', 'reading_time']
 
 
@@ -61,17 +61,17 @@ class KnowledgeArticleDetailSerializer(serializers.ModelSerializer):
                 avatar = obj.author.profile.avatar.url
             return {
                 'id': obj.author.id,
-                'username': obj.author.username,
+                'username': 'UnstressVN',
                 'avatar': avatar
             }
-        return None
+        return {'id': 0, 'username': 'UnstressVN', 'avatar': None}
     
     class Meta:
         model = KnowledgeArticle
         fields = ['id', 'title', 'slug', 'excerpt', 'content', 'category', 'author', 'author_name',
                   'language', 'language_display', 'level', 'level_display',
                   'featured_image', 'cover_image', 'thumbnail', 'cover_image_srcset',
-                  'schema_type',
+                  'schema_type', 'tags',
                   'meta_title', 'meta_description', 'meta_keywords', 'canonical_url',
                   'og_title', 'og_description', 'og_image',
                   'is_featured', 'published_at', 'view_count', 'reading_time',
