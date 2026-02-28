@@ -13,7 +13,7 @@ Image Support:
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, parser_classes
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
@@ -30,36 +30,60 @@ from core.image_utils import (
 
 # ============ Custom Authentication ============
 
+import logging
+n8n_logger = logging.getLogger('n8n_api')
+
+
 class APIKeyAuthentication(BaseAuthentication):
     """
-    Xác thực bằng API Key trong header X-API-Key
-    API Key được lưu trong database (core.models.APIKey)
+    Xác thực bằng API Key trong header X-API-Key.
+    Hỗ trợ cả header chuẩn và nhiều format n8n hay dùng.
+    API Key được lưu trong database (core.models.APIKey).
     """
     
     def authenticate(self, request):
         from core.models import APIKey
         
-        api_key = request.META.get('HTTP_X_API_KEY') or request.headers.get('X-API-Key')
+        # Hỗ trợ nhiều header format mà n8n có thể gửi
+        api_key = (
+            request.META.get('HTTP_X_API_KEY')
+            or request.headers.get('X-API-Key')
+            or request.headers.get('X-Api-Key')
+            or request.headers.get('Api-Key')
+        )
+        
+        # Fallback: check Authorization: Bearer <key>
+        if not api_key:
+            auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+            if auth_header.startswith('Bearer '):
+                api_key = auth_header[7:].strip()
         
         if not api_key:
+            n8n_logger.debug(f'No API key in request to {request.path}')
             return None  # No API key provided, skip this auth
         
         # Kiểm tra key từ database
-        if not APIKey.verify_key('n8n_api_key', api_key):
-            raise AuthenticationFailed('API Key không hợp lệ')
+        if not APIKey.verify_key('n8n_api_key', api_key, request=request):
+            n8n_logger.warning(f'Invalid API key attempt: {api_key[:8]}... from {request.META.get("REMOTE_ADDR")}')
+            raise AuthenticationFailed('API Key không hợp lệ hoặc đã hết hạn')
         
-        # Return bot user for automation
-        try:
-            bot_user = User.objects.get(username='automation_bot')
-        except User.DoesNotExist:
-            # Create automation bot user if not exists
-            bot_user = User.objects.create_user(
-                username='automation_bot',
-                email='unstressvn@gmail.com',
-                is_staff=True
-            )
+        # Return bot user for automation — atomic get_or_create to avoid race condition
+        bot_user, created = User.objects.get_or_create(
+            username='automation_bot',
+            defaults={'email': 'unstressvn@gmail.com', 'is_staff': True}
+        )
+        if created:
+            n8n_logger.info('Created automation_bot user')
         
         return (bot_user, None)
+
+
+def safe_truncate(value, max_length, default=''):
+    """Truncate string field to max_length, preventing DB DataError."""
+    if not value:
+        return default
+    value = str(value).strip()
+    return value[:max_length] if len(value) > max_length else value
 
 
 def vietnamese_slugify(text, max_length=250):
@@ -378,35 +402,47 @@ def n8n_create_news_article(request):
         request, slug, upload_to='news/covers/'
     )
     
-    # Create article
-    article = Article.objects.create(
-        title=title,
-        slug=slug,
-        content=content,
-        excerpt=request.data.get('excerpt', ''),
-        category=category,
-        author=request.user,
-        is_featured=request.data.get('is_featured', False),
-        is_published=request.data.get('is_published', True),
-        published_at=timezone.now() if request.data.get('is_published', True) else None,
-        meta_title=request.data.get('meta_title', ''),
-        meta_description=request.data.get('meta_description', ''),
-        meta_keywords=request.data.get('meta_keywords', ''),
-        # N8N tracking fields
-        source='n8n',
-        source_url=request.data.get('source_url', ''),
-        source_id=request.data.get('source_id', ''),
-        n8n_workflow_id=request.data.get('workflow_id', ''),
-        n8n_execution_id=request.data.get('execution_id', ''),
-        n8n_created_at=timezone.now(),
-        is_ai_generated=request.data.get('is_ai_generated', False),
-        ai_model=request.data.get('ai_model', ''),
-    )
+    # Create article — field truncation to prevent DataError
+    try:
+        article = Article.objects.create(
+            title=safe_truncate(title, 255),
+            slug=slug,
+            content=content,
+            excerpt=safe_truncate(request.data.get('excerpt', ''), 500),
+            category=category,
+            author=request.user,
+            is_featured=request.data.get('is_featured', False),
+            is_published=request.data.get('is_published', True),
+            published_at=timezone.now() if request.data.get('is_published', True) else None,
+            meta_title=safe_truncate(request.data.get('meta_title', ''), 70),
+            meta_description=safe_truncate(request.data.get('meta_description', ''), 160),
+            meta_keywords=safe_truncate(request.data.get('meta_keywords', ''), 255),
+            # N8N tracking fields
+            source='n8n',
+            source_url=safe_truncate(request.data.get('source_url', ''), 200),
+            source_id=safe_truncate(request.data.get('source_id', ''), 100),
+            n8n_workflow_id=safe_truncate(request.data.get('workflow_id', ''), 50),
+            n8n_execution_id=safe_truncate(request.data.get('execution_id', ''), 100),
+            n8n_created_at=timezone.now(),
+            is_ai_generated=request.data.get('is_ai_generated', False),
+            ai_model=safe_truncate(request.data.get('ai_model', ''), 50),
+        )
+    except Exception as e:
+        n8n_logger.error(f'Failed to create news article: {type(e).__name__}: {e}', exc_info=True)
+        return Response({
+            'success': False,
+            'error': f'Lỗi tạo bài viết: {type(e).__name__}: {str(e)[:500]}',
+            'hint': 'Kiểm tra dữ liệu gửi từ n8n — có thể trường quá dài hoặc dữ liệu không hợp lệ'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     # Assign cover image after creation (triggers WebP conversion + responsive generation in save())
     if cover_image:
-        article.cover_image = cover_image
-        article.save()
+        try:
+            article.cover_image = cover_image
+            article.save()
+        except Exception as e:
+            n8n_logger.warning(f'Cover image save failed for article {article.id}: {e}')
+            # Article was created OK, just no image — don't fail the whole request
     
     response_data = {
         'success': True,
@@ -540,37 +576,47 @@ def n8n_create_knowledge_article(request):
         request, slug, upload_to='knowledge/covers/'
     )
     
-    # Create article
-    article = KnowledgeArticle.objects.create(
-        title=title,
-        slug=slug,
-        content=content,
-        excerpt=request.data.get('excerpt', ''),
-        category=category,
-        language=language,
-        level=level,
-        author=request.user,
-        is_featured=request.data.get('is_featured', False),
-        is_published=request.data.get('is_published', True),
-        published_at=timezone.now() if request.data.get('is_published', True) else None,
-        meta_title=request.data.get('meta_title', ''),
-        meta_description=request.data.get('meta_description', ''),
-        meta_keywords=request.data.get('meta_keywords', ''),
-        # N8N tracking fields
-        source='n8n',
-        source_url=request.data.get('source_url', ''),
-        source_id=request.data.get('source_id', ''),
-        n8n_workflow_id=request.data.get('workflow_id', ''),
-        n8n_execution_id=request.data.get('execution_id', ''),
-        n8n_created_at=timezone.now(),
-        is_ai_generated=request.data.get('is_ai_generated', False),
-        ai_model=request.data.get('ai_model', ''),
-    )
+    # Create article — field truncation to prevent DataError
+    try:
+        article = KnowledgeArticle.objects.create(
+            title=safe_truncate(title, 255),
+            slug=slug,
+            content=content,
+            excerpt=safe_truncate(request.data.get('excerpt', ''), 500),
+            category=category,
+            language=language,
+            level=level,
+            author=request.user,
+            is_featured=request.data.get('is_featured', False),
+            is_published=request.data.get('is_published', True),
+            published_at=timezone.now() if request.data.get('is_published', True) else None,
+            meta_title=safe_truncate(request.data.get('meta_title', ''), 70),
+            meta_description=safe_truncate(request.data.get('meta_description', ''), 160),
+            meta_keywords=safe_truncate(request.data.get('meta_keywords', ''), 255),
+            # N8N tracking fields
+            source='n8n',
+            source_url=safe_truncate(request.data.get('source_url', ''), 200),
+            source_id=safe_truncate(request.data.get('source_id', ''), 100),
+            n8n_workflow_id=safe_truncate(request.data.get('workflow_id', ''), 50),
+            n8n_execution_id=safe_truncate(request.data.get('execution_id', ''), 100),
+            n8n_created_at=timezone.now(),
+            is_ai_generated=request.data.get('is_ai_generated', False),
+            ai_model=safe_truncate(request.data.get('ai_model', ''), 50),
+        )
+    except Exception as e:
+        n8n_logger.error(f'Failed to create knowledge article: {type(e).__name__}: {e}', exc_info=True)
+        return Response({
+            'success': False,
+            'error': f'Lỗi tạo bài viết kiến thức: {type(e).__name__}: {str(e)[:500]}',
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     # Assign cover image after creation (triggers WebP conversion + responsive generation)
     if cover_image:
-        article.cover_image = cover_image
-        article.save()
+        try:
+            article.cover_image = cover_image
+            article.save()
+        except Exception as e:
+            n8n_logger.warning(f'Cover image save failed for knowledge article {article.id}: {e}')
     
     response_data = {
         'success': True,
@@ -607,18 +653,21 @@ def _update_article(request, article, model_name, url_prefix):
     data = request.data
     updated_fields = []
 
-    # Updatable text fields
-    text_fields = {
-        'title': 'title',
-        'content': 'content',
-        'excerpt': 'excerpt',
-        'meta_title': 'meta_title',
-        'meta_description': 'meta_description',
-        'meta_keywords': 'meta_keywords',
+    # Updatable text fields — with truncation for safety
+    text_field_limits = {
+        'title': ('title', 255),
+        'content': ('content', None),  # TextField, no limit
+        'excerpt': ('excerpt', 500),
+        'meta_title': ('meta_title', 70),
+        'meta_description': ('meta_description', 160),
+        'meta_keywords': ('meta_keywords', 255),
     }
-    for param, field in text_fields.items():
+    for param, (field, max_len) in text_field_limits.items():
         if param in data:
-            setattr(article, field, data[param])
+            value = data[param]
+            if max_len and value:
+                value = safe_truncate(value, max_len)
+            setattr(article, field, value)
             updated_fields.append(field)
 
     # Boolean fields
@@ -963,28 +1012,35 @@ def n8n_create_resource(request):
     if resource_type not in valid_types:
         resource_type = 'document'
     
-    # Create resource
-    resource = Resource.objects.create(
-        title=title,
-        slug=slug,
-        description=description,
-        category=category,
-        resource_type=resource_type,
-        external_url=request.data.get('external_url', ''),
-        youtube_url=request.data.get('youtube_url', ''),
-        author=request.data.get('author', ''),
-        is_featured=request.data.get('is_featured', False),
-        is_active=True,
-        # N8N tracking fields
-        source='n8n',
-        source_url=request.data.get('source_url', ''),
-        source_id=request.data.get('source_id', ''),
-        n8n_workflow_id=request.data.get('workflow_id', ''),
-        n8n_execution_id=request.data.get('execution_id', ''),
-        n8n_created_at=timezone.now(),
-        is_ai_generated=request.data.get('is_ai_generated', False),
-        ai_model=request.data.get('ai_model', ''),
-    )
+    # Create resource — field truncation to prevent DataError
+    try:
+        resource = Resource.objects.create(
+            title=safe_truncate(title, 200),
+            slug=slug,
+            description=description,
+            category=category,
+            resource_type=resource_type,
+            external_url=safe_truncate(request.data.get('external_url', ''), 200),
+            youtube_url=safe_truncate(request.data.get('youtube_url', ''), 200),
+            author=safe_truncate(request.data.get('author', ''), 100),
+            is_featured=request.data.get('is_featured', False),
+            is_active=True,
+            # N8N tracking fields
+            source='n8n',
+            source_url=safe_truncate(request.data.get('source_url', ''), 200),
+            source_id=safe_truncate(request.data.get('source_id', ''), 100),
+            n8n_workflow_id=safe_truncate(request.data.get('workflow_id', ''), 50),
+            n8n_execution_id=safe_truncate(request.data.get('execution_id', ''), 100),
+            n8n_created_at=timezone.now(),
+            is_ai_generated=request.data.get('is_ai_generated', False),
+            ai_model=safe_truncate(request.data.get('ai_model', ''), 50),
+        )
+    except Exception as e:
+        n8n_logger.error(f'Failed to create resource: {type(e).__name__}: {e}', exc_info=True)
+        return Response({
+            'success': False,
+            'error': f'Lỗi tạo tài liệu: {type(e).__name__}: {str(e)[:500]}',
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     return Response({
         'success': True,
@@ -1163,25 +1219,32 @@ def n8n_create_video(request):
     if level not in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'all']:
         level = 'all'
     
-    # Create video
-    video = Video.objects.create(
-        youtube_id=youtube_id,
-        title=request.data.get('title', ''),  # Auto fetch from YouTube if empty
-        description=request.data.get('description', ''),
-        language=language,
-        level=level,
-        is_featured=request.data.get('is_featured', False),
-        is_active=True,
-        # N8N tracking fields
-        source='n8n',
-        source_url=request.data.get('source_url', ''),
-        source_id=source_id or '',
-        n8n_workflow_id=request.data.get('workflow_id', ''),
-        n8n_execution_id=request.data.get('execution_id', ''),
-        n8n_created_at=timezone.now(),
-        is_ai_generated=request.data.get('is_ai_generated', False),
-        ai_model=request.data.get('ai_model', ''),
-    )
+    # Create video — field truncation to prevent DataError
+    try:
+        video = Video.objects.create(
+            youtube_id=youtube_id,
+            title=safe_truncate(request.data.get('title', ''), 255),
+            description=request.data.get('description', ''),
+            language=language,
+            level=level,
+            is_featured=request.data.get('is_featured', False),
+            is_active=True,
+            # N8N tracking fields
+            source='n8n',
+            source_url=safe_truncate(request.data.get('source_url', ''), 200),
+            source_id=safe_truncate(source_id or '', 100),
+            n8n_workflow_id=safe_truncate(request.data.get('workflow_id', ''), 50),
+            n8n_execution_id=safe_truncate(request.data.get('execution_id', ''), 100),
+            n8n_created_at=timezone.now(),
+            is_ai_generated=request.data.get('is_ai_generated', False),
+            ai_model=safe_truncate(request.data.get('ai_model', ''), 50),
+        )
+    except Exception as e:
+        n8n_logger.error(f'Failed to create video: {type(e).__name__}: {e}', exc_info=True)
+        return Response({
+            'success': False,
+            'error': f'Lỗi tạo video: {type(e).__name__}: {str(e)[:500]}',
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     return Response({
         'success': True,
@@ -1598,30 +1661,40 @@ def n8n_create_tool(request):
 
     is_published = request.data.get('is_published', True)
 
-    tool = Tool.objects.create(
-        name=name,
-        slug=slug,
-        description=description,
-        content=content,
-        excerpt=request.data.get('excerpt', ''),
-        category=category,
-        author=request.user,
-        tool_type=tool_type,
-        url=request.data.get('url', ''),
-        embed_code=request.data.get('embed_code', ''),
-        icon=request.data.get('icon', ''),
-        language=language,
-        is_featured=request.data.get('is_featured', False),
-        is_published=is_published,
-        is_active=True,
-        published_at=timezone.now() if is_published else None,
-        meta_title=request.data.get('meta_title', ''),
-        meta_description=request.data.get('meta_description', ''),
-    )
+    try:
+        tool = Tool.objects.create(
+            name=safe_truncate(name, 200),
+            slug=slug,
+            description=description,
+            content=content,
+            excerpt=request.data.get('excerpt', ''),
+            category=category,
+            author=request.user,
+            tool_type=tool_type,
+            url=safe_truncate(request.data.get('url', ''), 500),
+            embed_code=request.data.get('embed_code', ''),
+            icon=safe_truncate(request.data.get('icon', ''), 50),
+            language=language,
+            is_featured=request.data.get('is_featured', False),
+            is_published=is_published,
+            is_active=True,
+            published_at=timezone.now() if is_published else None,
+            meta_title=safe_truncate(request.data.get('meta_title', ''), 200),
+            meta_description=request.data.get('meta_description', ''),
+        )
+    except Exception as e:
+        n8n_logger.error(f'Failed to create tool: {type(e).__name__}: {e}', exc_info=True)
+        return Response({
+            'success': False,
+            'error': f'Lỗi tạo công cụ: {type(e).__name__}: {str(e)[:500]}',
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     if cover_image:
-        tool.cover_image = cover_image
-        tool.save()
+        try:
+            tool.cover_image = cover_image
+            tool.save()
+        except Exception as e:
+            n8n_logger.warning(f'Cover image save failed for tool {tool.id}: {e}')
 
     response_data = {
         'success': True,
@@ -1867,16 +1940,23 @@ def n8n_create_flashcard_deck(request):
         })
 
     # Create deck
-    deck = FlashcardDeck.objects.create(
-        name=name,
-        slug=slug,
-        description=request.data.get('description', ''),
-        language=language,
-        level=level,
-        author=request.user,
-        is_public=request.data.get('is_public', True),
-        is_featured=request.data.get('is_featured', False),
-    )
+    try:
+        deck = FlashcardDeck.objects.create(
+            name=safe_truncate(name, 200),
+            slug=slug,
+            description=request.data.get('description', ''),
+            language=language,
+            level=level,
+            author=request.user,
+            is_public=request.data.get('is_public', True),
+            is_featured=request.data.get('is_featured', False),
+        )
+    except Exception as e:
+        n8n_logger.error(f'Failed to create flashcard deck: {type(e).__name__}: {e}', exc_info=True)
+        return Response({
+            'success': False,
+            'error': f'Lỗi tạo bộ flashcard: {type(e).__name__}: {str(e)[:500]}',
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # Create cards
     cards_data = request.data.get('cards', [])
@@ -1890,16 +1970,19 @@ def n8n_create_flashcard_deck(request):
             card_errors.append(f'Card {i + 1}: thiếu front hoặc back')
             continue
 
-        Flashcard.objects.create(
-            deck=deck,
-            front=front,
-            back=back,
-            example=card_data.get('example', ''),
-            pronunciation=card_data.get('pronunciation', ''),
-            audio_url=card_data.get('audio_url', ''),
-            order=i,
-        )
-        cards_created += 1
+        try:
+            Flashcard.objects.create(
+                deck=deck,
+                front=front,
+                back=back,
+                example=card_data.get('example', ''),
+                pronunciation=safe_truncate(card_data.get('pronunciation', ''), 200),
+                audio_url=safe_truncate(card_data.get('audio_url', ''), 200),
+                order=i,
+            )
+            cards_created += 1
+        except Exception as e:
+            card_errors.append(f'Card {i + 1}: {type(e).__name__}: {str(e)[:200]}')
 
     response_data = {
         'success': True,
@@ -2255,23 +2338,30 @@ def n8n_create_stream_media(request):
     if media_type not in ['video', 'audio']:
         media_type = 'video'
 
-    media = StreamMedia.objects.create(
-        title=title,
-        slug=slug,
-        description=request.data.get('description', ''),
-        media_type=media_type,
-        storage_type=storage_type,
-        gdrive_url=gdrive_url,
-        category=category,
-        language=language,
-        level=level,
-        tags=request.data.get('tags', ''),
-        transcript=request.data.get('transcript', ''),
-        is_public=request.data.get('is_public', True),
-        is_active=True,
-        requires_login=request.data.get('requires_login', False),
-        uploaded_by=request.user,
-    )
+    try:
+        media = StreamMedia.objects.create(
+            title=safe_truncate(title, 255),
+            slug=slug,
+            description=request.data.get('description', ''),
+            media_type=media_type,
+            storage_type=storage_type,
+            gdrive_url=safe_truncate(gdrive_url, 500),
+            category=category,
+            language=language,
+            level=level,
+            tags=safe_truncate(request.data.get('tags', ''), 500),
+            transcript=request.data.get('transcript', ''),
+            is_public=request.data.get('is_public', True),
+            is_active=True,
+            requires_login=request.data.get('requires_login', False),
+            uploaded_by=request.user,
+        )
+    except Exception as e:
+        n8n_logger.error(f'Failed to create stream media: {type(e).__name__}: {e}', exc_info=True)
+        return Response({
+            'success': False,
+            'error': f'Lỗi tạo stream media: {type(e).__name__}: {str(e)[:500]}',
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response({
         'success': True,
@@ -2454,11 +2544,22 @@ def n8n_create_category(request):
             'action': 'skipped',
         })
 
-    kwargs = {'name': name, 'slug': slug, 'description': description}
+    kwargs = {
+        'name': safe_truncate(name, 100),
+        'slug': safe_truncate(slug, 120),
+        'description': description,
+    }
     if hasattr(Model, 'icon'):
-        kwargs['icon'] = icon
+        kwargs['icon'] = safe_truncate(icon, 50)
 
-    cat = Model.objects.create(**kwargs)
+    try:
+        cat = Model.objects.create(**kwargs)
+    except Exception as e:
+        n8n_logger.error(f'Failed to create category: {type(e).__name__}: {e}', exc_info=True)
+        return Response({
+            'success': False,
+            'error': f'Lỗi tạo category: {type(e).__name__}: {str(e)[:500]}',
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response({
         'success': True,
