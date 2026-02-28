@@ -46,6 +46,36 @@ done
 echo "Running migrations..."
 python manage.py migrate --noinput
 
+# Fix PostgreSQL sequences (prevent "duplicate key" errors after data restore/import)
+echo "Fixing PostgreSQL sequences..."
+python -c "
+import django, os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unstressvn_settings.settings')
+django.setup()
+from django.db import connection
+with connection.cursor() as cursor:
+    cursor.execute(\"\"\"
+        DO \$\$
+        DECLARE
+            r RECORD;
+            max_id BIGINT;
+        BEGIN
+            FOR r IN
+                SELECT s.relname AS seq_name, t.relname AS table_name, a.attname AS column_name
+                FROM pg_class s
+                JOIN pg_depend d ON d.objid = s.oid
+                JOIN pg_class t ON d.refobjid = t.oid
+                JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+                WHERE s.relkind = 'S'
+            LOOP
+                EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %I', r.column_name, r.table_name) INTO max_id;
+                EXECUTE format('SELECT setval(%L, GREATEST(%s + 1, 1), false)', r.seq_name, max_id);
+            END LOOP;
+        END \$\$;
+    \"\"\")
+print('All sequences synced.')
+"
+
 # Collect static files
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
@@ -61,4 +91,4 @@ exec gunicorn unstressvn_settings.wsgi:application \
     --max-requests-jitter 50 \
     --access-logfile - \
     --error-logfile - \
-    --log-level warning
+    --log-level info
