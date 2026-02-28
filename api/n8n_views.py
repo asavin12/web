@@ -118,6 +118,45 @@ def vietnamese_slugify(text, max_length=250):
     return slug[:max_length]
 
 
+# ============ Auto SEO Tags Generator ============
+
+def generate_seo_tags(title, category_name='', meta_keywords='', max_tags=5):
+    """
+    Tự động tạo SEO tags từ title + category + keywords.
+    Dùng khi n8n không gửi trường 'tags'.
+    
+    Returns: string "tag1, tag2, tag3"
+    """
+    tags = set()
+    
+    # 1. Từ category name
+    if category_name:
+        tags.add(category_name)
+    
+    # 2. Từ meta_keywords (lấy 2 keyword đầu)
+    if meta_keywords:
+        for kw in meta_keywords.split(',')[:2]:
+            kw = kw.strip()
+            if kw and len(kw) > 2:
+                tags.add(kw)
+    
+    # 3. Từ title — tách các cụm từ có nghĩa
+    import re
+    # Bỏ số, ký tự đặc biệt
+    clean_title = re.sub(r'[0-9:—\-\|]+', ' ', title).strip()
+    # Lấy các cụm từ dài 2-5 từ từ title
+    words = clean_title.split()
+    if len(words) >= 4:
+        # Lấy 2-3 từ đầu làm tag chính
+        tags.add(' '.join(words[:3]))
+    if len(words) >= 6:
+        tags.add(' '.join(words[3:6]))
+    
+    # Giới hạn số tags
+    result = list(tags)[:max_tags]
+    return ', '.join(result) if result else ''
+
+
 # ============ SEO Content Validation ============
 
 def validate_seo_content(data, strict=True):
@@ -530,6 +569,12 @@ def n8n_create_news_article(request):
         request, slug, upload_to='news/covers/'
     )
     
+    # Auto-generate SEO tags if not provided
+    raw_tags = request.data.get('tags', '')
+    if not raw_tags and title:
+        cat_name = category.name if category else ''
+        raw_tags = generate_seo_tags(title, cat_name, request.data.get('meta_keywords', ''))
+    
     # Create article — field truncation to prevent DataError
     try:
         article = Article.objects.create(
@@ -542,7 +587,7 @@ def n8n_create_news_article(request):
             is_featured=request.data.get('is_featured', False),
             is_published=request.data.get('is_published', True),
             published_at=timezone.now() if request.data.get('is_published', True) else None,
-            tags=safe_truncate(request.data.get('tags', ''), 500),
+            tags=safe_truncate(raw_tags, 500),
             meta_title=safe_truncate(request.data.get('meta_title', ''), 70),
             meta_description=safe_truncate(request.data.get('meta_description', ''), 160),
             meta_keywords=safe_truncate(request.data.get('meta_keywords', ''), 255),
@@ -740,6 +785,12 @@ def n8n_create_knowledge_article(request):
         request, slug, upload_to='knowledge/covers/'
     )
     
+    # Auto-generate SEO tags if not provided
+    raw_tags = request.data.get('tags', '')
+    if not raw_tags and title:
+        cat_name = category.name if category else ''
+        raw_tags = generate_seo_tags(title, cat_name, request.data.get('meta_keywords', ''))
+    
     # Create article — field truncation to prevent DataError
     try:
         article = KnowledgeArticle.objects.create(
@@ -754,7 +805,7 @@ def n8n_create_knowledge_article(request):
             is_featured=request.data.get('is_featured', False),
             is_published=request.data.get('is_published', True),
             published_at=timezone.now() if request.data.get('is_published', True) else None,
-            tags=safe_truncate(request.data.get('tags', ''), 500),
+            tags=safe_truncate(raw_tags, 500),
             meta_title=safe_truncate(request.data.get('meta_title', ''), 70),
             meta_description=safe_truncate(request.data.get('meta_description', ''), 160),
             meta_keywords=safe_truncate(request.data.get('meta_keywords', ''), 255),

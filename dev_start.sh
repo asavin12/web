@@ -1,8 +1,6 @@
 #!/bin/bash
 # Script khởi động development servers cho UnstressVN
 
-set -e
-
 # Màu sắc output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -49,40 +47,58 @@ echo -e "${GREEN}✓ Virtual environment OK${NC}"
 
 # Start Django backend
 echo -e "${YELLOW}[3/4] Starting Django backend (port 8000)...${NC}"
-cd "$BACKEND_DIR"
-"$PYTHON" manage.py runserver 0.0.0.0:8000 > "$PID_DIR/django.log" 2>&1 &
-echo $! > "$PID_DIR/django.pid"
-sleep 2
+DJANGO_RUNNING=false
+if lsof -i:8000 -sTCP:LISTEN > /dev/null 2>&1; then
+    DJANGO_PID=$(lsof -ti:8000 -sTCP:LISTEN | head -1)
+    echo -e "${GREEN}✓ Django server already running (PID: $DJANGO_PID)${NC}"
+    DJANGO_RUNNING=true
+fi
 
-if kill -0 $(cat "$PID_DIR/django.pid") 2>/dev/null; then
-    echo -e "${GREEN}✓ Django server started (PID: $(cat $PID_DIR/django.pid))${NC}"
-else
-    echo -e "${RED}✗ Failed to start Django server. Check logs:${NC}"
-    tail -20 "$PID_DIR/django.log"
-    exit 1
+if [ "$DJANGO_RUNNING" = false ]; then
+    cd "$BACKEND_DIR"
+    "$PYTHON" manage.py runserver 0.0.0.0:8000 > "$PID_DIR/django.log" 2>&1 &
+    echo $! > "$PID_DIR/django.pid"
+    sleep 2
+
+    if kill -0 $(cat "$PID_DIR/django.pid") 2>/dev/null; then
+        echo -e "${GREEN}✓ Django server started (PID: $(cat $PID_DIR/django.pid))${NC}"
+    else
+        echo -e "${RED}✗ Failed to start Django server. Check logs:${NC}"
+        tail -20 "$PID_DIR/django.log"
+        exit 1
+    fi
 fi
 
 # Start Vite frontend
 echo -e "${YELLOW}[4/4] Starting Vite frontend (port 5173)...${NC}"
-cd "$FRONTEND_DIR"
-if [ -d "node_modules" ]; then
-    npm run dev > "$PID_DIR/vite.log" 2>&1 &
-    echo $! > "$PID_DIR/vite.pid"
-    sleep 3
-    
-    if kill -0 $(cat "$PID_DIR/vite.pid") 2>/dev/null; then
-        echo -e "${GREEN}✓ Vite server started (PID: $(cat $PID_DIR/vite.pid))${NC}"
+VITE_RUNNING=false
+if lsof -i:5173 -sTCP:LISTEN > /dev/null 2>&1; then
+    VITE_PID=$(lsof -ti:5173 -sTCP:LISTEN | head -1)
+    echo -e "${GREEN}✓ Vite server already running (PID: $VITE_PID)${NC}"
+    VITE_RUNNING=true
+fi
+
+if [ "$VITE_RUNNING" = false ]; then
+    cd "$FRONTEND_DIR"
+    if [ -d "node_modules" ]; then
+        npm run dev > "$PID_DIR/vite.log" 2>&1 &
+        echo $! > "$PID_DIR/vite.pid"
+        sleep 3
+        
+        if kill -0 $(cat "$PID_DIR/vite.pid") 2>/dev/null; then
+            echo -e "${GREEN}✓ Vite server started (PID: $(cat $PID_DIR/vite.pid))${NC}"
+        else
+            echo -e "${RED}✗ Failed to start Vite server. Check logs:${NC}"
+            tail -20 "$PID_DIR/vite.log"
+        fi
     else
-        echo -e "${RED}✗ Failed to start Vite server. Check logs:${NC}"
-        tail -20 "$PID_DIR/vite.log"
+        echo -e "${YELLOW}! node_modules not found. Running npm install first...${NC}"
+        npm install
+        npm run dev > "$PID_DIR/vite.log" 2>&1 &
+        echo $! > "$PID_DIR/vite.pid"
+        sleep 3
+        echo -e "${GREEN}✓ Vite server started${NC}"
     fi
-else
-    echo -e "${YELLOW}! node_modules not found. Running npm install first...${NC}"
-    npm install
-    npm run dev > "$PID_DIR/vite.log" 2>&1 &
-    echo $! > "$PID_DIR/vite.pid"
-    sleep 3
-    echo -e "${GREEN}✓ Vite server started${NC}"
 fi
 
 echo ""
