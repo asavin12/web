@@ -77,7 +77,7 @@ KNOWN_NAMES = {
     '/videos': {'vi': 'Video', 'en': 'Videos', 'de': 'Videos'},
     '/video': {'vi': 'Video', 'en': 'Videos', 'de': 'Videos'},
     '/resources': {'vi': 'Tài liệu', 'en': 'Resources', 'de': 'Ressourcen'},
-    '/tai-lieu': {'vi': 'Thư viện', 'en': 'Library', 'de': 'Bibliothek'},
+    '/tai-lieu': {'vi': 'Tài liệu', 'en': 'Resources', 'de': 'Ressourcen'},
     '/tin-tuc': {'vi': 'Tin tức', 'en': 'News', 'de': 'Nachrichten'},
     '/kien-thuc': {'vi': 'Kiến thức', 'en': 'Knowledge', 'de': 'Wissen'},
     '/cong-cu': {'vi': 'Công cụ', 'en': 'Tools', 'de': 'Werkzeuge'},
@@ -92,7 +92,9 @@ KNOWN_NAMES = {
     '/privacy': {'vi': 'Chính sách bảo mật', 'en': 'Privacy Policy', 'de': 'Datenschutz'},
     '/chinh-sach-bao-mat': {'vi': 'Chính sách bảo mật', 'en': 'Privacy', 'de': 'Datenschutz'},
     '/careers': {'vi': 'Việc làm', 'en': 'Careers', 'de': 'Karriere'},
+    '/tuyen-dung': {'vi': 'Tuyển dụng', 'en': 'Careers', 'de': 'Karriere'},
     '/study-rooms': {'vi': 'Phòng học nhóm', 'en': 'Study Rooms', 'de': 'Lernräume'},
+    '/phong-hoc-nhom': {'vi': 'Phòng học nhóm', 'en': 'Study Rooms', 'de': 'Lernräume'},
 }
 
 # Dropdown children definitions
@@ -170,6 +172,7 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING('🔍 DRY RUN — không thay đổi dữ liệu\n'))
 
+        self._fix_urls(dry_run)
         self._fix_icons(dry_run)
         self._fill_multilingual(dry_run)
         self._ensure_dropdowns(dry_run)
@@ -178,6 +181,35 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('\n🔍 DRY RUN hoàn tất. Chạy lại KHÔNG có --dry-run để áp dụng.'))
         else:
             self.stdout.write(self.style.SUCCESS('\n✅ Upgrade NavigationLink hoàn tất!'))
+
+    # URL corrections: old URLs → correct frontend route URLs
+    URL_FIXES = {
+        '/videos': '/video',
+        '/resources': '/tai-lieu',
+        '/about': '/gioi-thieu',
+        '/contact': '/lien-he',
+        '/terms': '/dieu-khoan',
+        '/privacy': '/chinh-sach-bao-mat',
+        '/careers': '/tuyen-dung',
+        '/study-rooms': '/phong-hoc-nhom',
+        # Footer resource links with query params
+        '/videos?language=en': '/video?language=en',
+        '/videos?language=de': '/video?language=de',
+    }
+
+    def _fix_urls(self, dry_run):
+        """Fix navigation URLs to match frontend routes"""
+        self.stdout.write('🔗 Fix navigation URLs...')
+        fixed = 0
+        for link in NavigationLink.objects.all():
+            if link.url in self.URL_FIXES:
+                new_url = self.URL_FIXES[link.url]
+                self.stdout.write(f'  {link.name}: {link.url} → {new_url}')
+                if not dry_run:
+                    link.url = new_url
+                    link.save(update_fields=['url'])
+                fixed += 1
+        self.stdout.write(f'  → Fixed {fixed} URLs\n')
 
     def _fix_icons(self, dry_run):
         """Fix FontAwesome icon names → Lucide names"""

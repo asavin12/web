@@ -35,6 +35,8 @@ export default function Navbar() {
   const notificationRef = useRef<HTMLDivElement>(null);
   // Dynamic dropdown refs — one per dropdown
   const dropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  // Hover delay timer for dropdowns (desktop only)
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Click outside handlers
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
@@ -158,7 +160,29 @@ export default function Navbar() {
     );
   };
 
-  // ── Render helper: desktop dropdown ──
+  // ── Hover handlers for desktop dropdowns (open on hover, close with small delay) ──
+  const handleDropdownEnter = useCallback((id: number) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setOpenDropdownId(id);
+  }, []);
+
+  const handleDropdownLeave = useCallback(() => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setOpenDropdownId(null);
+    }, 150); // 150ms grace period to move cursor into panel
+  }, []);
+
+  // Clean up hover timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    };
+  }, []);
+
+  // ── Render helper: desktop dropdown (hover to open) ──
   const renderDesktopDropdown = (dropdown: NavLinkType) => {
     const isOpen = openDropdownId === dropdown.id;
     const label = getLocalizedName(dropdown, lang);
@@ -169,6 +193,8 @@ export default function Navbar() {
         key={dropdown.id}
         className="relative"
         ref={el => { dropdownRefs.current[dropdown.id] = el; }}
+        onMouseEnter={() => handleDropdownEnter(dropdown.id)}
+        onMouseLeave={handleDropdownLeave}
       >
         <button
           onClick={() => setOpenDropdownId(isOpen ? null : dropdown.id)}
@@ -179,11 +205,11 @@ export default function Navbar() {
           } inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-semibold tracking-wide transition-all duration-200 uppercase`}
         >
           {label}
-          <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {isOpen && (
-          <div className="absolute left-0 top-full mt-2 w-64 bg-vintage-cream rounded-xl shadow-xl py-2 z-50 border border-vintage-tan">
+          <div className="absolute left-0 top-full mt-1 w-64 bg-vintage-cream rounded-xl shadow-xl py-2 z-50 border border-vintage-tan animate-in fade-in slide-in-from-top-2 duration-150">
             {dropdown.children.map((child, idx) => (
               <div key={child.id}>
                 {idx === 1 && <div className="my-1 border-t border-vintage-tan/30" />}
