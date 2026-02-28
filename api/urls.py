@@ -72,6 +72,10 @@ urlpatterns = [
     path('n8n/health/', n8n_views.n8n_health_check, name='n8n-health'),
     path('n8n/diagnostic/', n8n_views.n8n_diagnostic, name='n8n-diagnostic'),
 
+    # --- Content Builder ---
+    path('n8n/build-content/', n8n_views.n8n_build_content, name='n8n-build-content'),
+    path('n8n/content-schema/', n8n_views.n8n_content_schema, name='n8n-content-schema'),
+
     # --- Categories ---
     path('n8n/categories/', n8n_views.n8n_get_categories, name='n8n-categories'),
     path('n8n/categories/create/', n8n_views.n8n_create_category, name='n8n-create-category'),

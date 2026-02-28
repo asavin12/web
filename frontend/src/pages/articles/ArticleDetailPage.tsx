@@ -492,7 +492,7 @@ export default function ArticleDetailPage({ contentType }: ArticleDetailPageProp
           <section className="article-body mb-12">
             <div 
               className="prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articleContent, { ADD_TAGS: ['iframe', 'nav', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'caption', 'colgroup', 'col'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'itemProp', 'colspan', 'rowspan', 'scope'] }) }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articleContent, { ADD_TAGS: ['iframe', 'nav', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'caption', 'colgroup', 'col', 'details', 'summary', 'figure', 'figcaption'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'itemProp', 'colspan', 'rowspan', 'scope', 'open'] }) }}
               itemProp="articleBody"
             />
           </section>

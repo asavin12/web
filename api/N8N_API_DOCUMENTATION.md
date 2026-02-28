@@ -24,6 +24,9 @@ API Key được lưu trong database, quản lý qua Admin Panel → Core → AP
 | Method | Endpoint | Mô tả |
 |--------|----------|-------|
 | GET | `/health/` | Health check (không cần auth) |
+| **Content Builder** | | |
+| POST | `/build-content/` | Chuyển JSON cấu trúc → HTML |
+| GET | `/content-schema/` | Lấy danh sách block types + schema |
 | **Categories** | | |
 | GET | `/categories/?type=` | Danh sách categories |
 | POST | `/categories/create/` | Tạo category mới |
@@ -77,9 +80,82 @@ Không cần xác thực.
 
 ---
 
-## 2. Categories
+## 2. Content Builder
 
-### 2.1 Danh sách categories
+Cho phép n8n/AI gửi dữ liệu JSON cấu trúc → tự động sinh HTML chuẩn SEO.
+
+> Chi tiết đầy đủ: `docs/CONTENT_BUILDER_SCHEMA.md`
+
+### 2.1 Build Content (Preview)
+
+```http
+POST /api/v1/n8n/build-content/
+Content-Type: application/json
+```
+
+```json
+{
+  "lead": "<p>Đoạn mở đầu</p>",
+  "toc": true,
+  "blocks": [
+    {"type": "heading", "level": 2, "text": "Tiêu đề mục"},
+    {"type": "paragraph", "text": "Nội dung đoạn văn..."},
+    {"type": "table", "headers": ["A", "B"], "rows": [["1", "2"]]}
+  ],
+  "conclusion": "<p>Kết luận</p>"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "html": "<article>...</article>",
+  "stats": {
+    "word_count": 500,
+    "heading_count": 3,
+    "table_count": 1,
+    "list_count": 0,
+    "has_toc": true,
+    "has_conclusion": true
+  }
+}
+```
+
+### 2.2 Content Schema
+
+```http
+GET /api/v1/n8n/content-schema/
+```
+
+Trả về tất cả block types (paragraph, heading, table, info_table, comparison_table, list, blockquote, image, video, code, faq, divider, callout, html) cùng schema mẫu.
+
+### 2.3 Sử dụng với tạo bài viết
+
+Gửi `structured_content` thay vì `content` khi tạo bài News/Knowledge:
+
+```json
+{
+  "title": "Tiêu đề bài viết",
+  "structured_content": {
+    "lead": "...",
+    "toc": true,
+    "blocks": [...],
+    "conclusion": "..."
+  },
+  "category": "hoc-tieng-duc",
+  "is_published": true,
+  "skip_seo_validation": true
+}
+```
+
+Response sẽ thêm `content_build_stats` với thống kê nội dung.
+
+---
+
+## 3. Categories
+
+### 3.1 Danh sách categories
 
 ```http
 GET /api/v1/n8n/categories/?type=news|knowledge|resources|tools|media|all

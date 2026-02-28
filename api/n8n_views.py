@@ -302,6 +302,94 @@ def process_article_image(request, slug, upload_to='news/covers/'):
 
 # ============ N8N API Endpoints ============
 
+
+# ============ Content Builder Endpoints ============
+
+@api_view(['POST'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_build_content(request):
+    """
+    Chuyển đổi dữ liệu cấu trúc thành HTML chuẩn SEO.
+    
+    Headers:
+        X-API-Key: <N8N_API_KEY>
+    
+    Body (JSON):
+    {
+        "lead": "Đoạn mở đầu chứa từ khóa chính...",
+        "toc": true,
+        "blocks": [
+            {"type": "heading", "level": 2, "text": "Tiêu đề phần 1"},
+            {"type": "paragraph", "text": "Nội dung đoạn văn..."},
+            {"type": "table", "headers": ["A","B","C"], "rows": [["1","2","3"]]},
+            {"type": "comparison_table", "subjects": ["X","Y"], "criteria": [...]},
+            {"type": "info_table", "data": {"Key": "Value"}},
+            {"type": "list", "ordered": false, "items": ["a","b","c"]},
+            {"type": "blockquote", "style": "tip", "text": "Mẹo hữu ích"},
+            {"type": "faq", "items": [{"question": "?", "answer": "!"}]},
+            {"type": "image", "src": "/media/...", "alt": "Mô tả"},
+            {"type": "video", "youtube_id": "ID", "title": "Video"}
+        ],
+        "conclusion": {
+            "text": "Tóm tắt bài viết...",
+            "cta": "Hãy chia sẻ cho bạn bè!"
+        }
+    }
+    
+    Response (200):
+    {
+        "success": true,
+        "html": "<p>...</p>...",
+        "word_count": 1234,
+        "heading_count": 5,
+        "table_count": 2,
+        "list_count": 3,
+        "has_toc": true,
+        "has_conclusion": true,
+        "block_summary": ["lead", "toc", "heading", "paragraph", "table", ...]
+    }
+    """
+    from api.content_builder import build_article_content
+    
+    result = build_article_content(request.data)
+    
+    if not result.get('success'):
+        return Response(result, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(result)
+
+
+@api_view(['GET'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_content_schema(request):
+    """
+    Trả về danh sách block types và JSON schema mẫu.
+    Dùng cho n8n / AI để biết cấu trúc dữ liệu hỗ trợ.
+    
+    Headers:
+        X-API-Key: <N8N_API_KEY>
+    
+    Response: danh sách block types với schema mẫu.
+    """
+    from api.content_builder import get_available_block_types
+    
+    return Response({
+        'success': True,
+        'block_types': get_available_block_types(),
+        'full_schema': {
+            'lead': '(string) Đoạn mở đầu — BẮT BUỘC chứa từ khóa chính',
+            'toc': '(bool) Tự động tạo mục lục — default: true',
+            'blocks': '(array) Danh sách blocks nội dung',
+            'conclusion': {
+                'text': '(string) Tóm tắt kết luận',
+                'cta': '(string) Lời kêu gọi hành động',
+            },
+        },
+        'endpoint': 'POST /api/v1/n8n/build-content/',
+        'note': 'Gửi structured data → nhận HTML hoàn chỉnh. Dùng "html" trong field "content" khi tạo bài viết.',
+    })
+
+
 @api_view(['POST'])
 @authentication_classes([APIKeyAuthentication])
 @parser_classes([JSONParser, MultiPartParser, FormParser])
@@ -341,10 +429,12 @@ def n8n_create_news_article(request):
         }
     """
     from news.models import Article, Category
+    from api.content_builder import build_article_content
     
     # Validate required fields
     title = request.data.get('title')
     content = request.data.get('content')
+    structured_content = request.data.get('structured_content')
     
     if not title:
         return Response(
@@ -352,15 +442,34 @@ def n8n_create_news_article(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
+    # Support structured_content → auto-build HTML
+    content_build_stats = None
+    if structured_content and isinstance(structured_content, dict):
+        build_result = build_article_content(structured_content)
+        if not build_result.get('success'):
+            return Response({
+                'success': False,
+                'error': 'structured_content không hợp lệ',
+                'details': build_result.get('errors', []),
+            }, status=status.HTTP_400_BAD_REQUEST)
+        content = build_result['html']
+        content_build_stats = {
+            'word_count': build_result['word_count'],
+            'heading_count': build_result['heading_count'],
+            'table_count': build_result['table_count'],
+            'list_count': build_result['list_count'],
+        }
+    
     if not content:
         return Response(
-            {'success': False, 'error': 'Thiếu trường "content"'},
+            {'success': False, 'error': 'Thiếu trường "content" hoặc "structured_content"'},
             status=status.HTTP_400_BAD_REQUEST
         )
     
     # Validate SEO content (tham chiếu: docs/SEO_CONTENT_TEMPLATE.md)
     skip_validation = request.data.get('skip_seo_validation', False)
-    seo_valid, seo_warnings, seo_errors = validate_seo_content(request.data)
+    validation_data = {**request.data, 'content': content}
+    seo_valid, seo_warnings, seo_errors = validate_seo_content(validation_data)
     
     if not seo_valid and not skip_validation:
         return Response({
@@ -464,6 +573,8 @@ def n8n_create_news_article(request):
     # Đính kèm cảnh báo SEO (nếu có)
     if seo_warnings:
         response_data['seo_warnings'] = seo_warnings
+    if content_build_stats:
+        response_data['content_build_stats'] = content_build_stats
     
     return Response(response_data, status=status.HTTP_201_CREATED)
 
@@ -508,10 +619,12 @@ def n8n_create_knowledge_article(request):
         }
     """
     from knowledge.models import KnowledgeArticle, Category
+    from api.content_builder import build_article_content
     
     # Validate required fields
     title = request.data.get('title')
     content = request.data.get('content')
+    structured_content = request.data.get('structured_content')
     
     if not title:
         return Response(
@@ -519,15 +632,34 @@ def n8n_create_knowledge_article(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
+    # Support structured_content → auto-build HTML
+    content_build_stats = None
+    if structured_content and isinstance(structured_content, dict):
+        build_result = build_article_content(structured_content)
+        if not build_result.get('success'):
+            return Response({
+                'success': False,
+                'error': 'structured_content không hợp lệ',
+                'details': build_result.get('errors', []),
+            }, status=status.HTTP_400_BAD_REQUEST)
+        content = build_result['html']
+        content_build_stats = {
+            'word_count': build_result['word_count'],
+            'heading_count': build_result['heading_count'],
+            'table_count': build_result['table_count'],
+            'list_count': build_result['list_count'],
+        }
+    
     if not content:
         return Response(
-            {'success': False, 'error': 'Thiếu trường "content"'},
+            {'success': False, 'error': 'Thiếu trường "content" hoặc "structured_content"'},
             status=status.HTTP_400_BAD_REQUEST
         )
     
     # Validate SEO content (tham chiếu: docs/SEO_CONTENT_TEMPLATE.md)
     skip_validation = request.data.get('skip_seo_validation', False)
-    seo_valid, seo_warnings, seo_errors = validate_seo_content(request.data)
+    validation_data = {**request.data, 'content': content}
+    seo_valid, seo_warnings, seo_errors = validate_seo_content(validation_data)
     
     if not seo_valid and not skip_validation:
         return Response({
@@ -639,6 +771,8 @@ def n8n_create_knowledge_article(request):
     
     if seo_warnings:
         response_data['seo_warnings'] = seo_warnings
+    if content_build_stats:
+        response_data['content_build_stats'] = content_build_stats
     
     return Response(response_data, status=status.HTTP_201_CREATED)
 

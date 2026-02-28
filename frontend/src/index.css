@@ -986,6 +986,91 @@ a:not(.btn):not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-dan
   aspect-ratio: 16/9;
 }
 
+/* FAQ Section — details/summary accordion */
+.article-body .prose .faq-section {
+  margin: 2rem 0;
+}
+
+.article-body .prose .faq-section details {
+  border: 1px solid rgba(139, 129, 107, 0.15);
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.article-body .prose .faq-section details[open] {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.article-body .prose .faq-section summary {
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  list-style: none;
+  background: rgba(107, 122, 61, 0.04);
+  transition: background-color 0.2s ease;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.article-body .prose .faq-section summary::before {
+  content: '▸';
+  display: inline-block;
+  transition: transform 0.2s ease;
+  color: var(--color-vintage-olive, #6b7a3d);
+  font-weight: 700;
+}
+
+.article-body .prose .faq-section details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.article-body .prose .faq-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.article-body .prose .faq-section summary:hover {
+  background: rgba(107, 122, 61, 0.08);
+}
+
+.article-body .prose .faq-section details > div,
+.article-body .prose .faq-section details > p {
+  padding: 0.75rem 1.25rem 1rem;
+  border-top: 1px solid rgba(139, 129, 107, 0.1);
+  line-height: 1.8;
+}
+
+/* Callout boxes — styled blockquotes */
+.article-body .prose .callout {
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.article-body .prose .callout-tip {
+  background: rgba(107, 122, 61, 0.06);
+  border-left-color: var(--color-vintage-olive, #6b7a3d);
+}
+
+.article-body .prose .callout-warning {
+  background: rgba(234, 179, 8, 0.08);
+  border-left-color: #eab308;
+}
+
+.article-body .prose .callout-info {
+  background: rgba(59, 130, 246, 0.06);
+  border-left-color: #3b82f6;
+}
+
+.article-body .prose .callout-important {
+  background: rgba(239, 68, 68, 0.06);
+  border-left-color: #ef4444;
+}
+
 /* Print-friendly */
 @media print {
   .article-body .prose {
