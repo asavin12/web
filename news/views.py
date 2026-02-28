@@ -63,6 +63,30 @@ class ArticleViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = ArticleListSerializer(latest, many=True, context={'request': request})
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'])
+    def top(self, request):
+        """Lấy top bài viết theo tiêu chí
+        Params:
+        - sort: most_viewed, newest, oldest, most_featured (default: most_viewed)
+        - limit: số bài viết (default: 5)
+        """
+        sort = request.query_params.get('sort', 'most_viewed')
+        limit = int(request.query_params.get('limit', 5))
+        
+        queryset = self.get_queryset()
+        
+        if sort == 'newest':
+            queryset = queryset.order_by('-published_at', '-created_at')
+        elif sort == 'oldest':
+            queryset = queryset.order_by('published_at', 'created_at')
+        elif sort == 'most_featured':
+            queryset = queryset.filter(is_featured=True).order_by('-view_count')
+        else:  # most_viewed
+            queryset = queryset.order_by('-view_count')
+        
+        serializer = ArticleListSerializer(queryset[:limit], many=True, context={'request': request})
+        return Response(serializer.data)
+
     @action(detail=True, methods=['get'])
     def related(self, request, slug=None):
         """Lấy bài viết liên quan"""

@@ -113,10 +113,26 @@ export const getRelatedNews = async (articleSlug: string, limit: number = 4): Pr
   return response.data;
 };
 
+/**
+ * Get top news articles by criteria
+ * @param sort - 'most_viewed' | 'newest' | 'oldest' | 'most_featured'
+ * @param limit - number of articles to return (default: 5)
+ */
+export const getTopNewsArticles = async (
+  sort: 'most_viewed' | 'newest' | 'oldest' | 'most_featured' = 'most_viewed',
+  limit: number = 5
+): Promise<NewsArticle[]> => {
+  const response = await api.get('/news/articles/top/', {
+    params: { sort, limit }
+  });
+  return response.data;
+};
+
 export default {
   getNewsCategories,
   getNewsByCategory,
   getNewsArticles,
   getNewsArticleBySlug,
-  getRelatedNews
+  getRelatedNews,
+  getTopNewsArticles
 };

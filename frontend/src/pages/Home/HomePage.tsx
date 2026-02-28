@@ -1,24 +1,111 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { resourcesApi, knowledgeApi, utilsApi } from '@/api';
+import { resourcesApi, knowledgeApi, newsApi, utilsApi } from '@/api';
 import type { Resource, Video } from '@/types';
 import type { KnowledgeArticle } from '@/api/knowledge';
-import { ArrowRight, BookOpen, Video as VideoIcon, Play, Eye, FileText, Users, GraduationCap, Clock, Flame, Star, History } from 'lucide-react';
+import type { NewsArticle } from '@/api/news';
+import { ArrowRight, BookOpen, Video as VideoIcon, Play, Eye, FileText, Users, GraduationCap, Clock, Flame, Star, History, Newspaper } from 'lucide-react';
 import { VideoCard, BookCard, SEO } from '@/components/common';
+
+// Unified article type for homepage
+interface UnifiedHomeArticle {
+  id: string; // prefixed to avoid collision: 'news-1', 'knowledge-2'
+  title: string;
+  slug: string;
+  excerpt: string;
+  category: { name: string; slug: string } | null;
+  view_count: number;
+  is_featured: boolean;
+  published_at: string | null;
+  created_at: string;
+  level_display?: string;
+  source: 'news' | 'knowledge';
+  url: string;
+}
 
 export default function HomePage() {
   const { t } = useTranslation();
   const { isAuthenticated, user } = useAuth();
   const [articleSort, setArticleSort] = useState<'most_viewed' | 'newest' | 'oldest' | 'most_featured'>('most_viewed');
 
-  // Fetch top articles
-  const { data: topArticles, isLoading: loadingArticles } = useQuery({
-    queryKey: ['topArticles', articleSort],
-    queryFn: () => knowledgeApi.getTopArticles(articleSort, 5),
+  // Fetch top articles from both news and knowledge
+  const { data: knowledgeArticles, isLoading: loadingKnowledge } = useQuery({
+    queryKey: ['topKnowledgeArticles', articleSort],
+    queryFn: () => knowledgeApi.getTopArticles(articleSort, 10),
   });
+
+  const { data: newsArticles, isLoading: loadingNews } = useQuery({
+    queryKey: ['topNewsArticles', articleSort],
+    queryFn: () => newsApi.getTopNewsArticles(articleSort, 10),
+  });
+
+  const loadingArticles = loadingKnowledge || loadingNews;
+
+  // Merge and sort articles from both sources
+  const topArticles = useMemo(() => {
+    const unified: UnifiedHomeArticle[] = [];
+
+    if (knowledgeArticles) {
+      for (const a of knowledgeArticles) {
+        unified.push({
+          id: `knowledge-${a.id}`,
+          title: a.title,
+          slug: a.slug,
+          excerpt: a.excerpt,
+          category: a.category,
+          view_count: a.view_count,
+          is_featured: a.is_featured,
+          published_at: a.published_at,
+          created_at: a.created_at,
+          level_display: a.level_display,
+          source: 'knowledge',
+          url: `/kien-thuc/${a.category?.slug || 'bai-viet'}/${a.slug}`,
+        });
+      }
+    }
+
+    if (newsArticles) {
+      for (const a of newsArticles) {
+        unified.push({
+          id: `news-${a.id}`,
+          title: a.title,
+          slug: a.slug,
+          excerpt: a.excerpt,
+          category: a.category,
+          view_count: a.view_count,
+          is_featured: a.is_featured,
+          published_at: a.published_at,
+          created_at: a.created_at,
+          source: 'news',
+          url: `/tin-tuc/${a.category?.slug || 'bai-viet'}/${a.slug}`,
+        });
+      }
+    }
+
+    // Sort merged list
+    if (articleSort === 'most_viewed') {
+      unified.sort((a, b) => b.view_count - a.view_count);
+    } else if (articleSort === 'newest') {
+      unified.sort((a, b) => {
+        const da = new Date(a.published_at || a.created_at).getTime();
+        const db = new Date(b.published_at || b.created_at).getTime();
+        return db - da;
+      });
+    } else if (articleSort === 'oldest') {
+      unified.sort((a, b) => {
+        const da = new Date(a.published_at || a.created_at).getTime();
+        const db = new Date(b.published_at || b.created_at).getTime();
+        return da - db;
+      });
+    } else if (articleSort === 'most_featured') {
+      unified.sort((a, b) => b.view_count - a.view_count);
+    }
+
+    return unified.slice(0, 10);
+  }, [knowledgeArticles, newsArticles, articleSort]);
 
   // Fetch latest resources (books)
   const { data: resourcesData, isLoading: loadingResources } = useQuery({
@@ -119,7 +206,7 @@ export default function HomePage() {
               <div className="col-span-1 text-center">#</div>
               <div className="col-span-6">{t('home.topArticles.columnTitle', 'Tiêu đề')}</div>
               <div className="col-span-2">{t('home.topArticles.columnCategory', 'Danh mục')}</div>
-              <div className="col-span-2">{t('home.topArticles.columnLevel', 'Trình độ')}</div>
+              <div className="col-span-2">{t('home.topArticles.columnSource', 'Nguồn')}</div>
               <div className="col-span-1 text-right">{t('home.topArticles.columnViews', 'Lượt xem')}</div>
             </div>
 
@@ -138,10 +225,10 @@ export default function HomePage() {
               </div>
             ) : topArticles && topArticles.length > 0 ? (
               <div className="divide-y divide-vintage-tan/20">
-                {topArticles.map((article: KnowledgeArticle, index: number) => (
+                {topArticles.map((article: UnifiedHomeArticle, index: number) => (
                   <Link
                     key={article.id}
-                    to={`/kien-thuc/${article.category?.slug || 'bai-viet'}/${article.slug}`}
+                    to={article.url}
                     className="grid grid-cols-1 md:grid-cols-12 px-4 py-3 hover:bg-vintage-cream/50 transition-colors group"
                   >
                     {/* Rank */}
@@ -165,6 +252,7 @@ export default function HomePage() {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-serif font-bold text-vintage-dark group-hover:text-vintage-olive transition-colors line-clamp-1">
                             {article.is_featured && <Star className="inline h-4 w-4 text-yellow-500 mr-1" />}
+                            {article.source === 'news' && <Newspaper className="inline h-3.5 w-3.5 text-vintage-blue mr-1 opacity-60" />}
                             {article.title}
                           </h3>
                           <p className="text-xs text-vintage-dark/60 line-clamp-1 mt-0.5">
@@ -180,6 +268,11 @@ export default function HomePage() {
                             {article.level_display && (
                               <span className="text-xs px-2 py-0.5 bg-vintage-olive/10 text-vintage-olive rounded-full">
                                 {article.level_display}
+                              </span>
+                            )}
+                            {article.source === 'news' && (
+                              <span className="text-xs px-2 py-0.5 bg-vintage-blue/10 text-vintage-blue rounded-full">
+                                Tin tức
                               </span>
                             )}
                             <span className="text-xs text-vintage-dark/50 flex items-center gap-1">
@@ -199,11 +292,16 @@ export default function HomePage() {
                       )}
                     </div>
 
-                    {/* Level (Desktop) */}
-                    <div className="hidden md:flex col-span-2 items-center">
+                    {/* Source / Level (Desktop) */}
+                    <div className="hidden md:flex col-span-2 items-center gap-1.5">
                       {article.level_display && (
                         <span className="text-sm px-2 py-1 bg-vintage-olive/10 text-vintage-olive rounded-lg">
                           {article.level_display}
+                        </span>
+                      )}
+                      {article.source === 'news' && (
+                        <span className="text-xs px-2 py-1 bg-vintage-blue/10 text-vintage-blue rounded-lg">
+                          Tin tức
                         </span>
                       )}
                     </div>

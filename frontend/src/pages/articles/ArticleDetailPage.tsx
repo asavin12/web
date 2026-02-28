@@ -491,30 +491,8 @@ export default function ArticleDetailPage({ contentType }: ArticleDetailPageProp
           {/* Article Content — SEO-optimized body */}
           <section className="article-body mb-12">
             <div 
-              className="prose prose-lg max-w-none
-                prose-headings:font-serif prose-headings:text-vintage-dark prose-headings:font-bold prose-headings:scroll-mt-20
-                prose-h2:text-2xl prose-h2:md:text-3xl prose-h2:mt-12 prose-h2:mb-5 prose-h2:border-b prose-h2:border-vintage-tan/20 prose-h2:pb-3 prose-h2:relative
-                prose-h3:text-xl prose-h3:md:text-2xl prose-h3:mt-10 prose-h3:mb-4
-                prose-h4:text-lg prose-h4:md:text-xl prose-h4:mt-8 prose-h4:mb-3 prose-h4:text-vintage-dark/90
-                prose-p:text-base prose-p:md:text-lg prose-p:text-vintage-dark/85 prose-p:leading-[1.8] prose-p:mb-5 prose-p:tracking-wide
-                prose-a:text-vintage-olive prose-a:font-medium prose-a:underline prose-a:underline-offset-4 prose-a:decoration-vintage-olive/30 hover:prose-a:decoration-vintage-olive hover:prose-a:text-vintage-brown prose-a:transition-colors
-                prose-strong:text-vintage-dark prose-strong:font-semibold
-                prose-em:text-vintage-dark/75
-                prose-ul:my-5 prose-ul:space-y-2 prose-ol:my-5 prose-ol:space-y-2
-                prose-li:text-vintage-dark/85 prose-li:leading-[1.8] prose-li:marker:text-vintage-olive
-                prose-img:rounded-2xl prose-img:shadow-xl prose-img:my-10 prose-img:w-full
-                prose-figure:my-10
-                prose-figcaption:text-center prose-figcaption:text-sm prose-figcaption:text-vintage-tan prose-figcaption:mt-3 prose-figcaption:italic
-                prose-blockquote:border-l-4 prose-blockquote:border-vintage-olive prose-blockquote:bg-gradient-to-r prose-blockquote:from-vintage-cream/80 prose-blockquote:to-transparent prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:my-8 prose-blockquote:shadow-sm prose-blockquote:text-vintage-dark/80
-                prose-code:text-vintage-olive prose-code:bg-vintage-tan/10 prose-code:px-2 prose-code:py-1 prose-code:rounded-md prose-code:text-sm prose-code:font-mono
-                prose-pre:bg-vintage-dark prose-pre:rounded-xl prose-pre:shadow-lg prose-pre:my-8
-                prose-table:my-8 prose-table:w-full prose-table:rounded-xl prose-table:overflow-hidden prose-table:shadow-sm
-                prose-thead:bg-vintage-olive/10
-                prose-th:text-vintage-dark prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:text-left
-                prose-td:px-4 prose-td:py-3 prose-td:border-b prose-td:border-vintage-tan/10 prose-td:text-vintage-dark/80
-                prose-hr:border-vintage-tan/20 prose-hr:my-10
-                prose-video:rounded-2xl prose-video:shadow-xl prose-video:my-10"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articleContent, { ADD_TAGS: ['iframe', 'nav'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'itemProp'] }) }}
+              className="prose max-w-none"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articleContent, { ADD_TAGS: ['iframe', 'nav', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'caption', 'colgroup', 'col'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'itemProp', 'colspan', 'rowspan', 'scope'] }) }}
               itemProp="articleBody"
             />
           </section>
