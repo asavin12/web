@@ -11,8 +11,9 @@ NC='\033[0m' # No Color
 
 PROJECT_DIR="/home/unstress/unstressvn"
 VENV_PATH="$PROJECT_DIR/.venv"
-BACKEND_DIR="$PROJECT_DIR/unstressvn"
-FRONTEND_DIR="$PROJECT_DIR/unstressvn/frontend"
+PYTHON="$VENV_PATH/bin/python"
+BACKEND_DIR="$PROJECT_DIR"
+FRONTEND_DIR="$PROJECT_DIR/frontend"
 PID_DIR="$PROJECT_DIR/.pids"
 
 # Tạo thư mục PID nếu chưa có
@@ -38,15 +39,18 @@ else
     fi
 fi
 
-# Activate virtual environment
-echo -e "${YELLOW}[2/4] Activating virtual environment...${NC}"
-source "$VENV_PATH/bin/activate"
-echo -e "${GREEN}✓ Virtual environment activated${NC}"
+# Check virtual environment
+echo -e "${YELLOW}[2/4] Checking virtual environment...${NC}"
+if [ ! -f "$PYTHON" ]; then
+    echo -e "${RED}✗ Virtual environment not found: $PYTHON${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✓ Virtual environment OK${NC}"
 
 # Start Django backend
 echo -e "${YELLOW}[3/4] Starting Django backend (port 8000)...${NC}"
 cd "$BACKEND_DIR"
-python manage.py runserver 0.0.0.0:8000 > "$PID_DIR/django.log" 2>&1 &
+"$PYTHON" manage.py runserver 0.0.0.0:8000 > "$PID_DIR/django.log" 2>&1 &
 echo $! > "$PID_DIR/django.pid"
 sleep 2
 
