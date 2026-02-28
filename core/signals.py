@@ -59,12 +59,17 @@ def should_convert_to_webp(filename):
 @receiver(pre_save, sender=UserProfile)
 def convert_avatar_to_webp(sender, instance, **kwargs):
     """Convert avatar to WebP before saving"""
-    if instance.avatar and should_convert_to_webp(instance.avatar.name):
-        # Check if this is a new file (not already saved)
+    if not instance.avatar or not should_convert_to_webp(instance.avatar.name):
+        return
+    try:
+        # Only convert newly uploaded files (not existing files from storage)
         if hasattr(instance.avatar.file, 'content_type'):
             webp_content = convert_image_to_webp(instance.avatar)
             if webp_content:
                 instance.avatar = webp_content
+    except (FileNotFoundError, ValueError, OSError):
+        # File doesn't exist on disk or storage error — skip conversion
+        pass
 
 
 @receiver(pre_save, sender=Resource)

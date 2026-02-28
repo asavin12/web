@@ -65,10 +65,16 @@ class UserProfileAdmin(admin.ModelAdmin):
             'fields': ('target_language', 'level', 'skill_focus')
         }),
         ('Cài đặt', {
-            'fields': ('is_public',)
+            'fields': ('is_public', 'allow_messages')
         }),
         ('Thời gian', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
+    
+    def get_readonly_fields(self, request, obj=None):
+        """User field không được sửa sau khi tạo (OneToOneField)"""
+        if obj:  # Editing existing
+            return self.readonly_fields + ('user',)
+        return self.readonly_fields

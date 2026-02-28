@@ -148,11 +148,9 @@ def create_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.create(user=instance)
 
 
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    """Lưu hồ sơ người dùng khi cập nhật tài khoản"""
-    if hasattr(instance, 'profile'):
-        instance.profile.save()
+# NOTE: Đã xoá signal save_user_profile — gây duplicate save khi dùng
+# UserProfile inline trong UserAdmin. Django admin tự save inline formset,
+# không cần signal gọi profile.save() lại.
 
 
 class Notification(models.Model):
