@@ -491,15 +491,28 @@ Yêu cầu bổ sung: Thêm ví dụ bằng {{language}}, giải nghĩa từ v�
 
 ## 9. XỬ LÝ LỖI VÀ DEBUG
 
+### ⚡ Field Auto-Truncation (mới)
+
+API tự động cắt ngắn các trường vượt giới hạn để tránh lỗi:
+- `title`: max 255 ký tự
+- `meta_title`: max 70 ký tự
+- `meta_description`: max 160 ký tự
+- `excerpt`: max 500 ký tự
+
+> Nên kiểm soát độ dài từ phía AI prompt để không bị cắt mất nội dung.
+
 ### Mã lỗi API
 
 | HTTP Code | Ý nghĩa | Cách xử lý |
 |-----------|---------|-------------|
 | 200 | Thành công | Tiếp tục workflow |
 | 201 | Tạo thành công | Tiếp tục workflow |
-| 400 | Thiếu trường bắt buộc | Kiểm tra title, content |
-| 401 | API Key không hợp lệ | Kiểm tra lại X-API-Key |
-| 500 | Lỗi server | Thử lại sau 5 phút |
+| 400 | Thiếu trường / SEO không đạt | Kiểm tra title, content, gửi `skip_seo_validation: true` |
+| 403 | API Key không hợp lệ hoặc hết hạn | Kiểm tra lại X-API-Key |
+| 404 | Không tìm thấy (update/delete) | Kiểm tra identifier |
+| 500 | Lỗi server (JSON chi tiết) | Đọc `error` + `hint` trong response, thử lại |
+
+> **Tất cả lỗi đều trả JSON** (không bao giờ HTML). Response luôn có `{"success": false, "error": "..."}`. 
 
 ### Kiểm tra response
 

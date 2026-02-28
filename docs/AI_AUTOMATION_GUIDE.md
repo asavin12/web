@@ -3,7 +3,7 @@
 > **Tài liệu này dành cho AI đọc.** Chứa toàn bộ thông tin cần thiết để AI (GPT-4, Claude, Gemini...)
 > có thể tạo script automation đăng bài đúng form, đúng mục cho website UnstressVN.
 >
-> **Cập nhật:** 2026-02-26
+> **Cập nhật:** 2026-02-28
 
 ---
 
@@ -104,7 +104,7 @@ print(r.json())  # {"status": "ok", "service": "UnstressVN API", ...}
 
 | Field | Type | Bắt buộc | Mô tả |
 |-------|------|----------|-------|
-| `title` | CharField(255) | ✅ | Tiêu đề (40-65 ký tự cho SEO) |
+| `title` | CharField(255) | ✅ | Tiêu đề (40-65 ký tự cho SEO). **Auto-truncate** nếu > 255 |
 | `slug` | SlugField(280) | Auto | Tự tạo từ title (tiếng Việt không dấu) |
 | `content` | TextField | ✅ | Nội dung HTML chuẩn SEO |
 | `excerpt` | TextField(500) | | Mô tả ngắn (80-200 ký tự) |
@@ -116,9 +116,9 @@ print(r.json())  # {"status": "ok", "service": "UnstressVN API", ...}
 | `is_featured` | BooleanField | | Default: False |
 | `published_at` | DateTimeField | Auto | Auto set khi publish |
 | `view_count` | IntegerField | Auto | Mặc định 0 |
-| `meta_title` | CharField(70) | | SEO title (50-60 ký tự) |
-| `meta_description` | CharField(160) | | SEO description (120-155 ký tự) |
-| `meta_keywords` | CharField(255) | | 3-7 keywords, comma-separated |
+| `meta_title` | CharField(70) | | SEO title (50-60 ký tự). **Auto-truncate** nếu > 70 |
+| `meta_description` | CharField(160) | | SEO description (120-155 ký tự). **Auto-truncate** nếu > 160 |
+| `meta_keywords` | CharField(255) | | 3-7 keywords, comma-separated. **Auto-truncate** nếu > 255 |
 | `og_image` | ImageField | Auto | Copy từ cover_image |
 | **N8N Tracking:** | | | |
 | `source` | CharField(20) | Auto | `n8n` (auto set) |
@@ -1035,6 +1035,24 @@ Body: {{$json}}
 
 ## 11. XỬ LÝ LỖI
 
+### ⚡ Field Auto-Truncation (v2026-02-28)
+
+API **tự động cắt ngắn** các trường CharField vượt quá giới hạn DB thay vì crash:
+
+| Field | Max | Hành vi |
+|-------|-----|--------|
+| `title` / `name` | 200-255 | Auto-truncate, không lỗi |
+| `meta_title` | 70 | Auto-truncate |
+| `meta_description` | 160 | Auto-truncate |
+| `meta_keywords` | 255 | Auto-truncate |
+| `excerpt` | 500 | Auto-truncate |
+| `source_url` | 200 | Auto-truncate |
+| `ai_model` | 50 | Auto-truncate |
+| `n8n_workflow_id` | 50 | Auto-truncate |
+| `n8n_execution_id` | 100 | Auto-truncate |
+
+> **Lưu ý:** Dữ liệu bị cắt sẽ mất phần cuối. Nên kiểm soát độ dài từ phía AI/n8n để tránh mất nội dung.
+
 ### Status codes
 
 | Code | Ý nghĩa | Xử lý |
@@ -1042,12 +1060,16 @@ Body: {{$json}}
 | 200 | OK (update, list, skip duplicate) | Tiếp tục |
 | 201 | Created | Thành công |
 | 400 | Bad request (thiếu field, SEO fail) | Kiểm tra body |
-| 401 | API Key sai | Kiểm tra header |
+| 403 | API Key sai hoặc hết hạn | Kiểm tra header `X-API-Key` |
 | 404 | Không tìm thấy | Kiểm tra identifier |
-| 500 | Server error | Thử lại sau 5 phút |
+| 500 | Server error | JSON chi tiết, thử lại sau 5 phút |
+
+> **Quan trọng (v2026-02-28):** Tất cả lỗi đều trả về **JSON** (không bao giờ trả HTML).
+> Kể cả lỗi 500 cũng có `success`, `error`, `hint` trong JSON response.
 
 ### Error response format
 
+**Lỗi validation (400):**
 ```json
 {
   "success": false,
@@ -1055,6 +1077,34 @@ Body: {{$json}}
   "seo_errors": ["..."],
   "seo_warnings": ["..."],
   "hint": "Gửi skip_seo_validation=true để bỏ qua"
+}
+```
+
+**Lỗi xác thực (403):**
+```json
+{
+  "success": false,
+  "error": "API Key không hợp lệ hoặc đã hết hạn",
+  "status_code": 403
+}
+```
+
+**Lỗi server (500) — luôn trả JSON:**
+```json
+{
+  "success": false,
+  "error": "ValueError: Chi tiết lỗi...",
+  "hint": "Lỗi hệ thống không mong muốn. Kiểm tra dữ liệu gửi và thử lại.",
+  "path": "/api/v1/n8n/news/"
+}
+```
+
+**Lỗi tạo object (500 — có hint chi tiết):**
+```json
+{
+  "success": false,
+  "error": "Lỗi tạo bài viết: DataError: value too long...",
+  "hint": "Kiểm tra dữ liệu gửi từ n8n — có thể trường quá dài hoặc dữ liệu không hợp lệ"
 }
 ```
 

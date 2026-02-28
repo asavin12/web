@@ -693,6 +693,20 @@ Các model hỗ trợ tracking (News, Knowledge, Resources, Videos):
 
 ## Error Handling
 
+### Field Auto-Truncation
+
+API tự động cắt ngắn CharField vượt giới hạn DB (thay vì crash 500):
+
+| Field | Max Length | Áp dụng cho |
+|-------|-----------|-------------|
+| `title` / `name` | 200-255 | Tất cả models |
+| `meta_title` | 70 | News, Knowledge |
+| `meta_description` | 160 | News, Knowledge |
+| `meta_keywords` | 255 | News, Knowledge |
+| `excerpt` | 500 | News, Knowledge |
+| `source_url` | 200 | N8N tracking |
+| `ai_model` | 50 | N8N tracking |
+
 ### Status codes
 
 | Code | Ý nghĩa |
@@ -700,12 +714,15 @@ Các model hỗ trợ tracking (News, Knowledge, Resources, Videos):
 | 200 | Thành công (update, list, skip duplicate) |
 | 201 | Tạo mới thành công |
 | 400 | Thiếu field bắt buộc / SEO validation fail / invalid data |
-| 401 | API Key sai hoặc không có |
+| 403 | API Key không hợp lệ hoặc hết hạn |
 | 404 | Không tìm thấy object |
-| 500 | Internal server error |
+| 500 | Server error (trả JSON chi tiết, không HTML) |
+
+> **Tất cả error responses đều trả JSON** — không bao giờ trả HTML.
 
 ### Error Response Format
 
+**Lỗi validation (400):**
 ```json
 {
   "success": false,
@@ -713,6 +730,25 @@ Các model hỗ trợ tracking (News, Knowledge, Resources, Videos):
   "seo_errors": ["..."],
   "seo_warnings": ["..."],
   "hint": "Gửi skip_seo_validation=true để bỏ qua"
+}
+```
+
+**Lỗi xác thực (403):**
+```json
+{
+  "success": false,
+  "error": "API Key không hợp lệ hoặc đã hết hạn",
+  "status_code": 403
+}
+```
+
+**Lỗi server (500):**
+```json
+{
+  "success": false,
+  "error": "TypeError: Chi tiết lỗi...",
+  "hint": "Lỗi hệ thống không mong muốn. Kiểm tra dữ liệu gửi và thử lại.",
+  "path": "/api/v1/n8n/news/"
 }
 ```
 
