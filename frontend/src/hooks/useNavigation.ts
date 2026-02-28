@@ -12,19 +12,53 @@ import {
   Users, Wrench, MessageSquare, Music, Facebook, Twitter,
   Instagram, Youtube, ExternalLink, Home, Library, Video,
   Radio, Globe, Heart, Star, Bookmark, Compass, Mail, MapPin,
+  Search, Info, Phone, Settings, Link, Play, HelpCircle,
+  Lock, Shield, Calendar, Bell, Clipboard, Pen, Download,
+  Upload, Image, Camera, Mic, Headphones, Code, Database,
+  Trophy, Map,
   type LucideIcon,
 } from 'lucide-react';
 
-// ── Icon mapping ──
+// ── Icon mapping (Lucide names) ──
 const ICON_MAP: Record<string, LucideIcon> = {
   Newspaper, BookOpen, FileText, GraduationCap, Languages,
   Users, Wrench, MessageSquare, Music, Facebook, Twitter,
   Instagram, Youtube, ExternalLink, Home, Library, Video,
   Radio, Globe, Heart, Star, Bookmark, Compass, Mail, MapPin,
+  Search, Info, Phone, Settings, Link, Play, HelpCircle,
+  Lock, Shield, Calendar, Bell, Clipboard, Pen, Download,
+  Upload, Image, Camera, Mic, Headphones, Code, Database,
+  Trophy, Map,
+};
+
+// ── FontAwesome → Lucide fallback (for legacy DB data) ──
+const FA_FALLBACK: Record<string, string> = {
+  FaHome: 'Home', FaVideo: 'Video', FaBook: 'BookOpen',
+  FaNewspaper: 'Newspaper', FaLightbulb: 'BookOpen', FaTools: 'Wrench',
+  FaUsers: 'Users', FaFacebook: 'Facebook', FaYoutube: 'Youtube',
+  FaTiktok: 'Music', FaDiscord: 'Users', FaInstagram: 'Instagram',
+  FaTwitter: 'Twitter', FaGlobe: 'Globe', FaFile: 'FileText',
+  FaFileAlt: 'FileText', FaGraduationCap: 'GraduationCap',
+  FaLanguage: 'Languages', FaWrench: 'Wrench', FaHeart: 'Heart',
+  FaStar: 'Star', FaBookmark: 'Bookmark', FaCompass: 'Compass',
+  FaEnvelope: 'Mail', FaMapMarker: 'MapPin', FaMusic: 'Music',
+  FaRadio: 'Radio', FaExternalLink: 'ExternalLink',
+  FaComment: 'MessageSquare', FaSearch: 'Search', FaInfo: 'Info',
+  FaPhone: 'Phone', FaCog: 'Settings', FaLink: 'Link', FaPlay: 'Play',
+  FaQuestion: 'HelpCircle', FaLock: 'Lock', FaShield: 'Shield',
+  FaCalendar: 'Calendar', FaBell: 'Bell', FaClipboard: 'Clipboard',
+  FaPen: 'Pen', FaDownload: 'Download', FaUpload: 'Upload',
+  FaImage: 'Image', FaCamera: 'Camera', FaMicrophone: 'Mic',
+  FaHeadphones: 'Headphones', FaCode: 'Code', FaDatabase: 'Database',
+  FaTrophy: 'Trophy', FaMap: 'Map', FaFilePdf: 'FileText',
 };
 
 export function getIcon(name: string): LucideIcon | undefined {
-  return ICON_MAP[name];
+  // Direct Lucide name match
+  if (ICON_MAP[name]) return ICON_MAP[name];
+  // FontAwesome fallback
+  const mapped = FA_FALLBACK[name];
+  return mapped ? ICON_MAP[mapped] : undefined;
 }
 
 // ── Types ──

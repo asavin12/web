@@ -1,0 +1,62 @@
+/**
+ * navigation_admin.css — Custom CSS for NavigationLink admin panel.
+ * Improves Vietnamese font rendering and overall layout.
+ */
+
+/* ── Ensure Vietnamese diacritics render beautifully ── */
+#changelist-form table {
+  font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system,
+    BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+#changelist-form table th,
+#changelist-form table td {
+  font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system,
+    BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  vertical-align: middle;
+}
+
+/* ── Make list columns breathe ── */
+#changelist-form table th {
+  white-space: nowrap;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+#changelist-form table td {
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Better ordering for inline editable ── */
+#changelist-form table input[type="number"] {
+  width: 50px;
+  text-align: center;
+  font-size: 13px;
+}
+
+/* ── Fieldset headers ── */
+.module h2,
+.module caption {
+  font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system,
+    BlinkMacSystemFont, sans-serif;
+}
+
+/* ── Form labels ── */
+.form-row label,
+fieldset .field-box label {
+  font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
+}
+
+/* ── Help text styling ── */
+.help,
+.description {
+  font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}

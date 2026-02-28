@@ -84,6 +84,10 @@ python manage.py collectstatic --noinput
 echo "Seeding navigation data..."
 python manage.py seed_navigation 2>&1 || echo "Navigation seed skipped (may already exist)"
 
+# Upgrade navigation data (fix icons, add dropdown children)
+echo "Upgrading navigation data..."
+python manage.py upgrade_navigation 2>&1 || echo "Navigation upgrade skipped"
+
 # Start Gunicorn
 echo "Starting Gunicorn on port 8000..."
 exec gunicorn unstressvn_settings.wsgi:application \

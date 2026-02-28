@@ -290,6 +290,11 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     ordering = ['location', 'parent__order', 'order']
     list_per_page = 50
     
+    class Media:
+        css = {
+            'all': ('admin/css/navigation_admin.css',)
+        }
+    
     fieldsets = (
         ('Thông tin cơ bản', {
             'fields': ('name', 'url', 'icon'),
@@ -318,21 +323,30 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     )
     
     def display_name(self, obj):
-        """Hiển thị tên có indent cho children"""
+        """Hiển thị tên có indent cho children, hỗ trợ font tiếng Việt"""
+        name_style = (
+            'font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system, '
+            'BlinkMacSystemFont, sans-serif;'
+        )
         if obj.parent:
             return format_html(
-                '<span style="color:#888; margin-right:4px;">└─</span>'
-                '<span style="font-size:12px;">{}</span>',
-                obj.name
+                '<span style="color:#888; margin-right:4px; padding-left:24px;">└─</span>'
+                '<span style="font-size:12px; {}">{}</span>',
+                name_style, obj.name
             )
-        icon = obj.icon
-        if icon:
+        children_count = obj.children.filter(is_active=True).count()
+        name_html = format_html(
+            '<strong style="font-size:13px; {}">{}</strong>',
+            name_style, obj.name
+        )
+        if children_count > 0:
             return format_html(
-                '<strong style="font-size:13px;">{}</strong>'
-                ' <span style="color:#888; font-size:11px;">({})</span>',
-                obj.name, icon
+                '{} <span style="color:#6366f1; font-size:10px; '
+                'padding:1px 5px; background:#eef2ff; border-radius:3px;">'
+                '▼ {}</span>',
+                name_html, children_count
             )
-        return format_html('<strong style="font-size:13px;">{}</strong>', obj.name)
+        return name_html
     display_name.short_description = 'Tên menu'
     display_name.admin_order_field = 'name'
     
