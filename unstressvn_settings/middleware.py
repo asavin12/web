@@ -185,16 +185,19 @@ class AdminAccessMiddleware:
     def _generate_token(user):
         """Tạo token dựa trên user info và secret key"""
         from core.models import APIKey
-        # Lấy key từ database
-        secret = APIKey.get_key('admin_secret_key')
-        if not secret:
-            raise ValueError('ADMIN_SECRET_KEY chưa được cấu hình. Vào Admin → API Keys để tạo.')
-        data = f"{user.id}:{user.username}:{user.is_superuser}"
-        return hmac.new(
-            secret.encode(),
-            data.encode(),
-            hashlib.sha256
-        ).hexdigest()
+        try:
+            # Lấy key từ database
+            secret = APIKey.get_key('admin_secret_key')
+            if not secret:
+                return ''  # Return empty — token comparison will fail safely
+            data = f"{user.id}:{user.username}:{user.is_superuser}"
+            return hmac.new(
+                secret.encode(),
+                data.encode(),
+                hashlib.sha256
+            ).hexdigest()
+        except Exception:
+            return ''  # DB error — fail closed (deny access)
     
     @classmethod
     def verify_and_set_session(cls, request, secret_key):

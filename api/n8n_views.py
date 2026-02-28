@@ -2886,7 +2886,40 @@ def _bulk_create_stream_media(item, user, skip_validation):
 # DIAGNOSTIC — Kiểm tra trạng thái hệ thống
 # ============================================================================
 
-@api_view(['GET'])
+
+def _fix_sequences(request):
+    """Fix all PostgreSQL sequences to prevent duplicate key errors."""
+    from django.db import connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                DO $$
+                DECLARE
+                    r RECORD;
+                    max_id BIGINT;
+                    fixed INT := 0;
+                BEGIN
+                    FOR r IN
+                        SELECT s.relname AS seq_name, t.relname AS table_name, a.attname AS column_name
+                        FROM pg_class s
+                        JOIN pg_depend d ON d.objid = s.oid
+                        JOIN pg_class t ON d.refobjid = t.oid
+                        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+                        WHERE s.relkind = 'S'
+                    LOOP
+                        EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %I', r.column_name, r.table_name) INTO max_id;
+                        EXECUTE format('SELECT setval(%L, GREATEST(%s + 1, 1), false)', r.seq_name, max_id);
+                        fixed := fixed + 1;
+                    END LOOP;
+                    RAISE NOTICE 'Fixed % sequences', fixed;
+                END $$;
+            """)
+        return Response({'status': 'ok', 'message': 'All sequences synced successfully.'})
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+
+@api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def n8n_diagnostic(request):
     """
@@ -2894,7 +2927,8 @@ def n8n_diagnostic(request):
     Yêu cầu API key qua header X-API-Key hoặc query param ?key=.
     Không trả về thông tin nhạy cảm (keys, secrets, gateway URLs).
 
-    GET /api/v1/n8n/diagnostic/
+    GET  /api/v1/n8n/diagnostic/                → system status
+    POST /api/v1/n8n/diagnostic/?action=fix_sequences → fix all PG sequences
     Headers: X-API-Key: <n8n_api_key>
     """
     # Authenticate
@@ -2902,6 +2936,13 @@ def n8n_diagnostic(request):
     api_key = request.META.get('HTTP_X_API_KEY', '') or request.query_params.get('key', '')
     if not api_key or not APIKey.verify_key('n8n_api_key', api_key):
         return Response({'error': 'Authentication required. Provide X-API-Key header.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    # POST actions
+    if request.method == 'POST':
+        action = request.query_params.get('action', '')
+        if action == 'fix_sequences':
+            return _fix_sequences(request)
+        return Response({'error': f'Unknown action: {action}'}, status=status.HTTP_400_BAD_REQUEST)
 
     import sys
     from django.conf import settings

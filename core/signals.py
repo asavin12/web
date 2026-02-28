@@ -75,8 +75,12 @@ def convert_avatar_to_webp(sender, instance, **kwargs):
 @receiver(pre_save, sender=Resource)
 def convert_resource_cover_to_webp(sender, instance, **kwargs):
     """Convert resource cover to WebP before saving"""
-    if instance.cover_image and should_convert_to_webp(instance.cover_image.name):
-        if hasattr(instance.cover_image.file, 'content_type'):
-            webp_content = convert_image_to_webp(instance.cover_image)
-            if webp_content:
-                instance.cover_image = webp_content
+    try:
+        if instance.cover_image and should_convert_to_webp(instance.cover_image.name):
+            if hasattr(instance.cover_image.file, 'content_type'):
+                webp_content = convert_image_to_webp(instance.cover_image)
+                if webp_content:
+                    instance.cover_image = webp_content
+    except (FileNotFoundError, ValueError, OSError, Exception):
+        # File corrupt, missing, or PIL error — skip conversion, don't crash save
+        pass

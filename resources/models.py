@@ -292,15 +292,16 @@ class Resource(WebPImageMixin, N8NTrackingMixin, models.Model):
         return self.title
     
     def save(self, *args, **kwargs):
-        # Luôn tự động tạo slug từ title
-        self.slug = vietnamese_slugify(self.title)
-        
-        # Đảm bảo slug là duy nhất
-        original_slug = self.slug
-        counter = 1
-        while Resource.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
-            self.slug = f"{original_slug}-{counter}"
-            counter += 1
+        # Chỉ tạo slug khi chưa có (tránh thay đổi URL khi edit)
+        if not self.slug:
+            self.slug = vietnamese_slugify(self.title)
+            
+            # Đảm bảo slug là duy nhất
+            original_slug = self.slug
+            counter = 1
+            while Resource.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
             
         super().save(*args, **kwargs)
     

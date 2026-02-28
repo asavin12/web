@@ -145,7 +145,10 @@ class UserProfile(models.Model):
 def create_user_profile(sender, instance, created, **kwargs):
     """Tạo hồ sơ người dùng khi tạo tài khoản mới"""
     if created:
-        UserProfile.objects.create(user=instance)
+        try:
+            UserProfile.objects.get_or_create(user=instance)
+        except Exception:
+            pass  # Don't crash User save if profile creation fails
 
 
 # NOTE: Đã xoá signal save_user_profile — gây duplicate save khi dùng
@@ -288,10 +291,13 @@ def create_notification(recipient, notification_type, title, message, sender=Non
 def create_welcome_notification(sender, instance, created, **kwargs):
     """Tạo thông báo chào mừng cho user mới"""
     if created:
-        Notification.objects.create(
-            recipient=instance,
-            notification_type='welcome',
-            title='Chào mừng đến với UnstressVN!',
-            message=f'Xin chào {instance.username}! Cảm ơn bạn đã tham gia cộng đồng học ngoại ngữ của chúng tôi. Hãy khám phá thư viện tài liệu và tìm kiếm bạn học nhé!',
-            link='/'
-        )
+        try:
+            Notification.objects.create(
+                recipient=instance,
+                notification_type='welcome',
+                title='Chào mừng đến với UnstressVN!',
+                message=f'Xin chào {instance.username}! Cảm ơn bạn đã tham gia cộng đồng học ngoại ngữ của chúng tôi. Hãy khám phá thư viện tài liệu và tìm kiếm bạn học nhé!',
+                link='/'
+            )
+        except Exception:
+            pass  # Don't crash User save if notification creation fails
