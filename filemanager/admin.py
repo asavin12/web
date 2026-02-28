@@ -20,6 +20,9 @@ class MediaFileAdmin(admin.ModelAdmin):
                        'width', 'height', 'mime_type', 'created_at', 'updated_at']
     ordering = ['-created_at']
     
+    # Add "Scan unused" button to changelist
+    change_list_template = 'admin/filemanager/mediafile_changelist.html'
+    
     fieldsets = (
         ('File', {
             'fields': ('file', 'name', 'folder')

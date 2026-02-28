@@ -1,0 +1,16 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+{{ block.super }}
+<li>
+  <a href="{% url 'filemanager:unused_media' %}" class="button" style="background:#dc3545; padding: 6px 12px;">
+    🗑️ Quét media không sử dụng
+  </a>
+</li>
+<li>
+  <a href="{% url 'filemanager:file_browser' %}" class="button">
+    📁 File Browser
+  </a>
+</li>
+{% endblock %}

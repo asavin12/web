@@ -14,4 +14,5 @@ urlpatterns = [
     path('delete/', views.delete_item, name='delete_item'),
     path('rename/', views.rename_item, name='rename_item'),
     path('disk-usage/', views.disk_usage, name='disk_usage'),
+    path('unused-media/', views.unused_media, name='unused_media'),
 ]

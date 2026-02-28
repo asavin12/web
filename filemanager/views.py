@@ -438,3 +438,73 @@ def disk_usage(request):
     }
     
     return render(request, 'admin/filemanager/disk_usage.html', context)
+
+
+# ═══════════════════════════════════════════
+# Unused Media Scanner
+# ═══════════════════════════════════════════
+
+@staff_member_required
+@csrf_protect
+def unused_media(request):
+    """
+    Scan and display unused media files.
+    GET  — run scan, show results
+    POST — delete selected files
+    """
+    from .media_scanner import scan_unused_media, delete_media_files
+
+    if request.method == 'POST':
+        selected = request.POST.getlist('selected_files')
+        if selected:
+            deleted, errors = delete_media_files(selected)
+            if deleted:
+                messages.success(request, f'✅ Đã xoá {deleted} file không sử dụng.')
+            for err in errors:
+                messages.error(request, f'❌ {err}')
+        else:
+            messages.warning(request, '⚠️ Chưa chọn file nào.')
+        return redirect('filemanager:unused_media')
+
+    # GET — scan
+    unused = scan_unused_media()
+    total_size = sum(f['size'] for f in unused)
+
+    # Pre-compute display sizes
+    for f in unused:
+        f['size_display'] = _format_size(f['size'])
+
+    # Group by folder
+    folders = {}
+    for f in unused:
+        folder = f['folder']
+        if folder not in folders:
+            folders[folder] = {'files': [], 'size': 0, 'count': 0}
+        folders[folder]['files'].append(f)
+        folders[folder]['size'] += f['size']
+        folders[folder]['count'] += 1
+
+    for data in folders.values():
+        data['size_display'] = _format_size(data['size'])
+
+    context = {
+        'title': 'Quét Media Không Sử Dụng',
+        'unused_files': unused,
+        'total_count': len(unused),
+        'total_size': total_size,
+        'total_size_display': _format_size(total_size),
+        'folders': dict(sorted(folders.items())),
+    }
+    return render(request, 'admin/filemanager/unused_media.html', context)
+
+
+def _format_size(size_bytes):
+    """Format bytes to human-readable size"""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
