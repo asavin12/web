@@ -876,34 +876,22 @@ a:not(.btn):not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-dan
   scroll-margin-top: 5rem;
 }
 
-/* Table responsive wrapper */
+/* ===== Responsive Tables ===== */
+
+/* The table itself scrolls horizontally via display:block */
 .article-body .prose table {
-  display: table;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  margin: 0;
-  border-radius: 0.75rem;
-  overflow: hidden;
+  margin: 2rem 0;
   border: 1px solid rgba(139, 129, 107, 0.2);
+  border-radius: 0.75rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   font-size: 0.95rem;
   line-height: 1.7;
-}
-
-/* Scrollable wrapper injected by JS around every <table> */
-.article-body .prose .table-scroll-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin: 2rem 0;
-  border-radius: 0.75rem;
-}
-
-/* Table wrapper for horizontal scroll on mobile */
-.article-body .prose .table-wrapper,
-.article-body .prose > table {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .article-body .prose thead {
@@ -919,7 +907,6 @@ a:not(.btn):not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-dan
   letter-spacing: 0.03em;
   color: rgb(42, 36, 31);
   border-bottom: 2px solid rgba(93, 90, 47, 0.2);
-  white-space: nowrap;
 }
 
 .article-body .prose td {
@@ -950,33 +937,27 @@ a:not(.btn):not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-dan
   color: rgb(42, 36, 31);
 }
 
-/* Mobile table: make more readable */
-@media (max-width: 640px) {
+/* Tablet: tables fit comfortably */
+@media (min-width: 768px) {
+  .article-body .prose th {
+    white-space: nowrap;
+  }
+}
+
+/* Mobile: compact tables */
+@media (max-width: 767px) {
   .article-body .prose table {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
   }
-  .article-body .prose th,
+  .article-body .prose th {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+  }
   .article-body .prose td {
-    padding: 0.625rem 0.75rem;
-  }
-  /* Scroll hint shadow on the wrapper */
-  .article-body .prose .table-scroll-wrapper {
-    position: relative;
-  }
-  .article-body .prose .table-scroll-wrapper::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 24px;
-    background: linear-gradient(to left, rgba(242, 235, 227, 0.7), transparent);
-    pointer-events: none;
-    border-radius: 0 0.75rem 0.75rem 0;
-  }
-  /* Hide shadow when scrolled to the end */
-  .article-body .prose .table-scroll-wrapper.scrolled-end::after {
-    display: none;
+    padding: 0.5rem 0.625rem;
+    line-height: 1.5;
   }
 }
 
