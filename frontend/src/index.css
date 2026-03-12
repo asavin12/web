@@ -598,6 +598,9 @@ a:not(.btn):not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-dan
 
 .prose-vintage table {
   @apply w-full border-collapse my-6;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .prose-vintage th, .prose-vintage td {
@@ -879,13 +882,21 @@ a:not(.btn):not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-dan
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  margin: 2rem 0;
+  margin: 0;
   border-radius: 0.75rem;
   overflow: hidden;
   border: 1px solid rgba(139, 129, 107, 0.2);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   font-size: 0.95rem;
   line-height: 1.7;
+}
+
+/* Scrollable wrapper injected by JS around every <table> */
+.article-body .prose .table-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 2rem 0;
+  border-radius: 0.75rem;
 }
 
 /* Table wrapper for horizontal scroll on mobile */
@@ -947,6 +958,25 @@ a:not(.btn):not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-dan
   .article-body .prose th,
   .article-body .prose td {
     padding: 0.625rem 0.75rem;
+  }
+  /* Scroll hint shadow on the wrapper */
+  .article-body .prose .table-scroll-wrapper {
+    position: relative;
+  }
+  .article-body .prose .table-scroll-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to left, rgba(242, 235, 227, 0.7), transparent);
+    pointer-events: none;
+    border-radius: 0 0.75rem 0.75rem 0;
+  }
+  /* Hide shadow when scrolled to the end */
+  .article-body .prose .table-scroll-wrapper.scrolled-end::after {
+    display: none;
   }
 }
 

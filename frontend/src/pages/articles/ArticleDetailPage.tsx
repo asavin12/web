@@ -8,6 +8,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import { 
   Newspaper, BookOpen, Wrench, Calendar, Eye, User, ChevronLeft, 
@@ -72,6 +73,48 @@ const calculateReadingTime = (content: string) => {
   const words = text.split(/\s+/).length;
   return Math.max(1, Math.ceil(words / 200));
 };
+
+const SANITIZE_CONFIG = {
+  ADD_TAGS: ['iframe', 'nav', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'caption', 'colgroup', 'col', 'details', 'summary', 'figure', 'figcaption'],
+  ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'itemProp', 'colspan', 'rowspan', 'scope', 'open'],
+};
+
+/** Renders sanitized HTML and wraps `<table>` elements in a scrollable div */
+function ArticleContent({ html }: { html: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const wrappers: HTMLDivElement[] = [];
+
+    ref.current.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
+      if (table.parentElement?.classList.contains('table-scroll-wrapper')) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-scroll-wrapper';
+      table.parentNode!.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+      wrappers.push(wrapper);
+    });
+
+    // Toggle scroll-hint shadow when scrolled to end
+    const onScroll = (e: Event) => {
+      const el = e.target as HTMLDivElement;
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+      el.classList.toggle('scrolled-end', atEnd);
+    };
+    wrappers.forEach((w) => w.addEventListener('scroll', onScroll));
+    return () => wrappers.forEach((w) => w.removeEventListener('scroll', onScroll));
+  }, [html]);
+
+  return (
+    <div
+      ref={ref}
+      className="prose max-w-none"
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html, SANITIZE_CONFIG) }}
+      itemProp="articleBody"
+    />
+  );
+}
 
 export default function ArticleDetailPage({ contentType }: ArticleDetailPageProps) {
   const { t, i18n } = useTranslation();
@@ -479,11 +522,7 @@ export default function ArticleDetailPage({ contentType }: ArticleDetailPageProp
 
           {/* Article Content — SEO-optimized body */}
           <section className="article-body mb-12">
-            <div 
-              className="prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articleContent, { ADD_TAGS: ['iframe', 'nav', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'caption', 'colgroup', 'col', 'details', 'summary', 'figure', 'figcaption'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'itemProp', 'colspan', 'rowspan', 'scope', 'open'] }) }}
-              itemProp="articleBody"
-            />
+            <ArticleContent html={articleContent} />
           </section>
 
           {/* Level Progress Navigation (Knowledge only) */}
