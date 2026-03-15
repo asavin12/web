@@ -10,7 +10,8 @@ import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Newspaper, BookOpen, Wrench, Calendar, Eye, 
-  Search, GraduationCap, Languages, X 
+  Search, GraduationCap, Languages, X,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { getNewsArticles, getNewsCategories, getNewsByCategory, NewsArticle, NewsCategory } from '@/api/news';
 import ResponsiveImage from '@/components/common/ResponsiveImage';
@@ -352,10 +353,44 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
             )}
           </div>
 
-          {/* Results count */}
-          <div className="mb-6 text-sm text-vintage-tan">
-            {t('common.resultsCount', '{{count}} kết quả', { count: totalCount })}
-          </div>
+          {/* Pagination Info & Navigation (Top) */}
+          {!loading && totalPages > 1 && (
+            <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="text-sm text-vintage-dark/60">
+                {t('common.showingResults', 'Hiển thị {{from}}-{{to}} trong {{total}} kết quả', {
+                  from: (currentPage - 1) * pageSize + 1,
+                  to: Math.min(currentPage * pageSize, totalCount),
+                  total: totalCount
+                })}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => updateFilter('page', String(Math.max(1, currentPage - 1)))}
+                  disabled={currentPage <= 1}
+                  className="p-2 rounded-lg border border-vintage-tan/30 hover:bg-vintage-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  aria-label={t('common.previous', 'Trước')}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-sm text-vintage-dark/70 px-2">
+                  {t('common.pageOf', 'Trang {{current}} / {{total}}', { current: currentPage, total: totalPages })}
+                </span>
+                <button
+                  onClick={() => updateFilter('page', String(Math.min(totalPages, currentPage + 1)))}
+                  disabled={currentPage >= totalPages}
+                  className="p-2 rounded-lg border border-vintage-tan/30 hover:bg-vintage-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  aria-label={t('common.next', 'Sau')}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+          {!loading && totalPages <= 1 && totalCount > 0 && (
+            <div className="mb-6 text-sm text-vintage-dark/60">
+              {t('common.resultsCount', '{{count}} kết quả', { count: totalCount })}
+            </div>
+          )}
 
           {/* Loading State */}
           {loading && (
@@ -549,54 +584,68 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
             </div>
           )}
 
-          {/* Pagination */}
+          {/* Pagination (Bottom) */}
           {!loading && totalPages > 1 && (
-            <div className="mt-12 flex justify-center">
-              <div className="flex items-center gap-2">
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => updateFilter('page', String(Math.max(1, currentPage - 1)))}
                   disabled={currentPage <= 1}
-                  className="px-4 py-2 rounded-lg border border-vintage-tan/30 hover:bg-vintage-cream disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-vintage-tan/30 hover:bg-vintage-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
                 >
+                  <ChevronLeft className="h-4 w-4" />
                   {t('common.previous', 'Trước')}
                 </button>
                 
                 <div className="flex items-center gap-1">
-                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
+                  {(() => {
+                    const pages: (number | 'ellipsis-start' | 'ellipsis-end')[] = [];
+                    if (totalPages <= 7) {
+                      for (let i = 1; i <= totalPages; i++) pages.push(i);
                     } else {
-                      pageNum = currentPage - 2 + i;
+                      pages.push(1);
+                      if (currentPage > 3) pages.push('ellipsis-start');
+                      const start = Math.max(2, currentPage - 1);
+                      const end = Math.min(totalPages - 1, currentPage + 1);
+                      for (let i = start; i <= end; i++) pages.push(i);
+                      if (currentPage < totalPages - 2) pages.push('ellipsis-end');
+                      pages.push(totalPages);
                     }
-                    
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => updateFilter('page', String(pageNum))}
-                        className={`w-10 h-10 rounded-lg font-medium transition-colors ${
-                          currentPage === pageNum
-                            ? 'bg-vintage-olive text-white'
-                            : 'hover:bg-vintage-cream'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
+                    return pages.map((p) =>
+                      typeof p === 'string' ? (
+                        <span key={p} className="w-10 h-10 flex items-center justify-center text-vintage-tan">...</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => updateFilter('page', String(p))}
+                          className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+                            currentPage === p
+                              ? 'bg-vintage-olive text-white shadow-sm'
+                              : 'hover:bg-vintage-cream text-vintage-dark/70'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      )
                     );
-                  })}
+                  })()}
                 </div>
                 
                 <button
                   onClick={() => updateFilter('page', String(Math.min(totalPages, currentPage + 1)))}
                   disabled={currentPage >= totalPages}
-                  className="px-4 py-2 rounded-lg border border-vintage-tan/30 hover:bg-vintage-cream disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-vintage-tan/30 hover:bg-vintage-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
                 >
                   {t('common.next', 'Sau')}
+                  <ChevronRight className="h-4 w-4" />
                 </button>
+              </div>
+              <div className="text-sm text-vintage-dark/50">
+                {t('common.showingResults', 'Hiển thị {{from}}-{{to}} trong {{total}} kết quả', {
+                  from: (currentPage - 1) * pageSize + 1,
+                  to: Math.min(currentPage * pageSize, totalCount),
+                  total: totalCount
+                })}
               </div>
             </div>
           )}
