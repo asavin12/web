@@ -176,6 +176,18 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
       : (toolsData?.count || 0);
   const loading = contentType === 'news' ? newsLoading : contentType === 'knowledge' ? knowledgeLoading : toolsLoading;
 
+  // Derive pagination state from API response metadata (next/previous)
+  const apiHasNext = contentType === 'news' 
+    ? !!newsData?.next 
+    : contentType === 'knowledge' 
+      ? !!knowledgeData?.next 
+      : !!toolsData?.next;
+  const apiHasPrev = contentType === 'news' 
+    ? !!newsData?.previous 
+    : contentType === 'knowledge' 
+      ? !!knowledgeData?.previous 
+      : !!toolsData?.previous;
+
   const currentCategoryInfo = categorySlug
     ? displayCategories.find((c) => c.slug === categorySlug) || null
     : null;
@@ -192,6 +204,9 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
       params.set('page', '1');
     }
     setSearchParams(params);
+    if (key === 'page') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -214,7 +229,12 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
     navigate(config.basePath);
   };
 
-  const totalPages = Math.ceil(totalCount / pageSize);
+  // Calculate total pages from API metadata, not just count/pageSize
+  // This handles cases where backend page_size differs from frontend pageSize
+  const itemsOnPage = contentType === 'tools' ? tools.length : articles.length;
+  const totalPages = (!apiHasNext && !apiHasPrev && currentPage === 1)
+    ? (itemsOnPage >= totalCount ? 1 : Math.ceil(totalCount / pageSize))
+    : (!apiHasNext ? currentPage : Math.ceil(totalCount / pageSize));
   const hasActiveFilters = searchTerm || categorySlug || currentLanguage || currentLevel;
 
   // Page title and description
