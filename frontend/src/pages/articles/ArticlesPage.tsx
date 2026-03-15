@@ -187,7 +187,9 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
     } else {
       params.delete(key);
     }
-    params.set('page', '1');
+    if (key !== 'page') {
+      params.set('page', '1');
+    }
     setSearchParams(params);
   };
 
