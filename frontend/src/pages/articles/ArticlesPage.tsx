@@ -10,8 +10,7 @@ import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Newspaper, BookOpen, Wrench, Calendar, Eye, 
-  Search, GraduationCap, Languages, X,
-  ChevronLeft, ChevronRight
+  Search, GraduationCap, Languages, X
 } from 'lucide-react';
 import { getNewsArticles, getNewsCategories, getNewsByCategory, NewsArticle, NewsCategory } from '@/api/news';
 import ResponsiveImage from '@/components/common/ResponsiveImage';
@@ -21,6 +20,7 @@ import {
 } from '@/api/knowledge';
 import { getToolCategories, getTools, ToolCategory, Tool } from '@/api/tools';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
+import { Pagination } from '@/components/ui/Pagination';
 
 // Content type definitions
 export type ContentType = 'news' | 'knowledge' | 'tools';
@@ -176,17 +176,7 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
       : (toolsData?.count || 0);
   const loading = contentType === 'news' ? newsLoading : contentType === 'knowledge' ? knowledgeLoading : toolsLoading;
 
-  // Derive pagination state from API response metadata (next/previous)
-  const apiHasNext = contentType === 'news' 
-    ? !!newsData?.next 
-    : contentType === 'knowledge' 
-      ? !!knowledgeData?.next 
-      : !!toolsData?.next;
-  const apiHasPrev = contentType === 'news' 
-    ? !!newsData?.previous 
-    : contentType === 'knowledge' 
-      ? !!knowledgeData?.previous 
-      : !!toolsData?.previous;
+
 
   const currentCategoryInfo = categorySlug
     ? displayCategories.find((c) => c.slug === categorySlug) || null
@@ -216,6 +206,10 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
     updateFilter('q', query);
   };
 
+  const handlePageChange = (newPage: number) => {
+    updateFilter('page', String(newPage));
+  };
+
   const handleCategoryClick = (slug: string) => {
     if (slug) {
       navigate(`${config.basePath}/${slug}`);
@@ -229,12 +223,7 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
     navigate(config.basePath);
   };
 
-  // Calculate total pages from API metadata, not just count/pageSize
-  // This handles cases where backend page_size differs from frontend pageSize
-  const itemsOnPage = contentType === 'tools' ? tools.length : articles.length;
-  const totalPages = (!apiHasNext && !apiHasPrev && currentPage === 1)
-    ? (itemsOnPage >= totalCount ? 1 : Math.ceil(totalCount / pageSize))
-    : (!apiHasNext ? currentPage : Math.ceil(totalCount / pageSize));
+  const totalPages = Math.ceil(totalCount / pageSize);
   const hasActiveFilters = searchTerm || categorySlug || currentLanguage || currentLevel;
 
   // Page title and description
@@ -373,44 +362,26 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
             )}
           </div>
 
-          {/* Pagination Info & Navigation (Top) */}
-          {!loading && totalPages > 1 && (
-            <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="text-sm text-vintage-dark/60">
+          {/* Results Info & Top Pagination */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6">
+            {!loading && totalCount > 0 && (
+              <p className="text-sm text-vintage-dark/60">
                 {t('common.showingResults', 'Hiển thị {{from}}-{{to}} trong {{total}} kết quả', {
                   from: (currentPage - 1) * pageSize + 1,
                   to: Math.min(currentPage * pageSize, totalCount),
                   total: totalCount
                 })}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => updateFilter('page', String(Math.max(1, currentPage - 1)))}
-                  disabled={currentPage <= 1}
-                  className="p-2 rounded-lg border border-vintage-tan/30 hover:bg-vintage-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  aria-label={t('common.previous', 'Trước')}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="text-sm text-vintage-dark/70 px-2">
-                  {t('common.pageOf', 'Trang {{current}} / {{total}}', { current: currentPage, total: totalPages })}
-                </span>
-                <button
-                  onClick={() => updateFilter('page', String(Math.min(totalPages, currentPage + 1)))}
-                  disabled={currentPage >= totalPages}
-                  className="p-2 rounded-lg border border-vintage-tan/30 hover:bg-vintage-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  aria-label={t('common.next', 'Sau')}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
-          {!loading && totalPages <= 1 && totalCount > 0 && (
-            <div className="mb-6 text-sm text-vintage-dark/60">
-              {t('common.resultsCount', '{{count}} kết quả', { count: totalCount })}
-            </div>
-          )}
+              </p>
+            )}
+            {!loading && totalCount > pageSize && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                className="self-end"
+              />
+            )}
+          </div>
 
           {/* Loading State */}
           {loading && (
@@ -605,68 +576,13 @@ export default function ArticlesPage({ contentType }: ArticlesPageProps) {
           )}
 
           {/* Pagination (Bottom) */}
-          {!loading && totalPages > 1 && (
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => updateFilter('page', String(Math.max(1, currentPage - 1)))}
-                  disabled={currentPage <= 1}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-vintage-tan/30 hover:bg-vintage-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  {t('common.previous', 'Trước')}
-                </button>
-                
-                <div className="flex items-center gap-1">
-                  {(() => {
-                    const pages: (number | 'ellipsis-start' | 'ellipsis-end')[] = [];
-                    if (totalPages <= 7) {
-                      for (let i = 1; i <= totalPages; i++) pages.push(i);
-                    } else {
-                      pages.push(1);
-                      if (currentPage > 3) pages.push('ellipsis-start');
-                      const start = Math.max(2, currentPage - 1);
-                      const end = Math.min(totalPages - 1, currentPage + 1);
-                      for (let i = start; i <= end; i++) pages.push(i);
-                      if (currentPage < totalPages - 2) pages.push('ellipsis-end');
-                      pages.push(totalPages);
-                    }
-                    return pages.map((p) =>
-                      typeof p === 'string' ? (
-                        <span key={p} className="w-10 h-10 flex items-center justify-center text-vintage-tan">...</span>
-                      ) : (
-                        <button
-                          key={p}
-                          onClick={() => updateFilter('page', String(p))}
-                          className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
-                            currentPage === p
-                              ? 'bg-vintage-olive text-white shadow-sm'
-                              : 'hover:bg-vintage-cream text-vintage-dark/70'
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      )
-                    );
-                  })()}
-                </div>
-                
-                <button
-                  onClick={() => updateFilter('page', String(Math.min(totalPages, currentPage + 1)))}
-                  disabled={currentPage >= totalPages}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-vintage-tan/30 hover:bg-vintage-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
-                >
-                  {t('common.next', 'Sau')}
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="text-sm text-vintage-dark/50">
-                {t('common.showingResults', 'Hiển thị {{from}}-{{to}} trong {{total}} kết quả', {
-                  from: (currentPage - 1) * pageSize + 1,
-                  to: Math.min(currentPage * pageSize, totalCount),
-                  total: totalCount
-                })}
-              </div>
+          {!loading && totalCount > pageSize && (
+            <div className="mt-8 md:mt-12">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             </div>
           )}
         </div>
