@@ -159,7 +159,8 @@ class Article(WebPImageMixin, N8NTrackingMixin, models.Model):
         return minutes
     
     def get_absolute_url(self):
-        return f"/tin-tuc/{self.slug}"
+        category_slug = self.category.slug if self.category else 'chung'
+        return f"/tin-tuc/{category_slug}/{self.slug}"
     
     def get_tags_list(self):
         """Trả về list các tags"""

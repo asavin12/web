@@ -177,7 +177,8 @@ class KnowledgeArticle(WebPImageMixin, N8NTrackingMixin, models.Model):
         return max(1, round(word_count / 200))
     
     def get_absolute_url(self):
-        return f"/kien-thuc/{self.slug}"
+        category_slug = self.category.slug if self.category else 'chung'
+        return f"/kien-thuc/{category_slug}/{self.slug}"
     
     def increment_views(self):
         self.view_count += 1
