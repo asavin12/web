@@ -454,7 +454,7 @@ export default function Navbar() {
 
                   {/* Notifications Popup */}
                   {isNotificationOpen && (
-                    <div className="absolute right-0 top-full mt-3 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-vintage-tan/30 overflow-hidden z-50">
+                    <div className="absolute right-0 top-full mt-3 w-80 sm:w-96 max-w-[calc(100vw-1rem)] bg-white rounded-xl shadow-2xl border border-vintage-tan/30 overflow-hidden z-50">
                       {/* Header */}
                       <div className="p-4 bg-gradient-to-r from-vintage-olive to-vintage-brown text-white flex items-center justify-between">
                         <h3 className="font-bold flex items-center gap-2">
@@ -730,12 +730,14 @@ export default function Navbar() {
                   <img src={avatar} alt="" className="h-10 w-10 rounded-full object-cover border-2 border-vintage-tan" />
                   <div>
                     <span className="font-bold text-base block">{user?.username}</span>
-                    <span className="text-xs text-vintage-tan">{t('user.memberLevel', 'Scholar Member')}</span>
+                    <span className="text-xs text-vintage-olive font-medium">
+                      {user?.is_superuser ? t('user.role.admin', 'Quản trị viên') : user?.is_staff ? t('user.role.staff', 'Nhân viên') : t('user.role.member', 'Thành viên')}
+                    </span>
                   </div>
                 </Link>
                 
                 {/* Quick Actions */}
-                <div className="grid grid-cols-2 gap-2 py-2">
+                <div className={`grid gap-2 py-2 ${(user?.is_superuser || user?.is_staff) ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   <Link
                     to="/ho-so/cap-nhat"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -752,6 +754,21 @@ export default function Navbar() {
                     <Bell className="h-5 w-5 text-vintage-brown" />
                     <span className="text-[10px] font-bold uppercase text-vintage-dark">{t('nav.notifications', 'Notifications')}</span>
                   </Link>
+                  {(user?.is_superuser || user?.is_staff) && (
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleAdminAccess();
+                      }}
+                      disabled={isLoadingAdmin}
+                      className="flex flex-col items-center gap-1 p-3 rounded-lg bg-vintage-olive/10 hover:bg-vintage-olive/20 disabled:opacity-50"
+                    >
+                      <Shield className="h-5 w-5 text-vintage-olive" />
+                      <span className="text-[10px] font-bold uppercase text-vintage-dark">
+                        {isLoadingAdmin ? t('common.loading', '...') : t('nav.adminPanel', 'Admin')}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 <button
