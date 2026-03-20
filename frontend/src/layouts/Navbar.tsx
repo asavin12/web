@@ -205,7 +205,7 @@ export default function Navbar() {
             isActiveRoute
               ? 'text-vintage-brown border-vintage-brown'
               : 'text-vintage-dark/60 border-transparent hover:text-vintage-olive hover:border-vintage-tan'
-          } inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-semibold tracking-wide transition-all duration-200 uppercase`}
+          } inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-xs xl:text-sm font-semibold tracking-wide transition-all duration-200 uppercase whitespace-nowrap`}
         >
           {label}
           <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
@@ -341,7 +341,7 @@ export default function Navbar() {
             </Link>
             
             {/* Desktop Nav Links */}
-            <div className="hidden sm:ml-12 sm:flex sm:items-center sm:space-x-6">
+            <div className="hidden lg:ml-8 lg:flex lg:items-center lg:space-x-3 xl:space-x-5">
               {displayNavLinks.map((link) => (
                 <Link
                   key={link.to}
@@ -350,7 +350,7 @@ export default function Navbar() {
                     isActive(link.to)
                       ? 'text-vintage-brown border-vintage-brown'
                       : 'text-vintage-dark/60 border-transparent hover:text-vintage-olive hover:border-vintage-tan'
-                  } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-semibold tracking-wide transition-all duration-200 uppercase`}
+                  } inline-flex items-center px-1 pt-1 border-b-2 text-xs xl:text-sm font-semibold tracking-wide transition-all duration-200 uppercase whitespace-nowrap`}
                 >
                   {link.label}
                 </Link>
@@ -362,7 +362,7 @@ export default function Navbar() {
           </div>
           
           {/* Right Side Actions */}
-          <div className="hidden sm:ml-6 sm:flex sm:items-center gap-3">
+          <div className="hidden lg:ml-4 lg:flex lg:items-center gap-2">
             {/* Search Popover */}
             <div className="relative" ref={searchRef}>
               <button 
@@ -647,7 +647,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="sm:hidden flex items-center">
+          <div className="lg:hidden flex items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label={t('nav.menu', 'Menu')}
@@ -661,7 +661,7 @@ export default function Navbar() {
 
       {/* Mobile Menu - Improved */}
       {isMobileMenuOpen && (
-        <div className="sm:hidden bg-vintage-cream border-t border-vintage-tan/30 safe-area-bottom">
+        <div className="lg:hidden bg-vintage-cream border-t border-vintage-tan/30 max-h-[calc(100vh-5rem)] overflow-y-auto safe-area-bottom">
           {/* Mobile Search */}
           <div className="px-4 pt-4">
             <div className="relative">

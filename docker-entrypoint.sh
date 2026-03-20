@@ -88,6 +88,39 @@ python manage.py seed_navigation 2>&1 || echo "Navigation seed skipped (may alre
 echo "Upgrading navigation data..."
 python manage.py upgrade_navigation 2>&1 || echo "Navigation upgrade skipped"
 
+# Cleanup duplicate resources (from sample data scripts run multiple times)
+echo "Cleaning up duplicate records..."
+python -c "
+import django, os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unstressvn_settings.settings')
+django.setup()
+from collections import defaultdict
+
+for model_path in ['resources.models.Resource', 'news.models.NewsArticle', 'knowledge.models.KnowledgeArticle']:
+    try:
+        app, _, cls = model_path.rsplit('.', 2)
+        module = __import__(app + '.models', fromlist=[cls])
+        Model = getattr(module, cls)
+        title_field = 'title' if hasattr(Model, 'title') else None
+        if not title_field:
+            continue
+        title_ids = defaultdict(list)
+        for obj in Model.objects.all().order_by('id'):
+            title_ids[getattr(obj, title_field)].append(obj.id)
+        to_delete = []
+        for title, ids in title_ids.items():
+            if len(ids) > 1:
+                keep = max(ids)
+                to_delete.extend(i for i in ids if i != keep)
+        if to_delete:
+            deleted, _ = Model.objects.filter(id__in=to_delete).delete()
+            print(f'  {cls}: removed {deleted} duplicates')
+        else:
+            print(f'  {cls}: no duplicates')
+    except Exception as e:
+        print(f'  {model_path}: skipped ({e})')
+" 2>&1 || echo "Duplicate cleanup skipped"
+
 # Start Gunicorn
 echo "Starting Gunicorn on port 8000..."
 exec gunicorn unstressvn_settings.wsgi:application \
