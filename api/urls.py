@@ -80,6 +80,9 @@ urlpatterns = [
     path('n8n/categories/', n8n_views.n8n_get_categories, name='n8n-categories'),
     path('n8n/categories/create/', n8n_views.n8n_create_category, name='n8n-create-category'),
 
+    # --- Rules / Governance ---
+    path('n8n/rules/', n8n_views.n8n_get_rules, name='n8n-rules'),
+
     # --- News CRUD ---
     path('n8n/news/', n8n_views.n8n_create_news_article, name='n8n-create-news'),
     path('n8n/news/list/', n8n_views.n8n_list_news, name='n8n-list-news'),

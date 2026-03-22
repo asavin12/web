@@ -157,6 +157,96 @@ def generate_seo_tags(title, category_name='', meta_keywords='', max_tags=5):
     return ', '.join(result) if result else ''
 
 
+# ============ Category Resolution (Strict Governance) ============
+
+def resolve_category(category_input, content_type):
+    """
+    Resolve category from user input — NEVER auto-creates.
+    Matches by: id → slug → slug-of-input → name (case-insensitive).
+
+    Args:
+        category_input: int/str — category id, slug, or name from n8n
+        content_type: 'news' | 'knowledge' | 'resources' | 'tools'
+
+    Returns:
+        (category_obj, None) on success
+        (None, error_response_dict) on failure — includes available categories
+    """
+    import importlib
+
+    model_map = {
+        'news': 'news.models.Category',
+        'knowledge': 'knowledge.models.Category',
+        'resources': 'resources.models.Category',
+        'tools': 'tools.models.ToolCategory',
+    }
+
+    if content_type not in model_map:
+        return None, {
+            'success': False,
+            'error': f'content_type không hợp lệ: {content_type}',
+        }
+
+    module_path, class_name = model_map[content_type].rsplit('.', 1)
+    module = importlib.import_module(module_path)
+    CategoryModel = getattr(module, class_name)
+
+    if not category_input:
+        return None, None  # No category provided — allowed (optional)
+
+    category_input = str(category_input).strip()
+
+    # 1. Try by ID
+    if category_input.isdigit():
+        cat = CategoryModel.objects.filter(id=int(category_input)).first()
+        if cat:
+            return cat, None
+
+    # 2. Try by exact slug
+    cat = CategoryModel.objects.filter(slug=category_input).first()
+    if cat:
+        return cat, None
+
+    # 3. Try by slug-of-input (Vietnamese slugify)
+    input_slug = vietnamese_slugify(category_input)
+    if input_slug:
+        cat = CategoryModel.objects.filter(slug=input_slug).first()
+        if cat:
+            return cat, None
+
+    # 4. Try by name (case-insensitive)
+    cat = CategoryModel.objects.filter(name__iexact=category_input).first()
+    if cat:
+        return cat, None
+
+    # 5. Try partial slug match (input is substring of slug or vice versa)
+    for c in CategoryModel.objects.all():
+        if input_slug and (input_slug in c.slug or c.slug in input_slug):
+            return c, None
+
+    # FAILED — build helpful error with all available categories
+    filter_kwargs = {}
+    if hasattr(CategoryModel, 'is_active'):
+        filter_kwargs['is_active'] = True
+
+    available = []
+    for c in CategoryModel.objects.filter(**filter_kwargs).order_by('id'):
+        available.append({
+            'id': c.id,
+            'slug': c.slug,
+            'name': c.name,
+        })
+
+    return None, {
+        'success': False,
+        'error': f'Danh mục "{category_input}" không tồn tại trong {content_type}.',
+        'hint': 'Sử dụng slug hoặc id từ danh sách bên dưới. KHÔNG tự tạo danh mục mới.',
+        'rule': 'Website cấm tự động tạo danh mục. Chỉ sử dụng danh mục đã được quản trị viên phê duyệt.',
+        'available_categories': available,
+        'example': f'"category": "{available[0]["slug"]}"' if available else '"category": null',
+    }
+
+
 # ============ SEO Content Validation ============
 
 def validate_seo_content(data, strict=True):
@@ -520,41 +610,11 @@ def n8n_create_news_article(request):
             'hint': 'Gửi skip_seo_validation=true để bỏ qua kiểm tra (không khuyến nghị)'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Vietnamese category name mapping (slug → proper name with diacritics)
-    SLUG_TO_CATEGORY_NAME = {
-        'doi-song-duc': 'Đời sống Đức',
-        'du-hoc-duc': 'Du học Đức',
-        'kinh-nghiem': 'Kinh nghiệm',
-        'tin-tuc-chung': 'Tin tức chung',
-        'hoc-tieng-duc': 'Học tiếng Đức',
-        'hoc-tieng-anh': 'Học tiếng Anh',
-        'du-hoc': 'Du học',
-        'thi-cu': 'Thi cử',
-        'su-kien': 'Sự kiện',
-        'viec-lam': 'Việc làm',
-        'van-hoa': 'Văn hóa',
-        'cong-nghe': 'Công nghệ',
-    }
-
-    # Get or create category
+    # Resolve category (strict — no auto-creation)
     category_input = request.data.get('category')
-    category = None
-    
-    if category_input:
-        # Try to find by slug first, then by id
-        try:
-            if isinstance(category_input, int) or category_input.isdigit():
-                category = Category.objects.get(id=int(category_input))
-            else:
-                category = Category.objects.get(slug=category_input)
-        except Category.DoesNotExist:
-            # Create new category — use Vietnamese name if available
-            cat_slug = vietnamese_slugify(category_input)
-            cat_name = SLUG_TO_CATEGORY_NAME.get(cat_slug, category_input)
-            category = Category.objects.create(
-                name=cat_name,
-                slug=cat_slug
-            )
+    category, cat_error = resolve_category(category_input, 'news')
+    if cat_error:
+        return Response(cat_error, status=status.HTTP_400_BAD_REQUEST)
     
     # Generate unique slug
     base_slug = vietnamese_slugify(title)
@@ -735,33 +795,11 @@ def n8n_create_knowledge_article(request):
             'hint': 'Gửi skip_seo_validation=true để bỏ qua kiểm tra (không khuyến nghị)'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Get or create category
+    # Resolve category (strict — no auto-creation)
     category_input = request.data.get('category')
-    category = None
-    
-    if category_input:
-        # Vietnamese category name mapping for knowledge
-        SLUG_TO_CATEGORY_NAME_K = {
-            'hoc-tieng-duc': 'Học tiếng Đức',
-            'hoc-tieng-anh': 'Học tiếng Anh',
-            'ngu-phap': 'Ngữ pháp',
-            'tu-vung': 'Từ vựng',
-            'luyen-thi': 'Luyện thi',
-            'giao-tiep': 'Giao tiếp',
-            'van-hoa': 'Văn hóa',
-        }
-        try:
-            if isinstance(category_input, int) or category_input.isdigit():
-                category = Category.objects.get(id=int(category_input))
-            else:
-                category = Category.objects.get(slug=category_input)
-        except Category.DoesNotExist:
-            cat_slug = vietnamese_slugify(category_input)
-            cat_name = SLUG_TO_CATEGORY_NAME_K.get(cat_slug, category_input)
-            category = Category.objects.create(
-                name=cat_name,
-                slug=cat_slug
-            )
+    category, cat_error = resolve_category(category_input, 'knowledge')
+    if cat_error:
+        return Response(cat_error, status=status.HTTP_400_BAD_REQUEST)
     
     # Generate unique slug
     base_slug = vietnamese_slugify(title)
@@ -1200,21 +1238,11 @@ def n8n_create_resource(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    # Get or create category
+    # Resolve category (strict — no auto-creation)
     category_input = request.data.get('category')
-    category = None
-    
-    if category_input:
-        try:
-            if isinstance(category_input, int) or category_input.isdigit():
-                category = Category.objects.get(id=int(category_input))
-            else:
-                category = Category.objects.get(slug=category_input)
-        except Category.DoesNotExist:
-            category = Category.objects.create(
-                name=category_input,
-                slug=vietnamese_slugify(category_input)
-            )
+    category, cat_error = resolve_category(category_input, 'resources')
+    if cat_error:
+        return Response(cat_error, status=status.HTTP_400_BAD_REQUEST)
     
     # Generate unique slug
     base_slug = vietnamese_slugify(title)
@@ -1278,15 +1306,16 @@ def n8n_create_resource(request):
 @authentication_classes([APIKeyAuthentication])
 def n8n_get_categories(request):
     """
-    Lấy danh sách categories cho n8n
+    Lấy danh sách categories cho n8n — bao gồm governance rules
     
     Query params:
-        type: news/knowledge/resources
+        type: news/knowledge/resources/tools/media/all (default: all)
     
     Returns:
         {
             "success": true,
-            "categories": [...]
+            "categories": [...],
+            "governance": { ... }
         }
     """
     category_type = request.query_params.get('type', 'all')
@@ -1322,10 +1351,37 @@ def n8n_get_categories(request):
                 'slug': cat.slug,
                 'type': 'resources'
             })
+
+    if category_type in ['tools', 'all']:
+        from tools.models import ToolCategory
+        for cat in ToolCategory.objects.all():
+            categories.append({
+                'id': cat.id,
+                'name': cat.name,
+                'slug': cat.slug,
+                'type': 'tools'
+            })
+
+    if category_type in ['media', 'all']:
+        from mediastream.models import MediaCategory
+        for cat in MediaCategory.objects.all():
+            categories.append({
+                'id': cat.id,
+                'name': cat.name,
+                'slug': cat.slug,
+                'type': 'media'
+            })
     
     return Response({
         'success': True,
-        'categories': categories
+        'categories': categories,
+        'governance': {
+            'rule': 'BẮT BUỘC sử dụng category slug hoặc id từ danh sách trên. '
+                     'KHÔNG ĐƯỢC tự tạo category mới. Hệ thống sẽ từ chối nếu category không tồn tại.',
+            'how_to_use': 'Truyền slug hoặc id vào trường "category" khi tạo bài.',
+            'auto_create_allowed': False,
+            'contact_admin': 'Nếu cần category mới, liên hệ admin để tạo thủ công.',
+        }
     })
 
 
@@ -1341,6 +1397,73 @@ def n8n_health_check(request):
         'service': 'UnstressVN API',
         'version': '1.0.0',
         'timestamp': timezone.now().isoformat()
+    })
+
+
+@api_view(['GET'])
+@authentication_classes([APIKeyAuthentication])
+def n8n_get_rules(request):
+    """
+    Trả về bộ luật quản trị website cho n8n automation.
+    N8N nên gọi endpoint này TRƯỚC khi tạo bài để biết danh mục hợp lệ.
+
+    GET /api/v1/n8n/rules/
+    Headers: X-API-Key: <key>
+    """
+    # Gather all current categories dynamically
+    from news.models import Category as NewsCategory
+    from knowledge.models import Category as KnowledgeCategory
+    from resources.models import Category as ResourceCategory
+    from tools.models import ToolCategory
+
+    def cat_list(qs):
+        return [{'id': c.id, 'slug': c.slug, 'name': c.name} for c in qs]
+
+    return Response({
+        'success': True,
+        'rules': {
+            'category_governance': {
+                'description': 'Mỗi bài viết PHẢI thuộc một category đã tồn tại. '
+                               'Hệ thống KHÔNG tự tạo category mới. '
+                               'Nếu category không khớp, API sẽ trả lỗi 400 kèm danh sách category hợp lệ.',
+                'how_to_match': [
+                    '1. Truyền category ID (số) hoặc slug (chuỗi) vào trường "category".',
+                    '2. Hệ thống tìm theo: id → exact slug → slug hoá input → tên (không phân biệt hoa thường) → slug chứa input.',
+                    '3. Nếu không tìm thấy → trả lỗi 400 với danh sách category hợp lệ.',
+                ],
+                'auto_create_allowed': False,
+            },
+            'content_types': {
+                'news': {
+                    'endpoint': '/api/v1/n8n/news/',
+                    'required_fields': ['title', 'content_blocks OR content', 'category'],
+                    'categories': cat_list(NewsCategory.objects.filter(is_active=True)),
+                },
+                'knowledge': {
+                    'endpoint': '/api/v1/n8n/knowledge/',
+                    'required_fields': ['title', 'content_blocks OR content', 'category'],
+                    'categories': cat_list(KnowledgeCategory.objects.filter(is_active=True)),
+                },
+                'resources': {
+                    'endpoint': '/api/v1/n8n/resources/',
+                    'required_fields': ['title', 'content', 'category', 'resource_type'],
+                    'categories': cat_list(ResourceCategory.objects.all()),
+                },
+                'tools': {
+                    'endpoint': '/api/v1/n8n/tools/',
+                    'required_fields': ['name', 'category', 'tool_type'],
+                    'categories': cat_list(ToolCategory.objects.all()),
+                },
+            },
+            'seo_rules': {
+                'description': 'Bài viết nên có meta_title (≤70 ký tự), meta_description (≤160), '
+                               'focus_keyword. Nếu thiếu, hệ thống sẽ tự sinh nhưng chất lượng SEO thấp hơn.',
+            },
+            'duplicate_prevention': {
+                'description': 'Truyền source_id (unique ID từ nguồn) để tránh tạo trùng. '
+                               'Nếu source_id đã tồn tại, API trả lỗi.',
+            },
+        },
     })
 
 
@@ -1844,20 +1967,11 @@ def n8n_create_tool(request):
                 'hint': 'Gửi skip_seo_validation=true để bỏ qua'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-    # Category
+    # Resolve category (strict — no auto-creation)
     category_input = request.data.get('category')
-    category = None
-    if category_input:
-        try:
-            if isinstance(category_input, int) or (isinstance(category_input, str) and category_input.isdigit()):
-                category = ToolCategory.objects.get(id=int(category_input))
-            else:
-                category = ToolCategory.objects.get(slug=category_input)
-        except ToolCategory.DoesNotExist:
-            category = ToolCategory.objects.create(
-                name=category_input,
-                slug=vietnamese_slugify(category_input)
-            )
+    category, cat_error = resolve_category(category_input, 'tools')
+    if cat_error:
+        return Response(cat_error, status=status.HTTP_400_BAD_REQUEST)
 
     # Generate unique slug
     base_slug = vietnamese_slugify(name)
@@ -2701,38 +2815,23 @@ def n8n_delete_content(request, content_type, identifier):
 @authentication_classes([APIKeyAuthentication])
 def n8n_create_category(request):
     """
-    Tạo category mới cho bất kỳ loại nội dung nào
+    Tạo category mới — BỊ KHÓA theo governance rules.
+    
+    Endpoint này bị vô hiệu hóa để ngăn n8n tự tạo danh mục.
+    Nếu cần category mới, admin phải tạo thủ công qua Django Admin.
 
     POST /api/v1/n8n/categories/create/
     Headers: X-API-Key: <key>
-
-    Body (JSON):
-        {
-            "type": "news|knowledge|resources|tools|media" (bắt buộc),
-            "name": "Tên category" (bắt buộc),
-            "slug": "slug-tuy-chon",
-            "description": "Mô tả",
-            "icon": "Icon (emoji hoặc lucide-react name)"
-        }
     """
-    cat_type = request.data.get('type')
-    name = request.data.get('name')
+    cat_type = request.data.get('type', '?')
+    name = request.data.get('name', '?')
 
-    if not cat_type:
-        return Response(
-            {'success': False, 'error': 'Thiếu trường "type" (news/knowledge/resources/tools/media)'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    if not name:
-        return Response(
-            {'success': False, 'error': 'Thiếu trường "name"'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    n8n_logger.warning(
+        f'[GOVERNANCE] n8n_create_category bị chặn — type={cat_type}, name={name}'
+    )
 
-    slug = request.data.get('slug') or vietnamese_slugify(name)
-    description = request.data.get('description', '')
-    icon = request.data.get('icon', '')
-
+    # Gather available categories for the requested type
+    available = []
     category_models = {
         'news': 'news.models.Category',
         'knowledge': 'knowledge.models.Category',
@@ -2740,51 +2839,21 @@ def n8n_create_category(request):
         'tools': 'tools.models.ToolCategory',
         'media': 'mediastream.models.MediaCategory',
     }
-
-    if cat_type not in category_models:
-        return Response(
-            {'success': False, 'error': f'type phải là: {", ".join(category_models.keys())}'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    import importlib
-    module_path, class_name = category_models[cat_type].rsplit('.', 1)
-    module = importlib.import_module(module_path)
-    Model = getattr(module, class_name)
-
-    # Check existing
-    existing = Model.objects.filter(slug=slug).first()
-    if existing:
-        return Response({
-            'success': True,
-            'category': {'id': existing.id, 'name': existing.name, 'slug': existing.slug},
-            'message': 'Category đã tồn tại',
-            'action': 'skipped',
-        })
-
-    kwargs = {
-        'name': safe_truncate(name, 100),
-        'slug': safe_truncate(slug, 120),
-        'description': description,
-    }
-    if hasattr(Model, 'icon'):
-        kwargs['icon'] = safe_truncate(icon, 50)
-
-    try:
-        cat = Model.objects.create(**kwargs)
-    except Exception as e:
-        n8n_logger.error(f'Failed to create category: {type(e).__name__}: {e}', exc_info=True)
-        return Response({
-            'success': False,
-            'error': f'Lỗi tạo category: {type(e).__name__}: {str(e)[:500]}',
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    if cat_type in category_models:
+        import importlib
+        module_path, class_name = category_models[cat_type].rsplit('.', 1)
+        module = importlib.import_module(module_path)
+        Model = getattr(module, class_name)
+        available = [{'id': c.id, 'slug': c.slug, 'name': c.name} for c in Model.objects.all()[:50]]
 
     return Response({
-        'success': True,
-        'category': {'id': cat.id, 'name': cat.name, 'slug': cat.slug, 'type': cat_type},
-        'message': f'Đã tạo category {cat_type} thành công',
-        'action': 'created',
-    }, status=status.HTTP_201_CREATED)
+        'success': False,
+        'error': 'Tạo category tự động đã bị vô hiệu hóa theo governance rules. '
+                 'Vui lòng sử dụng category có sẵn hoặc liên hệ admin.',
+        'rule': 'KHÔNG ĐƯỢC tự tạo category mới. Chỉ admin mới có quyền tạo category qua Django Admin.',
+        'available_categories': available,
+        'hint': f'Hãy dùng slug hoặc id từ danh sách trên cho trường "category" khi tạo bài {cat_type}.',
+    }, status=status.HTTP_403_FORBIDDEN)
 
 
 # ============================================================================
