@@ -373,13 +373,50 @@ def validate_seo_content(data, strict=True):
     return is_valid, warnings, errors
 
 
+def decode_base64_image(base64_string, slug='image'):
+    """
+    Decode a base64 encoded image string into a Django ContentFile.
+    
+    Supports formats:
+        - data:image/png;base64,iVBOR...  (with data URI prefix)
+        - iVBOR...  (raw base64 string)
+    
+    Returns:
+        ContentFile or None
+    """
+    import base64
+    import re
+    from django.core.files.base import ContentFile
+
+    if not base64_string or not isinstance(base64_string, str):
+        return None
+
+    # Strip data URI prefix if present (e.g., "data:image/jpeg;base64,")
+    match = re.match(r'^data:image/\w+;base64,', base64_string)
+    if match:
+        base64_string = base64_string[match.end():]
+
+    try:
+        image_data = base64.b64decode(base64_string)
+    except Exception:
+        return None
+
+    # Minimum sanity check — must be at least a few hundred bytes for a real image
+    if len(image_data) < 100:
+        return None
+
+    filename = generate_image_filename(slug=slug, suffix='cover', ext='.webp')
+    return ContentFile(image_data, name=filename)
+
+
 def process_article_image(request, slug, upload_to='news/covers/'):
     """
     Process cover image for article from n8n request.
-    Supports 3 methods (in priority order):
+    Supports 4 methods (in priority order):
     1. Direct file upload (multipart/form-data, field: cover_image)
-    2. Image URL download (JSON field: cover_image_url)  
-    3. Auto-generated placeholder from title
+    2. Base64 encoded image (JSON field: cover_image_base64)
+    3. Image URL download (JSON field: cover_image_url)  
+    4. Auto-generated placeholder from title
     
     Args:
         request: DRF request object
@@ -388,7 +425,7 @@ def process_article_image(request, slug, upload_to='news/covers/'):
         
     Returns:
         (ContentFile or None, image_source: str)
-        image_source: 'upload', 'url', 'placeholder', or 'none'
+        image_source: 'upload', 'base64', 'url', 'placeholder', or 'none'
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -401,7 +438,20 @@ def process_article_image(request, slug, upload_to='news/covers/'):
         if webp:
             return webp, 'upload'
     
-    # Method 2: Download from URL
+    # Method 2: Base64 encoded image
+    base64_data = request.data.get('cover_image_base64')
+    if base64_data:
+        logger.info(f"Processing base64 cover image for '{slug}'")
+        image_file = decode_base64_image(base64_data, slug)
+        if image_file:
+            webp = convert_to_webp(image_file, quality='high', slug=slug, suffix='cover')
+            if webp:
+                return webp, 'base64'
+            logger.warning(f"Could not convert base64 image to WebP for '{slug}'")
+        else:
+            logger.warning(f"Could not decode base64 image for '{slug}'")
+    
+    # Method 3: Download from URL
     cover_url = request.data.get('cover_image_url')
     if cover_url:
         logger.info(f"Downloading cover image from URL for '{slug}': {cover_url}")
@@ -1024,7 +1074,7 @@ def _update_article(request, article, model_name, url_prefix):
 
     # Cover image update
     image_source = 'unchanged'
-    if 'cover_image' in request.FILES or 'cover_image_url' in data:
+    if 'cover_image' in request.FILES or 'cover_image_url' in data or 'cover_image_base64' in data:
         cover_image, image_source = process_article_image(
             request, article.slug,
             upload_to=f'{model_name}/covers/'
@@ -2149,7 +2199,7 @@ def n8n_update_tool(request, identifier):
 
     # Cover image
     image_source = 'unchanged'
-    if 'cover_image' in request.FILES or 'cover_image_url' in data:
+    if 'cover_image' in request.FILES or 'cover_image_url' in data or 'cover_image_base64' in data:
         cover_image, image_source = process_article_image(
             request, tool.slug, upload_to='tools/covers/'
         )
@@ -2529,7 +2579,7 @@ def n8n_update_resource(request, identifier):
 
     # Cover image
     image_source = 'unchanged'
-    if 'cover_image' in request.FILES or 'cover_image_url' in data:
+    if 'cover_image' in request.FILES or 'cover_image_url' in data or 'cover_image_base64' in data:
         cover_image, image_source = process_article_image(
             request, resource.slug, upload_to='resources/covers/'
         )
