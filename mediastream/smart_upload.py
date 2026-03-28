@@ -560,6 +560,7 @@ def gdrive_status(request):
         'folder_name': result['folder_name'],
         'folder_accessible': result['folder_accessible'],
         'error': result['error'],
+        'visible_folders': result.get('visible_folders', []),
     })
 
 

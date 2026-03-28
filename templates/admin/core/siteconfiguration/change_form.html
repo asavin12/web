@@ -138,8 +138,11 @@
       btn.disabled=false;btn.textContent='🔄 Kiểm tra kết nối';
 
       if(d.configured){
-        panel.className='gdrive-panel connected';
-        st.innerHTML='<span class="gdrive-tag gdrive-tag-ok">✅ Đã kết nối</span>';
+        var folderOk=d.folder_accessible;
+        panel.className=folderOk?'gdrive-panel connected':'gdrive-panel checking';
+        st.innerHTML=folderOk
+          ?'<span class="gdrive-tag gdrive-tag-ok">✅ Đã kết nối</span>'
+          :'<span class="gdrive-tag gdrive-tag-warn">⚠️ Tài khoản OK — thư mục chưa truy cập được</span>';
         var h='';
         if(d.email)
           h+='<div class="gdrive-info"><span class="gdrive-lbl">📧 Service Account:</span> '+esc(d.email)+'</div>';
@@ -147,12 +150,35 @@
           h+='<div class="gdrive-info"><span class="gdrive-lbl">📁 Thư mục:</span> ';
           if(d.folder_name) h+='<strong>'+esc(d.folder_name)+'</strong> ';
           h+='<code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:11px">'+esc(d.folder_id)+'</code> ';
-          h+=d.folder_accessible
-            ?'<span class="gdrive-tag gdrive-tag-ok">✅ Truy cập được</span>'
-            :'<span class="gdrive-tag gdrive-tag-err">❌ Không truy cập được — kiểm tra quyền chia sẻ</span>';
+          if(folderOk){
+            h+='<span class="gdrive-tag gdrive-tag-ok">✅ Truy cập được</span>';
+          }else{
+            h+='<span class="gdrive-tag gdrive-tag-err">❌ Không truy cập được</span>';
+            h+='</div>';
+            h+='<div class="gdrive-info" style="background:#fff3cd;padding:8px 12px;border-radius:6px;margin-top:6px">';
+            h+='<strong>💡 Để sửa lỗi:</strong> Mở Google Drive → chuột phải thư mục → <strong>Share</strong><br>';
+            h+='Thêm email: <code style="background:#e8f4e8;padding:2px 6px;border-radius:3px;user-select:all">'+esc(d.email)+'</code> (quyền <strong>Editor</strong>)';
+            if(d.error) h+='<br><small style="color:#991b1b">Chi tiết: '+esc(d.error)+'</small>';
+          }
           h+='</div>';
         }else{
           h+='<div class="gdrive-info"><span class="gdrive-tag gdrive-tag-warn">⚠️ Chưa cấu hình Folder ID</span></div>';
+        }
+        /* Show visible folders if any */
+        if(d.visible_folders&&d.visible_folders.length>0){
+          h+='<div class="gdrive-info" style="margin-top:6px"><span class="gdrive-lbl">📂 Thư mục có thể truy cập:</span>';
+          h+='<ul style="margin:4px 0 0 20px;list-style:disc">';
+          for(var i=0;i<d.visible_folders.length;i++){
+            var f=d.visible_folders[i];
+            var isActive=d.folder_id&&f.id===d.folder_id;
+            h+='<li><strong>'+esc(f.name)+'</strong> ';
+            h+='<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:11px;user-select:all">'+esc(f.id)+'</code>';
+            if(isActive) h+=' <span class="gdrive-tag gdrive-tag-ok">← đang dùng</span>';
+            h+='</li>';
+          }
+          h+='</ul></div>';
+        }else if(d.configured&&!folderOk){
+          h+='<div class="gdrive-info" style="color:#991b1b;margin-top:4px">⚠️ Service Account chưa có quyền truy cập bất kỳ thư mục nào. Hãy Share thư mục với email ở trên.</div>';
         }
         det.innerHTML=h;det.style.display='block';
       }else if(d.error){

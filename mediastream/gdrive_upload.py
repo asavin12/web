@@ -103,7 +103,34 @@ def check_gdrive_connection(sa_json_str=None):
                     result['error'] = f'ID "{folder_id}" không phải folder'
             except Exception as e:
                 result['folder_accessible'] = False
-                result['error'] = f'Không truy cập được folder: {str(e)[:200]}'
+                err = str(e)
+                if '404' in err or 'not found' in err.lower() or 'notFound' in err:
+                    result['error'] = (
+                        f'Folder "{folder_id}" không tìm thấy. '
+                        f'Hãy chia sẻ (Share) thư mục với email: {result["email"]} (quyền Editor)'
+                    )
+                elif '403' in err or 'forbidden' in err.lower():
+                    result['error'] = (
+                        f'Không có quyền truy cập folder. '
+                        f'Hãy Share thư mục với {result["email"]} (quyền Editor)'
+                    )
+                else:
+                    result['error'] = f'Không truy cập được folder: {err[:200]}'
+
+        # List visible folders for debugging
+        try:
+            visible = service.files().list(
+                q="mimeType='application/vnd.google-apps.folder' and trashed=false",
+                pageSize=10,
+                fields='files(id,name)',
+                orderBy='modifiedTime desc',
+            ).execute()
+            result['visible_folders'] = [
+                {'id': f['id'], 'name': f['name']}
+                for f in visible.get('files', [])
+            ]
+        except Exception:
+            result['visible_folders'] = []
 
     except json.JSONDecodeError:
         result['error'] = 'Service Account JSON không hợp lệ'
