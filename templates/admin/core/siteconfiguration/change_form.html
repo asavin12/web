@@ -13,12 +13,20 @@
 .gdrive-btn:hover{opacity:.85}
 .gdrive-btn-primary{background:#417690}
 .gdrive-btn-file{background:#79aec8}
+.gdrive-btn-danger{background:#dc3545}
+.gdrive-btn-success{background:#28a745}
+.gdrive-btn-outline{background:transparent;color:#417690;border:2px solid #417690}
+.gdrive-btn-outline:hover{background:#417690;color:#fff}
 .gdrive-info{margin:4px 0}
 .gdrive-lbl{font-weight:600;color:#555;min-width:140px;display:inline-block}
 .gdrive-tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}
 .gdrive-tag-ok{background:#d1fae5;color:#065f46}
 .gdrive-tag-warn{background:#fef3c7;color:#92400e}
 .gdrive-tag-err{background:#fee2e2;color:#991b1b}
+/* JSON field wrapper */
+.gdrive-json-current{padding:10px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;margin-bottom:8px;font-size:13px}
+.gdrive-json-current.corrupted{background:#fef2f2;border-color:#fca5a5}
+.gdrive-json-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
 </style>
 {% endblock %}
 
@@ -28,52 +36,200 @@
 (function(){
   /* Helpers */
   function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+  var FERNET_PREFIX='gAAAAA';
 
-  /* === 1. JSON File Upload Button === */
+  /* === 1. JSON Field — Smart Display with Change/Clear buttons === */
   var jsonField=document.getElementById('id_gdrive_service_account_json');
   if(jsonField){
-    var wrap=document.createElement('div');
-    wrap.style.marginTop='6px';
-    wrap.innerHTML=
-      '<input type="file" accept=".json,application/json" id="gdrive-json-file" style="display:none">'+
-      '<button type="button" class="gdrive-btn gdrive-btn-file" id="gdrive-upload-btn">'+
-      '📁 Chọn file JSON từ máy tính</button>'+
-      '<span id="gdrive-file-name" style="margin-left:8px;color:#666;font-size:12px"></span>';
-    jsonField.parentElement.appendChild(wrap);
+    var currentVal=jsonField.value.trim();
+    var hasData=!!currentVal;
+    var isCorrupted=hasData&&currentVal.indexOf(FERNET_PREFIX)===0;
+    var isValidJson=false;
+    var jsonEmail='';
+    if(hasData&&!isCorrupted){
+      try{var parsed=JSON.parse(currentVal);isValidJson=true;jsonEmail=parsed.client_email||'';}catch(e){}
+    }
 
-    document.getElementById('gdrive-upload-btn').onclick=function(){
-      document.getElementById('gdrive-json-file').click();
-    };
-    document.getElementById('gdrive-json-file').onchange=function(){
-      var file=this.files[0];
-      if(!file) return;
-      document.getElementById('gdrive-file-name').textContent='📄 '+file.name;
-      var reader=new FileReader();
-      reader.onload=function(e){
-        try{
-          var obj=JSON.parse(e.target.result);
-          jsonField.value=JSON.stringify(obj,null,2);
-          jsonField.dispatchEvent(new Event('change'));
-          document.getElementById('gdrive-file-name').innerHTML=
-            '📄 '+esc(file.name)+' <span class="gdrive-tag gdrive-tag-ok">✅ Đã nạp</span>';
-        }catch(err){
-          alert('❌ File JSON không hợp lệ:\n'+err.message);
-          document.getElementById('gdrive-file-name').innerHTML=
-            '<span class="gdrive-tag gdrive-tag-err">❌ File JSON lỗi</span>';
+    // Create wrapper above textarea
+    var wrapper=document.createElement('div');
+    wrapper.id='gdrive-json-wrapper';
+
+    if(hasData){
+      // Show current status + Change/Clear buttons, hide textarea by default
+      var statusDiv=document.createElement('div');
+      statusDiv.id='gdrive-json-status';
+      if(isCorrupted){
+        statusDiv.className='gdrive-json-current corrupted';
+        statusDiv.innerHTML=
+          '<strong>⚠️ Dữ liệu JSON đang bị lỗi mã hoá</strong> (SECRET_KEY đã thay đổi)<br>'+
+          '<small style="color:#991b1b">Cần nhập lại file JSON Service Account.</small>';
+      }else if(isValidJson){
+        statusDiv.className='gdrive-json-current';
+        statusDiv.innerHTML=
+          '<strong>✅ JSON Service Account đã cấu hình</strong>'+
+          (jsonEmail?' — <code style="background:#dcfce7;padding:2px 6px;border-radius:3px;user-select:all">'+esc(jsonEmail)+'</code>':'')+
+          '<br><small style="color:#065f46">Dữ liệu được mã hoá Fernet trong database.</small>';
+      }else{
+        statusDiv.className='gdrive-json-current';
+        statusDiv.innerHTML='<strong>📄 Có dữ liệu JSON</strong> (không thể parse hiển thị)';
+      }
+      wrapper.appendChild(statusDiv);
+
+      var actionsDiv=document.createElement('div');
+      actionsDiv.className='gdrive-json-actions';
+      actionsDiv.innerHTML=
+        '<button type="button" class="gdrive-btn gdrive-btn-outline" id="gdrive-change-btn">✏️ Thay đổi JSON</button>'+
+        '<input type="file" accept=".json,application/json" id="gdrive-json-file" style="display:none">'+
+        '<button type="button" class="gdrive-btn gdrive-btn-file" id="gdrive-upload-btn">📁 Upload file JSON mới</button>'+
+        '<button type="button" class="gdrive-btn gdrive-btn-danger" id="gdrive-clear-btn">🗑️ Xoá JSON</button>'+
+        '<span id="gdrive-file-name" style="color:#666;font-size:12px"></span>';
+      wrapper.appendChild(actionsDiv);
+
+      // Hide textarea by default when data exists
+      jsonField.style.display='none';
+
+      // Change button — show/hide textarea
+      jsonField.parentElement.insertBefore(wrapper,jsonField);
+      document.getElementById('gdrive-change-btn').onclick=function(){
+        if(jsonField.style.display==='none'){
+          jsonField.style.display='';
+          this.textContent='📌 Ẩn trình soạn thảo';
+          // If corrupted, clear the ciphertext so user can paste new value
+          if(isCorrupted){
+            jsonField.value='';
+            jsonField.focus();
+          }
+        }else{
+          jsonField.style.display='none';
+          this.textContent='✏️ Thay đổi JSON';
         }
       };
-      reader.readAsText(file);
-    };
+
+      // Clear button
+      document.getElementById('gdrive-clear-btn').onclick=function(){
+        if(confirm('⚠️ Bạn có chắc muốn xoá JSON Service Account?\nGoogle Drive sẽ ngừng hoạt động.')){
+          jsonField.value='';
+          jsonField.style.display='';
+          statusDiv.className='gdrive-json-current corrupted';
+          statusDiv.innerHTML='<strong>🗑️ JSON đã bị xoá</strong> — nhớ bấm <strong>Lưu</strong> để áp dụng.';
+        }
+      };
+
+      // If corrupted, auto-show textarea
+      if(isCorrupted){
+        jsonField.value='';
+        jsonField.style.display='';
+        document.getElementById('gdrive-change-btn').textContent='📌 Ẩn trình soạn thảo';
+      }
+
+    }else{
+      // No data — show upload button + textarea
+      jsonField.parentElement.insertBefore(wrapper,jsonField);
+      wrapper.innerHTML=
+        '<div class="gdrive-json-current corrupted" style="background:#f8f9fa;border-color:#e2e8f0">'+
+        '<strong>⚠️ Chưa cấu hình Service Account JSON</strong><br>'+
+        '<small>Dán nội dung JSON hoặc upload file .json bên dưới.</small></div>'+
+        '<div class="gdrive-json-actions">'+
+        '<input type="file" accept=".json,application/json" id="gdrive-json-file" style="display:none">'+
+        '<button type="button" class="gdrive-btn gdrive-btn-file" id="gdrive-upload-btn">📁 Chọn file JSON từ máy tính</button>'+
+        '<span id="gdrive-file-name" style="color:#666;font-size:12px"></span>'+
+        '</div>';
+    }
+
+    // File upload handler (shared)
+    var uploadBtn=document.getElementById('gdrive-upload-btn');
+    var fileInput=document.getElementById('gdrive-json-file');
+    if(uploadBtn&&fileInput){
+      uploadBtn.onclick=function(){fileInput.click()};
+      fileInput.onchange=function(){
+        var file=this.files[0];
+        if(!file) return;
+        document.getElementById('gdrive-file-name').textContent='📄 '+file.name;
+        var reader=new FileReader();
+        reader.onload=function(e){
+          try{
+            var obj=JSON.parse(e.target.result);
+            jsonField.value=JSON.stringify(obj,null,2);
+            jsonField.style.display='';
+            jsonField.dispatchEvent(new Event('change'));
+            document.getElementById('gdrive-file-name').innerHTML=
+              '📄 '+esc(file.name)+' <span class="gdrive-tag gdrive-tag-ok">✅ Đã nạp — nhớ bấm Lưu</span>';
+            // Update status
+            var st=document.getElementById('gdrive-json-status');
+            if(st){
+              st.className='gdrive-json-current';
+              var em=obj.client_email||'';
+              st.innerHTML='<strong>✅ JSON mới đã nạp</strong>'+(em?' — <code style="background:#dcfce7;padding:2px 6px;border-radius:3px">'+esc(em)+'</code>':'')+
+                '<br><span class="gdrive-tag gdrive-tag-warn">⚠️ Chưa lưu — bấm Lưu để áp dụng</span>';
+            }
+          }catch(err){
+            alert('❌ File JSON không hợp lệ:\n'+err.message);
+            document.getElementById('gdrive-file-name').innerHTML=
+              '<span class="gdrive-tag gdrive-tag-err">❌ File JSON lỗi</span>';
+          }
+        };
+        reader.readAsText(file);
+      };
+    }
   }
 
-  /* === 2. Folder URL Auto-Extract === */
+  /* === 2. Folder ID — with Change button & URL Auto-Extract === */
   var folderField=document.getElementById('id_gdrive_folder_id');
   if(folderField){
+    var folderVal=folderField.value.trim();
+    var hasFolderData=!!folderVal;
+
+    // Create actions wrapper
+    var folderWrap=document.createElement('div');
+    folderWrap.id='gdrive-folder-wrapper';
+    folderWrap.style.marginTop='6px';
+
+    if(hasFolderData){
+      // Show current folder + Change/Clear buttons
+      folderField.style.display='none';
+      var folderStatus=document.createElement('div');
+      folderStatus.id='gdrive-folder-status';
+      folderStatus.style.cssText='padding:6px 12px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;font-size:13px;margin-bottom:6px';
+      folderStatus.innerHTML=
+        '📁 Folder ID: <code style="background:#dcfce7;padding:2px 6px;border-radius:3px;user-select:all;font-size:12px">'+esc(folderVal)+'</code>';
+      folderWrap.appendChild(folderStatus);
+
+      var folderActions=document.createElement('div');
+      folderActions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center';
+      folderActions.innerHTML=
+        '<button type="button" class="gdrive-btn gdrive-btn-outline" id="gdrive-folder-change-btn">✏️ Thay đổi thư mục</button>'+
+        '<button type="button" class="gdrive-btn gdrive-btn-danger" id="gdrive-folder-clear-btn" style="font-size:11px;padding:4px 10px">🗑️ Xoá</button>';
+      folderWrap.appendChild(folderActions);
+
+      folderField.parentElement.insertBefore(folderWrap,folderField.nextSibling);
+
+      document.getElementById('gdrive-folder-change-btn').onclick=function(){
+        if(folderField.style.display==='none'){
+          folderField.style.display='';
+          folderField.focus();
+          this.textContent='📌 Ẩn';
+        }else{
+          folderField.style.display='none';
+          this.textContent='✏️ Thay đổi thư mục';
+        }
+      };
+      document.getElementById('gdrive-folder-clear-btn').onclick=function(){
+        if(confirm('Xoá Folder ID?')){
+          folderField.value='';
+          folderField.style.display='';
+          folderStatus.innerHTML='📁 Folder ID: <span class="gdrive-tag gdrive-tag-warn">đã xoá — nhớ bấm Lưu</span>';
+        }
+      };
+    }else{
+      folderField.parentElement.insertBefore(folderWrap,folderField.nextSibling);
+    }
+
+    // URL Auto-Extract tip (always shown)
     var tip=document.createElement('div');
     tip.id='gdrive-folder-tip';
     tip.style.cssText='margin-top:4px;font-size:12px;color:#666';
     tip.innerHTML='💡 Có thể dán link thư mục Google Drive — tự động trích xuất Folder ID';
-    folderField.parentElement.appendChild(tip);
+    folderWrap.appendChild(tip);
 
     folderField.addEventListener('input',function(){
       var v=this.value.trim();
@@ -83,6 +239,8 @@
         this.value=m[1];
         tip.innerHTML='✅ Đã trích xuất Folder ID: <code style="background:#e8f4e8;padding:2px 6px;border-radius:3px">'+esc(m[1])+'</code>';
         tip.style.color='#065f46';
+        var st=document.getElementById('gdrive-folder-status');
+        if(st) st.innerHTML='📁 Folder ID: <code style="background:#dcfce7;padding:2px 6px;border-radius:3px;user-select:all;font-size:12px">'+esc(m[1])+'</code> <span class="gdrive-tag gdrive-tag-warn">chưa lưu</span>';
       }else{
         tip.innerHTML='💡 Có thể dán link thư mục Google Drive — tự động trích xuất Folder ID';
         tip.style.color='#666';
