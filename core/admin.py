@@ -480,6 +480,15 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
                 'Giá trị được mã hoá Fernet trước khi lưu vào database.'
             ),
         }),
+        ('☁️ Google Drive', {
+            'fields': ('gdrive_service_account_json', 'gdrive_folder_id'),
+            'classes': ('collapse',),
+            'description': (
+                'Cấu hình upload video lên Google Drive qua Service Account. '
+                'Dán nội dung JSON credentials và Folder ID. '
+                'Cũng có thể cấu hình từ trang Smart Upload (/thu-vien/upload).'
+            ),
+        }),
         ('📊 Thông tin hệ thống', {
             'fields': ('updated_at', 'encryption_status'),
         }),
