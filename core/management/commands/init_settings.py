@@ -24,15 +24,6 @@ class Command(BaseCommand):
         config = SiteConfiguration.get_instance()
         self.stdout.write(self.style.SUCCESS(f'    ✓ SiteConfiguration: {config.site_name}'))
         
-        # Show MinIO status
-        minio_config = config.get_minio_config()
-        if minio_config:
-            self.stdout.write(f'\n  📦 MinIO Storage:')
-            self.stdout.write(f'    • Endpoint: {minio_config["endpoint_url"]}')
-            self.stdout.write(f'    • Bucket: {minio_config["bucket"]}')
-        else:
-            self.stdout.write(f'\n  📦 MinIO Storage: (chưa cấu hình — local storage)')
-        
         # Init API Keys
         self.stdout.write('\n  → Tạo API Keys...')
         created_keys = APIKey.create_default_keys()

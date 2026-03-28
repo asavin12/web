@@ -114,47 +114,6 @@ def apply_dynamic_settings():
     # === YouTube ===
     settings.YOUTUBE_API_KEY = config.youtube_api_key or ''
 
-    # === Elasticsearch ===
-    settings.ELASTICSEARCH_DSL = {
-        'default': {
-            'hosts': config.elasticsearch_url or 'http://localhost:9200',
-        },
-    }
-    settings.ELASTICSEARCH_DSL_AUTOSYNC = config.elasticsearch_autosync
-
-    # === Redis / Channels ===
-    if config.redis_url:
-        settings.CHANNEL_LAYERS = {
-            "default": {
-                "BACKEND": "channels_redis.core.RedisChannelLayer",
-                "CONFIG": {"hosts": [config.redis_url]},
-            },
-        }
-    else:
-        settings.CHANNEL_LAYERS = {
-            "default": {
-                "BACKEND": "channels.layers.InMemoryChannelLayer",
-            },
-        }
-
-    # === MinIO/S3 ===
-    minio_cfg = config.get_minio_config()
-    if minio_cfg:
-        apps_list = list(settings.INSTALLED_APPS)
-        if 'storages' not in apps_list:
-            apps_list.append('storages')
-            settings.INSTALLED_APPS = apps_list
-        settings.AWS_S3_ENDPOINT_URL = minio_cfg['endpoint_url']
-        settings.AWS_ACCESS_KEY_ID = minio_cfg['access_key']
-        settings.AWS_SECRET_ACCESS_KEY = minio_cfg['secret_key']
-        settings.AWS_STORAGE_BUCKET_NAME = minio_cfg['bucket']
-        settings.AWS_S3_REGION_NAME = minio_cfg['region']
-        settings.AWS_S3_SIGNATURE_VERSION = 's3v4'
-        settings.AWS_S3_FILE_OVERWRITE = False
-        settings.AWS_DEFAULT_ACL = 'private'
-        settings.AWS_QUERYSTRING_AUTH = True
-        settings.AWS_QUERYSTRING_EXPIRE = 3600
-
     # === Security (production) ===
     if not config.debug_mode:
         settings.SECURE_SSL_REDIRECT = True

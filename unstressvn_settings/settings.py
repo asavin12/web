@@ -426,17 +426,6 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # =============================================
-# ELASTICSEARCH — Defaults (override bởi DB)
-# =============================================
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': 'http://localhost:9200',
-    },
-}
-ELASTICSEARCH_DSL_AUTOSYNC = False
-ELASTICSEARCH_DSL_SIGNAL_PROCESSOR = 'django_elasticsearch_dsl.signals.BaseSignalProcessor'
-
-# =============================================
 # YOUTUBE — Default (override bởi DB)
 # =============================================
 YOUTUBE_API_KEY = ''

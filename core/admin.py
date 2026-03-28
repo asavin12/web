@@ -480,27 +480,6 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
                 'Giá trị được mã hoá Fernet trước khi lưu vào database.'
             ),
         }),
-        ('☁️ MinIO/S3 Storage', {
-            'fields': (
-                'minio_endpoint_url', 'minio_access_key', 'minio_secret_key',
-                'minio_media_bucket', 'minio_region', 'minio_custom_domain',
-            ),
-            'classes': ('collapse',),
-            'description': 'Cloud storage cho media files. Để trống = local storage.',
-        }),
-        ('🔍 Elasticsearch', {
-            'fields': ('elasticsearch_url', 'elasticsearch_autosync'),
-            'classes': ('collapse',),
-        }),
-        ('📡 Redis', {
-            'fields': ('redis_url',),
-            'classes': ('collapse',),
-            'description': 'Channel layer cho WebSocket. Để trống = InMemory (dev).',
-        }),
-        ('🔗 Mạng xã hội', {
-            'fields': ('facebook_url', 'youtube_channel_url', 'tiktok_url', 'github_url'),
-            'classes': ('collapse',),
-        }),
         ('📊 Thông tin hệ thống', {
             'fields': ('updated_at', 'encryption_status'),
         }),
@@ -528,10 +507,10 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
             encrypted_fields.append('Mật khẩu SMTP')
         if obj.youtube_api_key:
             encrypted_fields.append('YouTube API Key')
-        if obj.minio_access_key:
-            encrypted_fields.append('MinIO Access Key')
-        if obj.minio_secret_key:
-            encrypted_fields.append('MinIO Secret Key')
+        if obj.gemini_api_key:
+            encrypted_fields.append('Gemini API Key')
+        if obj.gdrive_service_account_json:
+            encrypted_fields.append('Google Drive Service Account')
 
         if encrypted_fields:
             items = ''.join(f'<li>✅ {f}</li>' for f in encrypted_fields)

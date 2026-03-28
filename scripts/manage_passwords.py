@@ -96,11 +96,6 @@ def cmd_init(args):
     print(f"  • Site: {config.site_name}")
     print(f"  • Debug: {'ON' if config.debug_mode else 'OFF'}")
     print(f"  • Email: {config.email_host or '(chưa cấu hình)'}")
-    minio = config.get_minio_config()
-    if minio:
-        print(f"  • MinIO: {minio['endpoint_url']}")
-    else:
-        print(f"  • MinIO: (chưa cấu hình — local storage)")
     
     print()
 
@@ -128,20 +123,6 @@ def cmd_show(args):
         print(f"   email_host_password: {config.email_host_password or '(trống)'}")
     else:
         print(f"   email_host_password: {'●●●●●●●●' if config.email_host_password else '(trống)'}")
-    
-    print(f"\n🔹 MinIO Storage:")
-    minio = config.get_minio_config()
-    if minio:
-        print(f"   endpoint: {minio['endpoint_url']}")
-        print(f"   bucket: {minio['bucket']}")
-        if args.show_secrets:
-            print(f"   access_key: {minio['access_key']}")
-            print(f"   secret_key: {minio['secret_key']}")
-        else:
-            print(f"   access_key: {'●●●●●●●●' if minio['access_key'] else '(trống)'}")
-            print(f"   secret_key: {'●●●●●●●●' if minio['secret_key'] else '(trống)'}")
-    else:
-        print(f"   (chưa cấu hình — local storage)")
     
     print(f"\n🔹 API Keys:")
     for key in APIKey.objects.filter(is_active=True):
@@ -178,12 +159,6 @@ def cmd_export(args):
         f"EMAIL_USE_TLS={'True' if config.email_use_tls else 'False'}",
         f"EMAIL_HOST_USER={config.email_host_user or ''}",
         f"EMAIL_HOST_PASSWORD={config.email_host_password or ''}",
-        "",
-        "# ============ MinIO ============",
-        f"MINIO_ENDPOINT_URL={config.minio_endpoint_url or ''}",
-        f"MINIO_ACCESS_KEY={config.minio_access_key or ''}",
-        f"MINIO_SECRET_KEY={config.minio_secret_key or ''}",
-        f"MINIO_MEDIA_BUCKET={config.minio_media_bucket}",
         "",
         "# ============ API Keys ============",
     ]

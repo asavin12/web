@@ -2,7 +2,6 @@
 Media Stream Models
 Quản lý video và audio files cho học ngoại ngữ
 Hỗ trợ streaming với bảo vệ referrer (chỉ cho phép truy cập từ domain chính)
-Hỗ trợ MinIO/S3 storage - Config từ Admin Panel
 """
 
 import os
@@ -12,23 +11,16 @@ from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
 from django.core.validators import FileExtensionValidator
+from django.core.files.storage import default_storage
 
 
 def get_media_storage():
-    """Get storage backend - MinIO nếu configured (từ Admin), ngược lại default"""
-    from .storage import is_minio_configured, PrivateMediaStreamStorage
-    if is_minio_configured():
-        return PrivateMediaStreamStorage()
-    from django.core.files.storage import default_storage
+    """Get storage backend — always default (local) storage."""
     return default_storage
 
 
 def get_thumbnail_storage():
-    """Get storage cho thumbnails - MinIO nếu configured (từ Admin)"""
-    from .storage import is_minio_configured, PublicMediaStreamStorage
-    if is_minio_configured():
-        return PublicMediaStreamStorage()
-    from django.core.files.storage import default_storage
+    """Get storage cho thumbnails — always default (local) storage."""
     return default_storage
 
 

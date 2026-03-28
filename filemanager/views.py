@@ -366,53 +366,6 @@ def disk_usage(request):
             })
     type_list.sort(key=lambda x: x['size'], reverse=True)
     
-    # Check MinIO storage
-    minio_info = None
-    try:
-        from core.models import SiteConfiguration
-        minio_config = SiteConfiguration.get_instance().get_minio_config()
-        if minio_config and minio_config.get('endpoint_url'):
-            import boto3
-            from botocore.config import Config
-            
-            s3_client = boto3.client(
-                's3',
-                endpoint_url=minio_config['endpoint_url'],
-                aws_access_key_id=minio_config['access_key'],
-                aws_secret_access_key=minio_config['secret_key'],
-                region_name=minio_config.get('region', 'us-east-1'),
-                config=Config(signature_version='s3v4', connect_timeout=5, read_timeout=5)
-            )
-            
-            bucket = minio_config.get('bucket', 'mediastream')
-            minio_size = 0
-            minio_count = 0
-            
-            try:
-                paginator = s3_client.get_paginator('list_objects_v2')
-                for page in paginator.paginate(Bucket=bucket):
-                    for obj in page.get('Contents', []):
-                        minio_size += obj.get('Size', 0)
-                        minio_count += 1
-                
-                minio_info = {
-                    'endpoint': minio_config['endpoint_url'],
-                    'bucket': bucket,
-                    'size': minio_size,
-                    'size_display': format_size(minio_size),
-                    'count': minio_count,
-                    'status': 'connected'
-                }
-            except Exception as e:
-                minio_info = {
-                    'endpoint': minio_config['endpoint_url'],
-                    'bucket': bucket,
-                    'status': 'error',
-                    'error': str(e)[:100]
-                }
-    except Exception:
-        pass
-    
     # Check if JSON response requested
     if request.headers.get('Accept') == 'application/json' or request.GET.get('format') == 'json':
         return JsonResponse({
@@ -422,7 +375,6 @@ def disk_usage(request):
             'folder_count': folder_count,
             'folders': folder_list,
             'types': type_list,
-            'minio': minio_info
         })
     
     # Render template
@@ -434,7 +386,6 @@ def disk_usage(request):
         'folder_count': folder_count,
         'folders': folder_list,
         'types': type_list,
-        'minio': minio_info,
     }
     
     return render(request, 'admin/filemanager/disk_usage.html', context)
