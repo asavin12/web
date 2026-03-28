@@ -21,6 +21,46 @@
   <div class="nav-preview-bar" id="navPreviewBar"></div>
 </div>
 
+{# ── Live Footer Preview ── #}
+<div class="nav-preview" id="footerPreview">
+  <div class="nav-preview-header" style="background:linear-gradient(135deg,#6b21a8,#4c1d95);">
+    <span>📄 XEM TRƯỚC FOOTER (Live Preview)</span>
+    <button onclick="toggleFooterPreview()" id="toggleFooterBtn">Ẩn</button>
+  </div>
+  <div class="nav-footer-preview" id="navFooterBar"></div>
+</div>
+
+{# ── Quick Add Menu ── #}
+<div class="nav-icon-ref">
+  <div class="nav-icon-ref-header" onclick="toggleQuickAdd()" style="background:linear-gradient(135deg,#059669,#047857);">
+    <span>⚡ THÊM NHANH MENU (Quick Add)</span>
+    <span id="quickAddArrow">▼</span>
+  </div>
+  <div class="nav-collapsible-body collapsed" id="quickAddBody" style="padding:0;">
+    <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Tên menu</label>
+        <input id="qa_name" type="text" placeholder="VD: Trang mới" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">URL</label>
+        <input id="qa_url" type="text" placeholder="VD: /trang-moi" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Vị trí</label>
+        <select id="qa_location" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+          <option value="navbar">Navbar</option>
+          <option value="footer">Footer</option>
+          <option value="both">Cả hai</option>
+        </select>
+      </div>
+      <button onclick="quickAddMenu()" style="padding:8px 20px;background:#059669;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap;">
+        ➕ Thêm
+      </button>
+    </div>
+  </div>
+</div>
+
 {# ── Icon Reference ── #}
 <div class="nav-icon-ref">
   <div class="nav-icon-ref-header" onclick="toggleIconRef()">
@@ -37,6 +77,7 @@
 (function() {
   // Parse data from Django context
   const navbarTree = JSON.parse('{{ navbar_tree_json|escapejs }}');
+  const footerSections = JSON.parse('{{ footer_sections_json|escapejs }}');
   const availableIcons = JSON.parse('{{ available_icons_json|escapejs }}');
 
   // ── Render Navbar Preview ──
@@ -67,6 +108,34 @@
     });
   } else if (bar) {
     bar.innerHTML = '<div style="padding:12px;color:#9ca3af;font-size:12px;">Chưa có menu nào. Thêm NavigationLink để xem preview.</div>';
+  }
+
+  // ── Render Footer Preview ──
+  const footerBar = document.getElementById('navFooterBar');
+  if (footerBar && Object.keys(footerSections).length > 0) {
+    const sectionOrder = ['resources', 'company', 'legal', 'community', 'social'];
+    sectionOrder.forEach(key => {
+      const section = footerSections[key];
+      if (!section) return;
+      const col = document.createElement('div');
+      col.className = 'footer-section-col';
+      let html = '<div class="footer-section-title">' + section.label + '</div>';
+      if (key === 'social') {
+        html += '<div class="footer-social-row">';
+        section.items.forEach(item => {
+          html += '<span class="footer-social-chip" title="' + item.name + '">' + (item.icon || '🔗') + '</span>';
+        });
+        html += '</div>';
+      } else {
+        section.items.forEach(item => {
+          html += '<div class="footer-link-item">' + item.name + '</div>';
+        });
+      }
+      col.innerHTML = html;
+      footerBar.appendChild(col);
+    });
+  } else if (footerBar) {
+    footerBar.innerHTML = '<div style="padding:12px;color:#9ca3af;font-size:12px;">Chưa có footer links. Thêm NavigationLink với location=Footer.</div>';
   }
 
   // ── Render Icon Reference ──
@@ -106,6 +175,18 @@
     }
   };
 
+  window.toggleFooterPreview = function() {
+    const bar = document.getElementById('navFooterBar');
+    const btn = document.getElementById('toggleFooterBtn');
+    if (bar.style.display === 'none') {
+      bar.style.display = 'flex';
+      btn.textContent = 'Ẩn';
+    } else {
+      bar.style.display = 'none';
+      btn.textContent = 'Hiện';
+    }
+  };
+
   window.toggleIconRef = function() {
     const body = document.getElementById('iconRefBody');
     const arrow = document.getElementById('iconToggleArrow');
@@ -120,6 +201,35 @@
       body.style.padding = '0 16px';
       arrow.textContent = '▼';
     }
+  };
+
+  window.toggleQuickAdd = function() {
+    const body = document.getElementById('quickAddBody');
+    const arrow = document.getElementById('quickAddArrow');
+    if (body.classList.contains('collapsed')) {
+      body.classList.remove('collapsed');
+      body.style.maxHeight = body.scrollHeight + 'px';
+      body.style.padding = '0';
+      arrow.textContent = '▲';
+    } else {
+      body.classList.add('collapsed');
+      body.style.maxHeight = '0';
+      body.style.padding = '0';
+      arrow.textContent = '▼';
+    }
+  };
+
+  window.quickAddMenu = function() {
+    const name = document.getElementById('qa_name').value.trim();
+    const url = document.getElementById('qa_url').value.trim();
+    const location = document.getElementById('qa_location').value;
+    if (!name || !url) {
+      alert('Vui lòng nhập tên và URL!');
+      return;
+    }
+    // Build the Django admin add URL with prefilled fields
+    const params = new URLSearchParams({name: name, url: url, location: location});
+    window.location.href = 'add/?' + params.toString();
   };
 })();
 </script>

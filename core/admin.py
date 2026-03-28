@@ -274,6 +274,33 @@ class VideoAdmin(admin.ModelAdmin):
             messages.warning(request, f'⚠️ {failed} video không thể cập nhật')
 
 
+class NavigationChildInline(admin.TabularInline):
+    """Inline: thêm/sửa submenu trực tiếp trong form parent menu"""
+    model = NavigationLink
+    fk_name = 'parent'
+    extra = 1
+    fields = ('name', 'name_vi', 'name_en', 'url', 'icon', 'description', 'badge_text', 'is_coming_soon', 'open_in_new_tab', 'is_active', 'order')
+    ordering = ['order']
+    verbose_name = 'Mục con'
+    verbose_name_plural = '📂 Mục con (Submenu)'
+    classes = ['collapse']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(parent__isnull=False)
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        field = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if db_field.name == 'name':
+            field.widget.attrs['style'] = 'width:120px'
+        elif db_field.name == 'url':
+            field.widget.attrs['style'] = 'width:150px'
+        elif db_field.name in ('icon', 'badge_text', 'description'):
+            field.widget.attrs['style'] = 'width:100px'
+        elif db_field.name in ('name_vi', 'name_en'):
+            field.widget.attrs['style'] = 'width:100px'
+        return field
+
+
 @admin.register(NavigationLink)
 class NavigationLinkAdmin(admin.ModelAdmin):
     """
@@ -281,6 +308,7 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     Hỗ trợ menu phân cấp (parent → children), đa ngôn ngữ, badge, coming-soon.
     """
     change_list_template = 'admin/core/navigationlink/change_list.html'
+    inlines = [NavigationChildInline]
     
     list_display = (
         'tree_display', 'url_preview', 'location_badge',
@@ -329,6 +357,12 @@ class NavigationLinkAdmin(admin.ModelAdmin):
             ),
         }),
     )
+    
+    def get_inline_instances(self, request, obj=None):
+        """Chỉ hiển thị inline khi edit parent (không phải child, không phải add new)"""
+        if obj and obj.parent is None:
+            return super().get_inline_instances(request, obj)
+        return []
     
     # ── List Display Methods ──
     
@@ -512,7 +546,7 @@ class NavigationLinkAdmin(admin.ModelAdmin):
         navbar_count = NavigationLink.objects.filter(location__in=['navbar', 'both'], parent__isnull=True).count()
         footer_count = NavigationLink.objects.filter(location__in=['footer', 'both'], parent__isnull=True).count()
         
-        # Tree data cho preview panel
+        # Tree data cho navbar preview
         navbar_tree = []
         navbar_parents = NavigationLink.objects.filter(
             is_active=True, location__in=['navbar', 'both'], parent__isnull=True
@@ -529,6 +563,21 @@ class NavigationLinkAdmin(admin.ModelAdmin):
                 'has_children': len(children) > 0,
                 'children': [{'name': c.name, 'url': c.url, 'icon': c.icon, 'badge': c.badge_text, 'coming_soon': c.is_coming_soon} for c in children],
             })
+        
+        # Footer data cho footer preview
+        footer_sections = {}
+        section_labels = {
+            'resources': 'Khám phá', 'company': 'Hỗ trợ',
+            'legal': 'Pháp lý', 'social': 'Mạng xã hội', 'community': 'Cộng đồng',
+        }
+        footer_links = NavigationLink.objects.filter(
+            is_active=True, location__in=['footer', 'both'], parent__isnull=True
+        ).order_by('footer_section', 'order')
+        for link in footer_links:
+            section = link.footer_section or 'other'
+            if section not in footer_sections:
+                footer_sections[section] = {'label': section_labels.get(section, section), 'items': []}
+            footer_sections[section]['items'].append({'name': link.name, 'url': link.url, 'icon': link.icon})
         
         # Icon list for reference
         available_icons = [
@@ -551,6 +600,7 @@ class NavigationLinkAdmin(admin.ModelAdmin):
             'nav_navbar': navbar_count,
             'nav_footer': footer_count,
             'navbar_tree_json': json.dumps(navbar_tree, ensure_ascii=False),
+            'footer_sections_json': json.dumps(footer_sections, ensure_ascii=False),
             'available_icons_json': json.dumps(available_icons),
         })
         

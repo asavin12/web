@@ -1,10 +1,58 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, MapPin, Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
+import { Mail, MapPin } from 'lucide-react';
+import { useNavigation, getIcon, getLocalizedName, type NavLink } from '@/hooks/useNavigation';
+
+// Section labels — mapped from DB footer_section values
+const SECTION_LABELS: Record<string, Record<string, string>> = {
+  resources: { vi: 'Khám phá', en: 'Explore', de: 'Entdecken' },
+  company: { vi: 'Hỗ trợ', en: 'Support', de: 'Unterstützung' },
+  legal: { vi: 'Pháp lý', en: 'Legal', de: 'Rechtliches' },
+  community: { vi: 'Cộng đồng', en: 'Community', de: 'Gemeinschaft' },
+};
+
+// Display order for footer sections
+const SECTION_ORDER = ['resources', 'company', 'legal', 'community'];
+
+function FooterLink({ item, lang }: { item: NavLink; lang: string }) {
+  const label = getLocalizedName(item, lang);
+  const cls = "text-vintage-tan/80 hover:text-vintage-cream transition-colors text-xs md:text-sm uppercase tracking-wide font-medium";
+
+  if (item.is_external || item.open_in_new_tab) {
+    return (
+      <a href={item.url} target="_blank" rel="noopener noreferrer" className={cls}>
+        {label}
+      </a>
+    );
+  }
+  return <Link to={item.url} className={cls}>{label}</Link>;
+}
+
+function SocialLink({ item }: { item: NavLink }) {
+  const IconComp = getIcon(item.icon);
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="p-2 rounded-full bg-vintage-tan/10 hover:bg-vintage-olive transition-colors"
+      aria-label={item.name}
+    >
+      {IconComp ? <IconComp className="h-4 w-4" /> : <span className="text-xs">{item.name}</span>}
+    </a>
+  );
+}
 
 export default function Footer() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { footer } = useNavigation();
   const currentYear = new Date().getFullYear();
+  const lang = i18n.language || 'vi';
+
+  const socialLinks = footer.social || [];
+  const sections = SECTION_ORDER
+    .filter(key => footer[key] && footer[key].length > 0)
+    .map(key => ({ key, label: SECTION_LABELS[key]?.[lang] || SECTION_LABELS[key]?.vi || key, items: footer[key] }));
 
   return (
     <footer className="bg-vintage-dark text-vintage-cream mt-auto safe-area-bottom">
@@ -34,21 +82,14 @@ export default function Footer() {
               {t('home.hero.subtitle')}
             </p>
             
-            {/* Social Links */}
-            <div className="mt-4 md:mt-6 flex items-center gap-3">
-              <a href="https://facebook.com/unstressvn" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-vintage-tan/10 hover:bg-vintage-olive transition-colors" aria-label="Facebook">
-                <Facebook className="h-4 w-4" />
-              </a>
-              <a href="https://twitter.com/unstressvn" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-vintage-tan/10 hover:bg-vintage-olive transition-colors" aria-label="Twitter">
-                <Twitter className="h-4 w-4" />
-              </a>
-              <a href="https://instagram.com/unstressvn" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-vintage-tan/10 hover:bg-vintage-olive transition-colors" aria-label="Instagram">
-                <Instagram className="h-4 w-4" />
-              </a>
-              <a href="https://youtube.com/@unstressvn" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-vintage-tan/10 hover:bg-vintage-olive transition-colors" aria-label="Youtube">
-                <Youtube className="h-4 w-4" />
-              </a>
-            </div>
+            {/* Social Links — dynamic from DB */}
+            {socialLinks.length > 0 && (
+              <div className="mt-4 md:mt-6 flex items-center gap-3">
+                {socialLinks.map((link: NavLink) => (
+                  <SocialLink key={link.id} item={link} />
+                ))}
+              </div>
+            )}
             
             {/* Contact Info - Desktop only */}
             <div className="hidden md:block mt-6 space-y-2 text-sm text-vintage-tan/70">
@@ -63,63 +104,21 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h4 className="font-serif font-bold text-base md:text-lg mb-3 md:mb-4 text-vintage-cream">
-              {t('footer.explore')}
-            </h4>
-            <ul className="space-y-2 md:space-y-3">
-              <li>
-                <Link to="/kien-thuc" className="text-vintage-tan/80 hover:text-vintage-cream transition-colors text-xs md:text-sm uppercase tracking-wide font-medium">
-                  {t('footer.knowledge')}
-                </Link>
-              </li>
-              <li>
-                <Link to="/tai-lieu" className="text-vintage-tan/80 hover:text-vintage-cream transition-colors text-xs md:text-sm uppercase tracking-wide font-medium">
-                  {t('footer.resources')}
-                </Link>
-              </li>
-              <li>
-                <Link to="/cong-cu" className="text-vintage-tan/80 hover:text-vintage-cream transition-colors text-xs md:text-sm uppercase tracking-wide font-medium">
-                  {t('footer.tools')}
-                </Link>
-              </li>
-              <li>
-                <Link to="/tin-tuc" className="text-vintage-tan/80 hover:text-vintage-cream transition-colors text-xs md:text-sm uppercase tracking-wide font-medium">
-                  {t('footer.news')}
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h4 className="font-serif font-bold text-base md:text-lg mb-3 md:mb-4 text-vintage-cream">
-              {t('footer.support')}
-            </h4>
-            <ul className="space-y-2 md:space-y-3">
-              <li>
-                <Link to="/gioi-thieu" className="text-vintage-tan/80 hover:text-vintage-cream transition-colors text-xs md:text-sm uppercase tracking-wide font-medium">
-                  {t('footer.about')}
-                </Link>
-              </li>
-              <li>
-                <Link to="/lien-he" className="text-vintage-tan/80 hover:text-vintage-cream transition-colors text-xs md:text-sm uppercase tracking-wide font-medium">
-                  {t('footer.contact')}
-                </Link>
-              </li>
-              <li>
-                <Link to="/dieu-khoan" className="text-vintage-tan/80 hover:text-vintage-cream transition-colors text-xs md:text-sm uppercase tracking-wide font-medium">
-                  {t('footer.terms')}
-                </Link>
-              </li>
-              <li>
-                <Link to="/chinh-sach-bao-mat" className="text-vintage-tan/80 hover:text-vintage-cream transition-colors text-xs md:text-sm uppercase tracking-wide font-medium">
-                  {t('footer.privacy')}
-                </Link>
-              </li>
-            </ul>
-          </div>
+          {/* Dynamic footer sections from DB */}
+          {sections.map(({ key, label, items }) => (
+            <div key={key}>
+              <h4 className="font-serif font-bold text-base md:text-lg mb-3 md:mb-4 text-vintage-cream">
+                {label}
+              </h4>
+              <ul className="space-y-2 md:space-y-3">
+                {items.map((item: NavLink) => (
+                  <li key={item.id}>
+                    <FooterLink item={item} lang={lang} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
         {/* Copyright */}
