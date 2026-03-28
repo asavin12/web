@@ -39,6 +39,13 @@ urlpatterns = [
     path('analyze-subtitle/', smart_upload.analyze_subtitle_api, name='analyze-subtitle'),
     path('api/gemini-key-status/', smart_upload.gemini_key_status, name='gemini-key-status'),
     path('api/gemini-key/', smart_upload.save_gemini_key, name='gemini-key-save'),
+
+    # ===== Google Drive Credentials (admin) =====
+    path('api/gdrive-status/', smart_upload.gdrive_status, name='gdrive-status'),
+    path('api/gdrive-credentials/', smart_upload.save_gdrive_credentials, name='gdrive-credentials'),
+    path('api/gdrive-check/', smart_upload.gdrive_check_connection, name='gdrive-check'),
+    path('api/gdrive-folders/', smart_upload.gdrive_list_folders, name='gdrive-folders'),
+    path('api/gdrive-folder/', smart_upload.save_gdrive_folder, name='gdrive-folder-save'),
     
     # ===== Admin URLs =====
     # Upload page đã chuyển vào Django Admin (/admin/mediastream/streammedia/)

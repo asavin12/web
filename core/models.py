@@ -825,6 +825,17 @@ class SiteConfiguration(models.Model):
         help_text='🔒 Google Gemini API key cho dịch phụ đề realtime. Mã hoá tự động khi lưu.',
     )
 
+    # === Google Drive Service Account ===
+    gdrive_service_account_json = EncryptedTextField(
+        'Google Drive Service Account JSON', blank=True, default='',
+        help_text='🔒 Nội dung file JSON Service Account (Google Cloud). Mã hoá tự động khi lưu.',
+    )
+    gdrive_folder_id = models.CharField(
+        'Google Drive Folder ID', max_length=255, blank=True, default='',
+        help_text='ID thư mục mặc định trên Google Drive để upload video. '
+                  'Lấy từ URL: drive.google.com/drive/folders/FOLDER_ID',
+    )
+
     # === MinIO/S3 Storage ===
     minio_endpoint_url = models.CharField(
         'MinIO Endpoint URL', max_length=500, blank=True, default='',
