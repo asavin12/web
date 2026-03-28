@@ -30,32 +30,6 @@
                     <th scope="row">Số thư mục:</th>
                     <td>{{ folder_count }}</td>
                 </tr>
-                {% if minio %}
-                <tr>
-                    <th scope="row">MinIO Status:</th>
-                    <td>
-                        {% if minio.status == 'connected' %}
-                            <img src="{% static 'admin/img/icon-yes.svg' %}" alt="Yes"> Connected
-                        {% else %}
-                            <img src="{% static 'admin/img/icon-no.svg' %}" alt="No"> {{ minio.error|default:"Not connected" }}
-                        {% endif %}
-                    </td>
-                </tr>
-                {% if minio.status == 'connected' %}
-                <tr>
-                    <th scope="row">MinIO Endpoint:</th>
-                    <td>{{ minio.endpoint }}</td>
-                </tr>
-                <tr>
-                    <th scope="row">MinIO Bucket:</th>
-                    <td>{{ minio.bucket }}</td>
-                </tr>
-                <tr>
-                    <th scope="row">MinIO Storage:</th>
-                    <td><strong>{{ minio.size_display }}</strong> ({{ minio.count }} files)</td>
-                </tr>
-                {% endif %}
-                {% endif %}
             </tbody>
         </table>
     </div>

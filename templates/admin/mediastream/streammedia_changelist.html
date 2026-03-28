@@ -255,9 +255,7 @@
                 <div class="field">
                     <label>Storage</label>
                     <select name="storage" id="storage">
-                        <option value="auto">Auto</option>
-                        <option value="local">Local</option>
-                        <option value="minio">MinIO</option>
+                        <option value="local" selected>Local</option>
                     </select>
                 </div>
                 <div class="field">
@@ -284,10 +282,6 @@
                 <div class="status-item">
                     <span>Tổng Media:</span>
                     <strong>{{ total_media|default:0 }}</strong>
-                </div>
-                <div class="status-item">
-                    <span>MinIO:</span>
-                    <strong id="minioStatus">--</strong>
                 </div>
             </div>
         </form>
@@ -422,15 +416,6 @@ document.addEventListener('DOMContentLoaded', function() {
         xhr.send(formData);
     });
     
-    fetch('{% url "filemanager:disk_usage" %}?format=json')
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('minioStatus').textContent = 
-                (data.minio && data.minio.status === 'connected') ? '✓ Connected' : '✗ Not configured';
-        })
-        .catch(() => {
-            document.getElementById('minioStatus').textContent = '?';
-        });
 });
 </script>
 {% endblock %}
