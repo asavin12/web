@@ -482,11 +482,10 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
         }),
         ('☁️ Google Drive', {
             'fields': ('gdrive_service_account_json', 'gdrive_folder_id'),
-            'classes': ('collapse',),
             'description': (
                 'Cấu hình upload video lên Google Drive qua Service Account. '
-                'Dán nội dung JSON credentials và Folder ID. '
-                'Cũng có thể cấu hình từ trang Smart Upload (/thu-vien/upload).'
+                'Dán nội dung JSON credentials hoặc upload file .json. '
+                'Có thể dán link thư mục Google Drive — tự động trích xuất Folder ID.'
             ),
         }),
         ('📊 Thông tin hệ thống', {

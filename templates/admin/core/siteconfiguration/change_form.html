@@ -1,0 +1,180 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* === Google Drive Status Panel === */
+.gdrive-panel{margin:0 0 15px;padding:12px 16px;border-radius:8px;font-size:13px;line-height:1.6}
+.gdrive-panel.checking{background:#fff3cd;border:1px solid #ffc107}
+.gdrive-panel.connected{background:#d4edda;border:1px solid #28a745}
+.gdrive-panel.error{background:#f8d7da;border:1px solid #dc3545}
+.gdrive-panel.idle{background:#e2e8f0;border:1px solid #cbd5e0}
+.gdrive-btn{display:inline-block;padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;margin-right:6px;vertical-align:middle;text-decoration:none;color:#fff}
+.gdrive-btn:hover{opacity:.85}
+.gdrive-btn-primary{background:#417690}
+.gdrive-btn-file{background:#79aec8}
+.gdrive-info{margin:4px 0}
+.gdrive-lbl{font-weight:600;color:#555;min-width:140px;display:inline-block}
+.gdrive-tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}
+.gdrive-tag-ok{background:#d1fae5;color:#065f46}
+.gdrive-tag-warn{background:#fef3c7;color:#92400e}
+.gdrive-tag-err{background:#fee2e2;color:#991b1b}
+</style>
+{% endblock %}
+
+{% block after_field_sets %}
+{{ block.super }}
+<script>
+(function(){
+  /* Helpers */
+  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+  /* === 1. JSON File Upload Button === */
+  var jsonField=document.getElementById('id_gdrive_service_account_json');
+  if(jsonField){
+    var wrap=document.createElement('div');
+    wrap.style.marginTop='6px';
+    wrap.innerHTML=
+      '<input type="file" accept=".json,application/json" id="gdrive-json-file" style="display:none">'+
+      '<button type="button" class="gdrive-btn gdrive-btn-file" id="gdrive-upload-btn">'+
+      '📁 Chọn file JSON từ máy tính</button>'+
+      '<span id="gdrive-file-name" style="margin-left:8px;color:#666;font-size:12px"></span>';
+    jsonField.parentElement.appendChild(wrap);
+
+    document.getElementById('gdrive-upload-btn').onclick=function(){
+      document.getElementById('gdrive-json-file').click();
+    };
+    document.getElementById('gdrive-json-file').onchange=function(){
+      var file=this.files[0];
+      if(!file) return;
+      document.getElementById('gdrive-file-name').textContent='📄 '+file.name;
+      var reader=new FileReader();
+      reader.onload=function(e){
+        try{
+          var obj=JSON.parse(e.target.result);
+          jsonField.value=JSON.stringify(obj,null,2);
+          jsonField.dispatchEvent(new Event('change'));
+          document.getElementById('gdrive-file-name').innerHTML=
+            '📄 '+esc(file.name)+' <span class="gdrive-tag gdrive-tag-ok">✅ Đã nạp</span>';
+        }catch(err){
+          alert('❌ File JSON không hợp lệ:\n'+err.message);
+          document.getElementById('gdrive-file-name').innerHTML=
+            '<span class="gdrive-tag gdrive-tag-err">❌ File JSON lỗi</span>';
+        }
+      };
+      reader.readAsText(file);
+    };
+  }
+
+  /* === 2. Folder URL Auto-Extract === */
+  var folderField=document.getElementById('id_gdrive_folder_id');
+  if(folderField){
+    var tip=document.createElement('div');
+    tip.id='gdrive-folder-tip';
+    tip.style.cssText='margin-top:4px;font-size:12px;color:#666';
+    tip.innerHTML='💡 Có thể dán link thư mục Google Drive — tự động trích xuất Folder ID';
+    folderField.parentElement.appendChild(tip);
+
+    folderField.addEventListener('input',function(){
+      var v=this.value.trim();
+      var m=v.match(/drive\.google\.com\/(?:drive\/)?(?:u\/\d+\/)?folders\/([a-zA-Z0-9_-]+)/)||
+            v.match(/drive\.google\.com\/.*[?&]id=([a-zA-Z0-9_-]+)/);
+      if(m){
+        this.value=m[1];
+        tip.innerHTML='✅ Đã trích xuất Folder ID: <code style="background:#e8f4e8;padding:2px 6px;border-radius:3px">'+esc(m[1])+'</code>';
+        tip.style.color='#065f46';
+      }else{
+        tip.innerHTML='💡 Có thể dán link thư mục Google Drive — tự động trích xuất Folder ID';
+        tip.style.color='#666';
+      }
+    });
+  }
+
+  /* === 3. Connection Status Panel === */
+  var fieldsets=document.querySelectorAll('fieldset');
+  var gdriveFS=null;
+  for(var i=0;i<fieldsets.length;i++){
+    var h=fieldsets[i].querySelector('h2');
+    if(h&&h.textContent.indexOf('Google Drive')!==-1){gdriveFS=fieldsets[i];break}
+  }
+
+  if(gdriveFS){
+    var panel=document.createElement('div');
+    panel.id='gdrive-panel';
+    panel.className='gdrive-panel idle';
+    panel.innerHTML=
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'+
+      '  <span><strong>📡 Trạng thái kết nối:</strong> <span id="gdrive-st">Đang kiểm tra...</span></span>'+
+      '  <button type="button" class="gdrive-btn gdrive-btn-primary" id="gdrive-ck-btn">🔄 Kiểm tra kết nối</button>'+
+      '</div>'+
+      '<div id="gdrive-det" style="margin-top:8px;display:none"></div>';
+
+    var firstRow=gdriveFS.querySelector('.form-row');
+    if(firstRow) firstRow.parentElement.insertBefore(panel,firstRow);
+    else gdriveFS.appendChild(panel);
+
+    document.getElementById('gdrive-ck-btn').onclick=checkConn;
+    setTimeout(checkConn,300);
+  }
+
+  function checkConn(){
+    var panel=document.getElementById('gdrive-panel');
+    var st=document.getElementById('gdrive-st');
+    var det=document.getElementById('gdrive-det');
+    var btn=document.getElementById('gdrive-ck-btn');
+    if(!panel) return;
+
+    panel.className='gdrive-panel checking';
+    st.textContent='⏳ Đang kiểm tra...';
+    det.style.display='none';
+    btn.disabled=true;btn.textContent='⏳ Đang kiểm tra...';
+
+    fetch('/media-stream/api/gdrive-status/',{
+      method:'GET',credentials:'same-origin',
+      headers:{'X-Requested-With':'XMLHttpRequest'}
+    })
+    .then(function(r){return r.json()})
+    .then(function(d){
+      btn.disabled=false;btn.textContent='🔄 Kiểm tra kết nối';
+
+      if(d.configured){
+        panel.className='gdrive-panel connected';
+        st.innerHTML='<span class="gdrive-tag gdrive-tag-ok">✅ Đã kết nối</span>';
+        var h='';
+        if(d.email)
+          h+='<div class="gdrive-info"><span class="gdrive-lbl">📧 Service Account:</span> '+esc(d.email)+'</div>';
+        if(d.folder_id){
+          h+='<div class="gdrive-info"><span class="gdrive-lbl">📁 Thư mục:</span> ';
+          if(d.folder_name) h+='<strong>'+esc(d.folder_name)+'</strong> ';
+          h+='<code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:11px">'+esc(d.folder_id)+'</code> ';
+          h+=d.folder_accessible
+            ?'<span class="gdrive-tag gdrive-tag-ok">✅ Truy cập được</span>'
+            :'<span class="gdrive-tag gdrive-tag-err">❌ Không truy cập được — kiểm tra quyền chia sẻ</span>';
+          h+='</div>';
+        }else{
+          h+='<div class="gdrive-info"><span class="gdrive-tag gdrive-tag-warn">⚠️ Chưa cấu hình Folder ID</span></div>';
+        }
+        det.innerHTML=h;det.style.display='block';
+      }else if(d.error){
+        panel.className='gdrive-panel error';
+        st.innerHTML='<span class="gdrive-tag gdrive-tag-err">❌ Lỗi kết nối</span>';
+        det.innerHTML='<div class="gdrive-info" style="color:#991b1b">⚠️ '+esc(d.error)+'</div>';
+        det.style.display='block';
+      }else{
+        panel.className='gdrive-panel idle';
+        st.innerHTML='<span class="gdrive-tag gdrive-tag-warn">⚠️ Chưa cấu hình</span>';
+        det.innerHTML='<div class="gdrive-info">Dán JSON Service Account và Folder ID rồi bấm <strong>Lưu</strong> để kích hoạt.</div>';
+        det.style.display='block';
+      }
+    })
+    .catch(function(err){
+      btn.disabled=false;btn.textContent='🔄 Kiểm tra kết nối';
+      panel.className='gdrive-panel error';
+      st.innerHTML='<span class="gdrive-tag gdrive-tag-err">❌ Lỗi</span>';
+      det.innerHTML='<div class="gdrive-info" style="color:#991b1b">Không thể kết nối API: '+esc(err.message)+'</div>';
+      det.style.display='block';
+    });
+  }
+})();
+</script>
+{% endblock %}
