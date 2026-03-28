@@ -209,7 +209,7 @@ class NavigationLinkChildSerializer(serializers.ModelSerializer):
         model = NavigationLink
         fields = [
             'id', 'name', 'name_vi', 'name_en', 'name_de',
-            'url', 'icon', 'open_in_new_tab', 'is_external',
+            'url', 'description', 'icon', 'open_in_new_tab', 'is_external',
             'is_coming_soon', 'badge_text', 'order'
         ]
 
@@ -224,7 +224,7 @@ class NavigationLinkSerializer(serializers.ModelSerializer):
         model = NavigationLink
         fields = [
             'id', 'name', 'name_vi', 'name_en', 'name_de',
-            'url', 'icon', 'location', 'footer_section',
+            'url', 'description', 'icon', 'location', 'footer_section',
             'open_in_new_tab', 'is_external', 'is_coming_soon',
             'badge_text', 'has_children', 'order', 'children'
         ]

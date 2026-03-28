@@ -1,39 +1,45 @@
 /**
  * navigation_admin.css — Custom CSS for NavigationLink admin panel.
- * Improves Vietnamese font rendering and overall layout.
+ * Tree view, icon reference, live preview, Vietnamese font rendering.
  */
 
-/* ── Ensure Vietnamese diacritics render beautifully ── */
-#changelist-form table {
+/* ── Vietnamese font stack ── */
+#changelist-form table,
+#changelist-form table th,
+#changelist-form table td,
+.module h2, .module caption,
+.form-row label, fieldset .field-box label,
+.help, .description,
+.nav-preview, .nav-stats {
   font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system,
     BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ── Table layout ── */
+#changelist-form table {
   table-layout: auto;
   width: 100%;
 }
 
 #changelist-form table th,
 #changelist-form table td {
-  font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system,
-    BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   vertical-align: middle;
   padding: 8px 10px;
   white-space: nowrap;
 }
 
-/* ── Column widths ── */
+/* Checkbox column */
 #changelist-form table th:first-child,
-#changelist-form table td:first-child {
-  width: 30px;
-}
+#changelist-form table td:first-child { width: 30px; }
 
-/* Name column — flexible width */
+/* Name column — flexible */
 #changelist-form table td:nth-child(2) {
   white-space: normal;
-  min-width: 120px;
-  max-width: 200px;
+  min-width: 140px;
+  max-width: 260px;
 }
 
-/* URL column — truncate long URLs */
+/* URL column — truncate */
 #changelist-form table td:nth-child(3) {
   max-width: 220px;
   overflow: hidden;
@@ -41,11 +47,8 @@
 }
 
 /* Order column — narrow */
-#changelist-form table td:last-child {
-  width: 60px;
-}
+#changelist-form table td:last-child { width: 60px; }
 
-/* ── Make list column headers compact ── */
 #changelist-form table th {
   font-size: 11px;
   text-transform: uppercase;
@@ -58,33 +61,227 @@
   line-height: 1.5;
 }
 
-/* ── Better ordering for inline editable ── */
 #changelist-form table input[type="number"] {
   width: 50px;
   text-align: center;
   font-size: 13px;
 }
 
-/* ── Fieldset headers ── */
-.module h2,
-.module caption {
-  font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system,
-    BlinkMacSystemFont, sans-serif;
+.form-row label, fieldset .field-box label { font-weight: 600; }
+.help, .description { font-size: 12px; line-height: 1.5; }
+
+/* ── Stats bar ── */
+.nav-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 16px;
 }
 
-/* ── Form labels ── */
-.form-row label,
-fieldset .field-box label {
-  font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system,
-    BlinkMacSystemFont, sans-serif;
+.nav-stats .stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.nav-stats .stat strong {
+  font-size: 18px;
+  color: #1e293b;
+}
+
+/* ── Live Preview Panel ── */
+.nav-preview {
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.nav-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: #1e293b;
+  color: white;
+  font-size: 13px;
   font-weight: 600;
 }
 
-/* ── Help text styling ── */
-.help,
-.description {
-  font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system,
-    BlinkMacSystemFont, sans-serif;
+.nav-preview-header button {
+  background: #334155;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
   font-size: 12px;
-  line-height: 1.5;
+}
+
+.nav-preview-header button:hover {
+  background: #475569;
+}
+
+.nav-preview-bar {
+  display: flex;
+  gap: 0;
+  padding: 0 16px;
+  background: #faf8f5;
+  border-bottom: 1px solid #e2e8f0;
+  min-height: 48px;
+  align-items: stretch;
+  overflow-x: auto;
+}
+
+.nav-preview-bar .nav-item {
+  position: relative;
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: default;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nav-preview-bar .nav-item:hover {
+  color: #1e293b;
+  border-bottom-color: #92400e;
+}
+
+.nav-preview-bar .nav-item.has-dropdown {
+  cursor: pointer;
+}
+
+.nav-preview-bar .nav-item .dropdown-arrow {
+  font-size: 9px;
+  margin-left: 4px;
+  transition: transform 0.2s;
+}
+
+.nav-preview-bar .nav-item:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+/* Dropdown preview */
+.nav-preview-bar .nav-item .dropdown-panel {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 0;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  z-index: 100;
+}
+
+.nav-preview-bar .nav-item:hover .dropdown-panel {
+  display: block;
+}
+
+.nav-preview-bar .dropdown-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #334155;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.nav-preview-bar .dropdown-child:hover {
+  background: #f1f5f9;
+}
+
+.nav-preview-bar .dropdown-child .child-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.nav-preview-bar .dropdown-child.coming-soon {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ── Icon Reference Panel ── */
+.nav-icon-ref {
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.nav-icon-ref-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: #f1f5f9;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nav-icon-ref-header:hover {
+  background: #e2e8f0;
+}
+
+.nav-icon-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px;
+  background: white;
+}
+
+.nav-icon-list .icon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: monospace;
+}
+
+.nav-icon-list .icon-chip:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+/* ── Collapsible sections ── */
+.nav-collapsible-body {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.nav-collapsible-body.collapsed {
+  max-height: 0 !important;
+  padding: 0 !important;
 }

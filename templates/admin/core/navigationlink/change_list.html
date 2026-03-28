@@ -1,0 +1,127 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block content %}
+
+{# ── Stats Bar ── #}
+<div class="nav-stats">
+  <div class="stat">📊 Tổng: <strong>{{ nav_total }}</strong></div>
+  <div class="stat">✅ Đang hiển thị: <strong style="color:#16a34a;">{{ nav_active }}</strong></div>
+  <div class="stat">⛔ Đã tắt: <strong style="color:#dc2626;">{{ nav_inactive }}</strong></div>
+  <div class="stat">📌 Navbar: <strong style="color:#1e40af;">{{ nav_navbar }}</strong></div>
+  <div class="stat">📄 Footer: <strong style="color:#6b21a8;">{{ nav_footer }}</strong></div>
+</div>
+
+{# ── Live Navbar Preview ── #}
+<div class="nav-preview" id="navPreview">
+  <div class="nav-preview-header">
+    <span>👁️ XEM TRƯỚC NAVBAR (Live Preview)</span>
+    <button onclick="togglePreview()" id="togglePreviewBtn">Ẩn</button>
+  </div>
+  <div class="nav-preview-bar" id="navPreviewBar"></div>
+</div>
+
+{# ── Icon Reference ── #}
+<div class="nav-icon-ref">
+  <div class="nav-icon-ref-header" onclick="toggleIconRef()">
+    <span>🎨 DANH SÁCH ICON KHẢ DỤNG (Lucide Icons)</span>
+    <span id="iconToggleArrow">▼</span>
+  </div>
+  <div class="nav-icon-list nav-collapsible-body collapsed" id="iconRefBody"></div>
+</div>
+
+{# ── Original changelist (table) ── #}
+{{ block.super }}
+
+<script>
+(function() {
+  // Parse data from Django context
+  const navbarTree = JSON.parse('{{ navbar_tree_json|escapejs }}');
+  const availableIcons = JSON.parse('{{ available_icons_json|escapejs }}');
+
+  // ── Render Navbar Preview ──
+  const bar = document.getElementById('navPreviewBar');
+  if (bar && navbarTree.length > 0) {
+    navbarTree.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'nav-item' + (item.has_children ? ' has-dropdown' : '');
+
+      let html = item.name;
+      if (item.has_children) {
+        html += ' <span class="dropdown-arrow">▼</span>';
+        html += '<div class="dropdown-panel">';
+        item.children.forEach(child => {
+          const cls = child.coming_soon ? 'dropdown-child coming-soon' : 'dropdown-child';
+          html += '<div class="' + cls + '">';
+          if (child.icon) html += '<span style="font-size:11px;color:#94a3b8;">●</span>';
+          html += child.name;
+          if (child.badge) html += ' <span class="child-badge">' + child.badge + '</span>';
+          if (child.coming_soon) html += ' <span class="child-badge" style="background:#fef3c7;color:#92400e;">Soon</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+
+      el.innerHTML = html;
+      bar.appendChild(el);
+    });
+  } else if (bar) {
+    bar.innerHTML = '<div style="padding:12px;color:#9ca3af;font-size:12px;">Chưa có menu nào. Thêm NavigationLink để xem preview.</div>';
+  }
+
+  // ── Render Icon Reference ──
+  const iconBody = document.getElementById('iconRefBody');
+  if (iconBody) {
+    availableIcons.forEach(name => {
+      const chip = document.createElement('span');
+      chip.className = 'icon-chip';
+      chip.textContent = name;
+      chip.title = 'Click để copy: ' + name;
+      chip.onclick = function() {
+        navigator.clipboard.writeText(name).then(() => {
+          chip.style.background = '#dcfce7';
+          chip.style.borderColor = '#86efac';
+          chip.style.color = '#166534';
+          setTimeout(() => {
+            chip.style.background = '';
+            chip.style.borderColor = '';
+            chip.style.color = '';
+          }, 1000);
+        });
+      };
+      iconBody.appendChild(chip);
+    });
+  }
+
+  // ── Toggle Functions ──
+  window.togglePreview = function() {
+    const bar = document.getElementById('navPreviewBar');
+    const btn = document.getElementById('togglePreviewBtn');
+    if (bar.style.display === 'none') {
+      bar.style.display = 'flex';
+      btn.textContent = 'Ẩn';
+    } else {
+      bar.style.display = 'none';
+      btn.textContent = 'Hiện';
+    }
+  };
+
+  window.toggleIconRef = function() {
+    const body = document.getElementById('iconRefBody');
+    const arrow = document.getElementById('iconToggleArrow');
+    if (body.classList.contains('collapsed')) {
+      body.classList.remove('collapsed');
+      body.style.maxHeight = body.scrollHeight + 'px';
+      body.style.padding = '12px 16px';
+      arrow.textContent = '▲';
+    } else {
+      body.classList.add('collapsed');
+      body.style.maxHeight = '0';
+      body.style.padding = '0 16px';
+      arrow.textContent = '▼';
+    }
+  };
+})();
+</script>
+
+{% endblock %}

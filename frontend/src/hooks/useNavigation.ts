@@ -69,6 +69,7 @@ export interface NavChild {
   name_en: string;
   name_de: string;
   url: string;
+  description: string;
   icon: string;
   open_in_new_tab: boolean;
   is_external: boolean;
@@ -84,6 +85,7 @@ export interface NavLink {
   name_en: string;
   name_de: string;
   url: string;
+  description: string;
   icon: string;
   location: 'navbar' | 'footer' | 'both';
   footer_section: string;

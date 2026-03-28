@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.urls import reverse
 from django.shortcuts import redirect
 from django.utils.safestring import mark_safe
+from django.db import models
 from .models import Video, NavigationLink, APIKey, SiteConfiguration
 from .youtube import fetch_youtube_info
 import secrets
@@ -276,11 +277,13 @@ class VideoAdmin(admin.ModelAdmin):
 @admin.register(NavigationLink)
 class NavigationLinkAdmin(admin.ModelAdmin):
     """
-    Admin quản lý chuyên nghiệp links điều hướng cho navbar và footer.
+    Admin quản lý menu điều hướng — tree view, icon picker, live preview.
     Hỗ trợ menu phân cấp (parent → children), đa ngôn ngữ, badge, coming-soon.
     """
+    change_list_template = 'admin/core/navigationlink/change_list.html'
+    
     list_display = (
-        'display_name', 'url_preview', 'location_badge',
+        'tree_display', 'url_preview', 'location_badge',
         'parent_link', 'icon_display', 'badge_info',
         'is_active', 'order',
     )
@@ -288,7 +291,8 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     search_fields = ('name', 'name_vi', 'name_en', 'name_de', 'url')
     list_editable = ('is_active', 'order')
     ordering = ['location', 'parent__order', 'order']
-    list_per_page = 50
+    list_per_page = 100
+    actions = ['enable_selected', 'disable_selected', 'auto_reorder', 'duplicate_selected']
     
     class Media:
         css = {
@@ -297,8 +301,12 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Thông tin cơ bản', {
-            'fields': ('name', 'url', 'icon'),
-            'description': '📝 Tên chính (dùng cho admin) và URL đích.',
+            'fields': ('name', 'url', 'description', 'icon'),
+            'description': (
+                '📝 Tên chính (dùng cho admin) và URL đích.<br>'
+                '<b>Icon</b>: Nhập tên Lucide icon — xem danh sách đầy đủ tại '
+                '<a href="https://lucide.dev/icons/" target="_blank">lucide.dev/icons</a>'
+            ),
         }),
         ('🌐 Đa ngôn ngữ', {
             'fields': ('name_vi', 'name_en', 'name_de'),
@@ -322,17 +330,24 @@ class NavigationLinkAdmin(admin.ModelAdmin):
         }),
     )
     
-    def display_name(self, obj):
-        """Hiển thị tên có indent cho children, hỗ trợ font tiếng Việt"""
+    # ── List Display Methods ──
+    
+    def tree_display(self, obj):
+        """Hiển thị tree view — menu cha: bold, children: indent + └─"""
         name_style = (
             'font-family: "Segoe UI", "Noto Sans", "Roboto", -apple-system, '
             'BlinkMacSystemFont, sans-serif;'
         )
         if obj.parent:
             return format_html(
-                '<span style="color:#888; margin-right:4px; padding-left:24px;">└─</span>'
-                '<span style="font-size:12px; {}">{}</span>',
-                name_style, obj.name
+                '<span style="color:#888; padding-left:24px;">└─</span>'
+                '<span style="font-size:12px; {style}">{name}</span>'
+                '{desc}',
+                style=name_style,
+                name=obj.name,
+                desc=format_html(
+                    ' <span style="color:#9ca3af;font-size:10px;">{}</span>', obj.description
+                ) if obj.description else '',
             )
         children_count = obj.children.filter(is_active=True).count()
         name_html = format_html(
@@ -341,17 +356,26 @@ class NavigationLinkAdmin(admin.ModelAdmin):
         )
         if children_count > 0:
             return format_html(
-                '{} <span style="color:#6366f1; font-size:10px; '
+                '{name} <span style="color:#6366f1; font-size:10px; '
                 'padding:1px 5px; background:#eef2ff; border-radius:3px;">'
-                '▼ {}</span>',
-                name_html, children_count
+                '▼ {count}</span>{desc}',
+                name=name_html,
+                count=children_count,
+                desc=format_html(
+                    ' <span style="color:#9ca3af;font-size:10px;">{}</span>', obj.description
+                ) if obj.description else '',
             )
-        return name_html
-    display_name.short_description = 'Tên menu'
-    display_name.admin_order_field = 'name'
+        return format_html(
+            '{name}{desc}',
+            name=name_html,
+            desc=format_html(
+                ' <span style="color:#9ca3af;font-size:10px;">{}</span>', obj.description
+            ) if obj.description else '',
+        )
+    tree_display.short_description = 'Tên menu'
+    tree_display.admin_order_field = 'name'
     
     def url_preview(self, obj):
-        """Hiển thị URL với icon external nếu cần"""
         if obj.is_external:
             return format_html(
                 '<a href="{}" target="_blank" style="color: #417690;">{} 🔗</a>',
@@ -364,7 +388,6 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     url_preview.short_description = 'URL'
     
     def location_badge(self, obj):
-        """Badge màu cho location"""
         colors = {
             'navbar': ('#dbeafe', '#1e40af', '📌'),
             'footer': ('#f3e8ff', '#6b21a8', '📄'),
@@ -380,7 +403,6 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     location_badge.admin_order_field = 'location'
     
     def parent_link(self, obj):
-        """Hiển thị parent menu"""
         if obj.parent:
             return format_html(
                 '<span style="color:#059669; font-weight:500;">↑ {}</span>',
@@ -396,7 +418,6 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     parent_link.short_description = 'Cấp menu'
     
     def icon_display(self, obj):
-        """Hiển thị icon name ngắn gọn"""
         if obj.icon:
             return format_html(
                 '<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:11px;">{}</code>',
@@ -406,7 +427,6 @@ class NavigationLinkAdmin(admin.ModelAdmin):
     icon_display.short_description = 'Icon'
 
     def badge_info(self, obj):
-        """Hiển thị badge + trạng thái đặc biệt"""
         parts = []
         if obj.is_coming_soon:
             parts.append(
@@ -423,15 +443,118 @@ class NavigationLinkAdmin(admin.ModelAdmin):
         return format_html(' '.join(parts)) if parts else ''
     badge_info.short_description = 'Badge'
     
+    # ── Admin Actions ──
+    
+    @admin.action(description='✅ Bật hiển thị các mục đã chọn')
+    def enable_selected(self, request, queryset):
+        count = queryset.update(is_active=True)
+        self.message_user(request, f'✅ Đã bật {count} mục menu.', messages.SUCCESS)
+    
+    @admin.action(description='❌ Tắt hiển thị các mục đã chọn')
+    def disable_selected(self, request, queryset):
+        count = queryset.update(is_active=False)
+        self.message_user(request, f'❌ Đã tắt {count} mục menu.', messages.WARNING)
+    
+    @admin.action(description='🔄 Tự động sắp xếp thứ tự (theo vị trí)')
+    def auto_reorder(self, request, queryset):
+        """Sắp xếp lại order tự động: parent items theo thứ tự hiện tại, children theo parent order"""
+        navbar_parents = NavigationLink.objects.filter(
+            parent__isnull=True, location__in=['navbar', 'both']
+        ).order_by('order', 'name')
+        footer_parents = NavigationLink.objects.filter(
+            parent__isnull=True, location__in=['footer', 'both']
+        ).order_by('footer_section', 'order', 'name')
+        
+        idx = 0
+        for parent in navbar_parents:
+            idx += 1
+            NavigationLink.objects.filter(pk=parent.pk).update(order=idx * 10)
+            for child_idx, child in enumerate(parent.children.order_by('order', 'name'), 1):
+                NavigationLink.objects.filter(pk=child.pk).update(order=idx * 10 + child_idx)
+        
+        for parent in footer_parents:
+            idx += 1
+            NavigationLink.objects.filter(pk=parent.pk).update(order=idx * 10)
+            for child_idx, child in enumerate(parent.children.order_by('order', 'name'), 1):
+                NavigationLink.objects.filter(pk=child.pk).update(order=idx * 10 + child_idx)
+        
+        self.message_user(request, '🔄 Đã sắp xếp lại thứ tự tất cả menu items.', messages.SUCCESS)
+    
+    @admin.action(description='📋 Nhân đôi các mục đã chọn')
+    def duplicate_selected(self, request, queryset):
+        count = 0
+        for item in queryset:
+            item.pk = None
+            item.name = f'{item.name} (copy)'
+            item.is_active = False
+            item.order = item.order + 1
+            item.save()
+            count += 1
+        self.message_user(request, f'📋 Đã nhân đôi {count} mục menu (mặc định tắt hiển thị).', messages.SUCCESS)
+    
+    # ── Overrides ──
+    
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """Lọc parent chỉ hiển thị menu không có parent (menu gốc)"""
         if db_field.name == "parent":
             kwargs["queryset"] = NavigationLink.objects.filter(parent__isnull=True).order_by('location', 'order')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
     
     def get_queryset(self, request):
-        """Optimise queries — prefetch parent + children count"""
         return super().get_queryset(request).select_related('parent').prefetch_related('children')
+    
+    def changelist_view(self, request, extra_context=None):
+        """Thêm context cho change_list template — menu tree + stats"""
+        extra_context = extra_context or {}
+        
+        # Stats cho header
+        total = NavigationLink.objects.count()
+        active = NavigationLink.objects.filter(is_active=True).count()
+        navbar_count = NavigationLink.objects.filter(location__in=['navbar', 'both'], parent__isnull=True).count()
+        footer_count = NavigationLink.objects.filter(location__in=['footer', 'both'], parent__isnull=True).count()
+        
+        # Tree data cho preview panel
+        navbar_tree = []
+        navbar_parents = NavigationLink.objects.filter(
+            is_active=True, location__in=['navbar', 'both'], parent__isnull=True
+        ).prefetch_related(
+            models.Prefetch('children', queryset=NavigationLink.objects.filter(is_active=True).order_by('order'))
+        ).order_by('order')
+        
+        for parent in navbar_parents:
+            children = list(parent.children.all())
+            navbar_tree.append({
+                'name': parent.name,
+                'url': parent.url,
+                'icon': parent.icon,
+                'has_children': len(children) > 0,
+                'children': [{'name': c.name, 'url': c.url, 'icon': c.icon, 'badge': c.badge_text, 'coming_soon': c.is_coming_soon} for c in children],
+            })
+        
+        # Icon list for reference
+        available_icons = [
+            'Home', 'Newspaper', 'BookOpen', 'FileText', 'GraduationCap',
+            'Languages', 'Users', 'Wrench', 'MessageSquare', 'Music',
+            'Video', 'Radio', 'Globe', 'Heart', 'Star', 'Bookmark',
+            'Compass', 'Mail', 'MapPin', 'Search', 'Info', 'Phone',
+            'Settings', 'Link', 'Play', 'HelpCircle', 'Lock', 'Shield',
+            'Calendar', 'Bell', 'Clipboard', 'Pen', 'Download', 'Upload',
+            'Image', 'Camera', 'Mic', 'Headphones', 'Code', 'Database',
+            'Trophy', 'Map', 'ExternalLink', 'Library', 'Facebook',
+            'Youtube', 'Instagram', 'Twitter',
+        ]
+        
+        import json
+        extra_context.update({
+            'nav_total': total,
+            'nav_active': active,
+            'nav_inactive': total - active,
+            'nav_navbar': navbar_count,
+            'nav_footer': footer_count,
+            'navbar_tree_json': json.dumps(navbar_tree, ensure_ascii=False),
+            'available_icons_json': json.dumps(available_icons),
+        })
+        
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 # ============ Site Configuration Admin (Singleton) ============

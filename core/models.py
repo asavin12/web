@@ -421,6 +421,8 @@ class NavigationLink(models.Model):
     
     url = models.CharField(max_length=500, verbose_name='URL',
                           help_text='URL nội bộ (VD: /tin-tuc) hoặc URL bên ngoài (VD: https://discord.gg/...)')
+    description = models.CharField(max_length=200, blank=True, verbose_name='Mô tả ngắn',
+                                   help_text='Mô tả hiển thị dưới tên menu (tuỳ chọn, dùng cho mega-menu)')
     icon = models.CharField(max_length=50, blank=True, verbose_name='Icon',
                            help_text='Tên lucide icon (VD: Newspaper, BookOpen, Wrench, Users, GraduationCap)')
     
