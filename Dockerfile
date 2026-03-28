@@ -29,6 +29,7 @@ ENV PYTHONUNBUFFERED=1
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
+    postgresql-client \
     curl \
     media-types \
     && rm -rf /var/lib/apt/lists/*

@@ -3,6 +3,58 @@ set -e
 
 echo "=== UnstressVN Docker Entrypoint ==="
 
+# =============================================
+# Parse database connection info (reused below)
+# =============================================
+parse_db_conn() {
+  local database_url="${DATABASE_URL:-}"
+  if [ -n "$database_url" ]; then
+    # Parse DATABASE_URL: postgres://user:pass@host:port/dbname
+    DB_USER_PARSED=$(echo "$database_url" | sed -n 's|.*://\([^:]*\):.*|\1|p')
+    DB_PASS_PARSED=$(echo "$database_url" | sed -n 's|.*://[^:]*:\([^@]*\)@.*|\1|p')
+    DB_HOST_PARSED=$(echo "$database_url" | sed -n 's|.*@\([^:/]*\).*|\1|p')
+    DB_PORT_PARSED=$(echo "$database_url" | sed -n 's|.*:\([0-9]*\)/.*|\1|p')
+    DB_NAME_PARSED=$(echo "$database_url" | sed -n 's|.*/\([^?]*\).*|\1|p')
+  else
+    DB_USER_PARSED="${DB_USER:-unstressvn}"
+    DB_PASS_PARSED="${DB_PASSWORD:-unstressvn}"
+    DB_HOST_PARSED="${DB_HOST:-localhost}"
+    DB_PORT_PARSED="${DB_PORT:-5432}"
+    DB_NAME_PARSED="${DB_NAME:-unstressvn}"
+  fi
+}
+parse_db_conn
+
+# =============================================
+# Persist SECRET_KEY in PostgreSQL
+# Prevents encryption data loss across Docker rebuilds
+# =============================================
+if [ -z "${SECRET_KEY:-}" ]; then
+  echo "SECRET_KEY not set — reading/creating from database..."
+  PGPASSWORD="$DB_PASS_PARSED" psql -h "$DB_HOST_PARSED" -p "${DB_PORT_PARSED:-5432}" \
+    -U "$DB_USER_PARSED" -d "$DB_NAME_PARSED" -qtAX \
+    -c "CREATE TABLE IF NOT EXISTS _app_config (key VARCHAR(64) PRIMARY KEY, value TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW());" \
+    2>/dev/null || true
+
+  STORED_KEY=$(PGPASSWORD="$DB_PASS_PARSED" psql -h "$DB_HOST_PARSED" -p "${DB_PORT_PARSED:-5432}" \
+    -U "$DB_USER_PARSED" -d "$DB_NAME_PARSED" -qtAX \
+    -c "SELECT value FROM _app_config WHERE key='secret_key';" 2>/dev/null || echo "")
+
+  if [ -n "$STORED_KEY" ]; then
+    export SECRET_KEY="$STORED_KEY"
+    echo "SECRET_KEY loaded from database."
+  else
+    # Generate and store a new key
+    NEW_KEY=$(python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
+    PGPASSWORD="$DB_PASS_PARSED" psql -h "$DB_HOST_PARSED" -p "${DB_PORT_PARSED:-5432}" \
+      -U "$DB_USER_PARSED" -d "$DB_NAME_PARSED" -qtAX \
+      -c "INSERT INTO _app_config (key, value) VALUES ('secret_key', '$NEW_KEY') ON CONFLICT (key) DO NOTHING;" \
+      2>/dev/null || true
+    export SECRET_KEY="$NEW_KEY"
+    echo "SECRET_KEY generated and stored in database."
+  fi
+fi
+
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL..."
 MAX_RETRIES=30

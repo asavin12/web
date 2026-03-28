@@ -6,6 +6,9 @@ tự động giải mã khi đọc. Admin thấy plaintext, DB chứa ciphertext
 
 from django.db import models
 
+# Fernet ciphertext luôn bắt đầu bằng 'gAAAAA'
+_FERNET_PREFIX = 'gAAAAA'
+
 
 class EncryptedTextField(models.TextField):
     """
@@ -14,6 +17,10 @@ class EncryptedTextField(models.TextField):
 
     Trong database: gAAAA...base64 ciphertext
     Trong Python/Admin: plaintext
+    
+    Bảo vệ:
+    - Nếu decrypt thất bại → giữ nguyên ciphertext (không mất dữ liệu)
+    - Nếu value đã là ciphertext → không mã hoá lại (tránh double-encrypt)
     """
 
     def get_prep_value(self, value):
@@ -22,6 +29,10 @@ class EncryptedTextField(models.TextField):
 
         value = super().get_prep_value(value)
         if value:
+            # Nếu value đã là Fernet ciphertext (VD: decrypt thất bại → trả về ciphertext gốc)
+            # → giữ nguyên, KHÔNG mã hoá lại
+            if str(value).startswith(_FERNET_PREFIX):
+                return value
             return encrypt_value(str(value))
         return value
 

@@ -632,27 +632,61 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
         return redirect(reverse('admin:core_siteconfiguration_change', args=[obj.pk]))
 
     def encryption_status(self, obj):
-        """Hiển thị trạng thái mã hoá."""
-        encrypted_fields = []
-        if obj.email_host_password:
-            encrypted_fields.append('Mật khẩu SMTP')
-        if obj.youtube_api_key:
-            encrypted_fields.append('YouTube API Key')
-        if obj.gemini_api_key:
-            encrypted_fields.append('Gemini API Key')
-        if obj.gdrive_service_account_json:
-            encrypted_fields.append('Google Drive Service Account')
-
-        if encrypted_fields:
-            items = ''.join(f'<li>✅ {f}</li>' for f in encrypted_fields)
-            return format_html(
-                '<div style="padding:10px;background:#d4edda;border-radius:6px;">'
-                '<strong>🔒 Các trường đang được mã hoá Fernet trong database:</strong>'
-                '<ul style="margin:5px 0 0 0;">{}</ul></div>',
-                mark_safe(items),
+        """Hiển thị trạng thái mã hoá + phát hiện lỗi giải mã."""
+        from .encryption import _get_fernet
+        from cryptography.fernet import InvalidToken
+        
+        FERNET_PREFIX = 'gAAAAA'
+        fernet = _get_fernet()
+        
+        encrypted_fields_map = {
+            'email_host_password': 'Mật khẩu SMTP',
+            'youtube_api_key': 'YouTube API Key',
+            'gemini_api_key': 'Gemini API Key',
+            'gdrive_service_account_json': 'Google Drive Service Account',
+        }
+        
+        ok_fields = []
+        corrupt_fields = []
+        empty_fields = []
+        
+        for field_name, display_name in encrypted_fields_map.items():
+            value = getattr(obj, field_name, '')
+            if not value:
+                empty_fields.append(display_name)
+            elif value.startswith(FERNET_PREFIX):
+                # Value is still ciphertext — decrypt failed (wrong SECRET_KEY)
+                corrupt_fields.append(display_name)
+            else:
+                # Value is plaintext — decrypted successfully
+                ok_fields.append(display_name)
+        
+        html_parts = []
+        
+        if corrupt_fields:
+            items = ''.join(f'<li>⚠️ {f} — <b>KHÔNG THỂ GIẢI MÃ</b></li>' for f in corrupt_fields)
+            html_parts.append(
+                '<div style="padding:10px;background:#f8d7da;border-radius:6px;margin-bottom:8px;">'
+                '<strong>🔴 CẢNH BÁO: SECRET_KEY có thể đã thay đổi!</strong><br>'
+                'Các trường sau chứa dữ liệu mã hoá nhưng không thể giải mã:'
+                f'<ul style="margin:5px 0 0 0;">{items}</ul>'
+                '<small>💡 Đặt SECRET_KEY cố định trong Coolify Environment Variables để tránh mất dữ liệu.</small>'
+                '</div>'
             )
-        return format_html(
-            '<div style="padding:10px;background:#f8f9fa;border-radius:6px;">'
-            'Chưa có dữ liệu nhạy cảm nào được lưu.</div>'
-        )
+        
+        if ok_fields:
+            items = ''.join(f'<li>✅ {f}</li>' for f in ok_fields)
+            html_parts.append(
+                '<div style="padding:10px;background:#d4edda;border-radius:6px;margin-bottom:8px;">'
+                '<strong>🔒 Đang mã hoá Fernet:</strong>'
+                f'<ul style="margin:5px 0 0 0;">{items}</ul></div>'
+            )
+        
+        if not ok_fields and not corrupt_fields:
+            html_parts.append(
+                '<div style="padding:10px;background:#f8f9fa;border-radius:6px;">'
+                'Chưa có dữ liệu nhạy cảm nào được lưu.</div>'
+            )
+        
+        return format_html(mark_safe(''.join(html_parts)))
     encryption_status.short_description = 'Trạng thái mã hoá'

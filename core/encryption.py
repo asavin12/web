@@ -39,7 +39,11 @@ def encrypt_value(plaintext: str) -> str:
 
 
 def decrypt_value(ciphertext: str) -> str:
-    """Giải mã ciphertext → chuỗi gốc."""
+    """Giải mã ciphertext → chuỗi gốc.
+    
+    Nếu không thể giải mã (VD: SECRET_KEY thay đổi), TRẢ VỀ CIPHERTEXT GỐC
+    thay vì chuỗi rỗng — tránh mất dữ liệu khi admin save form.
+    """
     if not ciphertext:
         return ''
     try:
@@ -48,4 +52,5 @@ def decrypt_value(ciphertext: str) -> str:
         logger.warning(
             'Không thể giải mã giá trị — SECRET_KEY có thể đã thay đổi: %s', exc
         )
-        return ''
+        # Trả về ciphertext gốc để KHÔNG mất dữ liệu khi save form
+        return ciphertext
