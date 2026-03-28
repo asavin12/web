@@ -70,6 +70,7 @@ class StreamMedia(models.Model):
     MEDIA_TYPE_CHOICES = [
         ('video', 'Video'),
         ('audio', 'Audio'),
+        ('podcast', 'Podcast'),
     ]
     
     STORAGE_TYPE_CHOICES = [
@@ -284,7 +285,7 @@ class StreamMedia(models.Model):
   Your browser does not support the video tag.
 </video>'''
         else:
-            return f'''<audio controls src="{self.get_stream_url()}">
+            return f'''<audio controls src="{self.get_stream_url()}" style="width:100%;">
   Your browser does not support the audio tag.
 </audio>'''
     

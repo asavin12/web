@@ -689,24 +689,28 @@ def upload_media(request):
     level = request.POST.get('level', 'all')
     category_id = request.POST.get('category')
     is_public = request.POST.get('is_public', 'true') == 'true'
-    storage_preference = request.POST.get('storage', 'auto')
+    storage_preference = request.POST.get('storage', 'local')
+    gdrive_folder = request.POST.get('gdrive_folder', '').strip()
     
     # Validate extensions
     allowed_video = ['.mp4', '.webm', '.ogg', '.mov', '.flv', '.avi', '.m4v']
     allowed_audio = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.wma', '.ogg']
     allowed_image = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+    allowed_subs = ['.vtt', '.srt']
     
     uploaded_media = []
     errors = []
     thumbnail_file = None
     
-    # Separate media files from thumbnail
+    # Separate media files from thumbnail and subtitles
     media_files = []
+    subtitle_files = []
     for f in files:
         ext = os.path.splitext(f.name)[1].lower()
         if ext in allowed_image:
-            # This is a thumbnail
             thumbnail_file = f
+        elif ext in allowed_subs:
+            subtitle_files.append(f)
         elif ext in allowed_video or ext in allowed_audio:
             media_files.append(f)
         else:
@@ -715,14 +719,23 @@ def upload_media(request):
     if not media_files:
         return JsonResponse({'error': 'No valid media files uploaded'}, status=400)
     
-    # Determine storage backend
-    use_minio = False
-    if storage_preference == 'minio' or (storage_preference == 'auto'):
+    # Google Drive upload setup
+    use_gdrive = storage_preference == 'gdrive'
+    gdrive_service = None
+    target_folder_id = None
+    if use_gdrive:
         try:
-            from .storage import is_minio_configured
-            use_minio = is_minio_configured()
-        except Exception:
-            use_minio = False
+            from .gdrive_upload import _get_gdrive_config, _build_drive_service, upload_to_gdrive
+            sa_dict, cfg_folder_id = _get_gdrive_config()
+            if sa_dict:
+                gdrive_service = _build_drive_service(sa_dict)
+                target_folder_id = gdrive_folder or cfg_folder_id
+            else:
+                use_gdrive = False
+                errors.append('Google Drive chưa cấu hình — upload local thay thế')
+        except Exception as e:
+            use_gdrive = False
+            errors.append(f'GDrive init error: {str(e)[:100]}')
     
     # Upload each media file
     for i, uploaded_file in enumerate(media_files):
@@ -751,13 +764,35 @@ def upload_media(request):
             media = StreamMedia(
                 title=title,
                 media_type=file_media_type,
-                file=uploaded_file,
                 description=description,
                 language=language,
                 level=level,
                 is_public=is_public,
                 uploaded_by=request.user,
             )
+            
+            # Upload to Google Drive or save locally
+            if use_gdrive and gdrive_service:
+                try:
+                    from .gdrive_upload import upload_to_gdrive
+                    mime_type, _ = mimetypes.guess_type(uploaded_file.name)
+                    result = upload_to_gdrive(
+                        uploaded_file, uploaded_file.name,
+                        mime_type=mime_type or 'video/mp4',
+                        folder_id=target_folder_id
+                    )
+                    media.storage_type = 'gdrive'
+                    media.gdrive_file_id = result['file_id']
+                    media.gdrive_url = result.get('gdrive_url', '')
+                    media.file_size = uploaded_file.size
+                    media.mime_type = mime_type or 'video/mp4'
+                except Exception as e:
+                    errors.append(f'GDrive upload failed for {uploaded_file.name}: {str(e)[:100]}')
+                    media.file = uploaded_file
+                    media.storage_type = 'local'
+            else:
+                media.file = uploaded_file
+                media.storage_type = 'local'
             
             # Add thumbnail to first media
             if thumbnail_file and i == 0:
@@ -770,6 +805,28 @@ def upload_media(request):
                     pass
             
             media.save()
+            
+            # Attach subtitle files to the first media
+            if subtitle_files and i == 0:
+                for sf in subtitle_files:
+                    sub_name = os.path.splitext(sf.name)[0].lower()
+                    # Detect subtitle language from filename
+                    sub_lang = 'vi'
+                    if '_en' in sub_name or '.en' in sub_name or 'english' in sub_name:
+                        sub_lang = 'en'
+                    elif '_de' in sub_name or '.de' in sub_name or 'deutsch' in sub_name or 'german' in sub_name:
+                        sub_lang = 'de'
+                    try:
+                        from .models import MediaSubtitle
+                        MediaSubtitle.objects.create(
+                            media=media,
+                            language=sub_lang,
+                            label=sf.name,
+                            file=sf,
+                            is_default=(sub_lang == language),
+                        )
+                    except Exception as e:
+                        errors.append(f'Subtitle {sf.name}: {str(e)[:80]}')
             
             uploaded_media.append({
                 'uid': str(media.uid),

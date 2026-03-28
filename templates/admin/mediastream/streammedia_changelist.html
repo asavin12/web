@@ -204,8 +204,8 @@
 <div class="upload-section">
     <h3>📤 Upload Media</h3>
     <p style="margin: 0 0 10px; padding: 10px; background: #fffbe6; border-left: 3px solid #ffc107; font-size: 12px;">
-        ⚠️ <strong>Lưu ý:</strong> Video chỉ được upload bởi Admin hoặc n8n automation. 
-        Link video chỉ hoạt động trên domain <code>unstressvn.com</code>.
+        ⚠️ <strong>Lưu ý:</strong> Video upload lên Google Drive (mặc định). 
+        File phụ đề (.vtt, .srt) sẽ lưu local. Có thể kéo thả cả video + sub cùng lúc.
     </p>
     <div class="upload-content">
         <form id="mediaUploadForm" method="post" enctype="multipart/form-data">
@@ -213,8 +213,8 @@
             
             <div class="upload-area" id="uploadArea">
                 <p><strong>Kéo thả files vào đây hoặc click để chọn</strong></p>
-                <p style="font-size:12px;">Hỗ trợ: MP4, WebM, MP3, WAV, OGG</p>
-                <input type="file" id="fileInput" name="files" multiple accept="video/*,audio/*,image/*" style="display:none">
+                <p style="font-size:12px;">Hỗ trợ: MP4, WebM, MP3, WAV, OGG + phụ đề VTT, SRT</p>
+                <input type="file" id="fileInput" name="files" multiple accept="video/*,audio/*,image/*,.vtt,.srt" style="display:none">
             </div>
             
             <div class="file-list" id="filePreview"></div>
@@ -227,35 +227,37 @@
                 <div class="field">
                     <label>Loại</label>
                     <select name="media_type" id="mediaType">
-                        <option value="video">Video</option>
-                        <option value="audio">Audio</option>
+                        <option value="video">🎬 Video</option>
+                        <option value="audio">🎵 Audio</option>
+                        <option value="podcast">🎙️ Podcast</option>
                     </select>
                 </div>
                 <div class="field">
                     <label>Ngôn ngữ</label>
                     <select name="language" id="mediaLanguage">
+                        <option value="de" selected>Deutsch</option>
                         <option value="vi">Tiếng Việt</option>
                         <option value="en">English</option>
-                        <option value="de">Deutsch</option>
                         <option value="all">Tất cả</option>
                     </select>
                 </div>
                 <div class="field">
                     <label>Cấp độ</label>
                     <select name="level" id="mediaLevel">
+                        <option value="all" selected>Tất cả trình độ</option>
                         <option value="A1">A1 - Sơ cấp</option>
                         <option value="A2">A2 - Cơ bản</option>
                         <option value="B1">B1 - Trung cấp</option>
                         <option value="B2">B2 - Trung cao</option>
                         <option value="C1">C1 - Cao cấp</option>
                         <option value="C2">C2 - Thành thạo</option>
-                        <option value="all" selected>Tất cả trình độ</option>
                     </select>
                 </div>
                 <div class="field">
                     <label>Storage</label>
                     <select name="storage" id="storage">
-                        <option value="local" selected>Local</option>
+                        <option value="gdrive" selected>☁️ Google Drive</option>
+                        <option value="local">💾 Local</option>
                     </select>
                 </div>
                 <div class="field">
@@ -265,6 +267,18 @@
                         <option value="false">Private</option>
                     </select>
                 </div>
+            </div>
+            
+            <!-- GDrive Folder Picker -->
+            <div id="gdriveFolderSection" style="margin-bottom:15px;padding:10px;background:#f0f6fa;border:1px solid #79aec8;border-radius:4px;">
+                <label style="font-size:12px;color:#417690;font-weight:bold;">📁 Thư mục Google Drive</label>
+                <div style="display:flex;gap:8px;margin-top:4px;align-items:center;">
+                    <select name="gdrive_folder" id="gdriveFolder" style="flex:1;padding:6px 8px;border:1px solid #ccc;font-size:13px;">
+                        <option value="">— Thư mục mặc định (từ cấu hình) —</option>
+                    </select>
+                    <button type="button" id="refreshFolders" style="background:#417690;color:#fff;border:none;padding:6px 12px;cursor:pointer;border-radius:3px;font-size:12px;white-space:nowrap;">🔄 Tải</button>
+                </div>
+                <div id="gdriveStatus" style="margin-top:4px;font-size:11px;color:#666;"></div>
             </div>
             
             <div class="upload-progress" id="uploadProgress">
@@ -302,9 +316,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const progressText = document.getElementById('progressText');
     const uploadResult = document.getElementById('uploadResult');
     const mediaTypeSelect = document.getElementById('mediaType');
+    const storageSelect = document.getElementById('storage');
+    const gdriveFolderSection = document.getElementById('gdriveFolderSection');
+    const gdriveFolderSelect = document.getElementById('gdriveFolder');
+    const gdriveStatus = document.getElementById('gdriveStatus');
     
     let selectedFiles = [];
     
+    /* === Storage toggle === */
+    function toggleGdriveSection() {
+        gdriveFolderSection.style.display = storageSelect.value === 'gdrive' ? 'block' : 'none';
+    }
+    storageSelect.addEventListener('change', toggleGdriveSection);
+    toggleGdriveSection();
+    
+    /* === GDrive folder loader === */
+    function loadGdriveFolders() {
+        gdriveStatus.textContent = '⏳ Đang tải thư mục...';
+        gdriveFolderSelect.disabled = true;
+        fetch('/media-stream/api/gdrive-folders/', {credentials: 'same-origin'})
+        .then(r => r.json())
+        .then(d => {
+            gdriveFolderSelect.innerHTML = '<option value="">— Thư mục mặc định —</option>';
+            (d.folders || []).forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.textContent = '📁 ' + f.name;
+                gdriveFolderSelect.appendChild(opt);
+            });
+            gdriveFolderSelect.disabled = false;
+            gdriveStatus.innerHTML = d.folders && d.folders.length > 0
+                ? '<span style="color:#065f46">✅ ' + d.folders.length + ' thư mục</span>'
+                : '<span style="color:#92400e">⚠️ Không tìm thấy thư mục — kiểm tra cấu hình GDrive</span>';
+        })
+        .catch(e => {
+            gdriveFolderSelect.disabled = false;
+            gdriveStatus.innerHTML = '<span style="color:#991b1b">❌ Lỗi: ' + e.message + '</span>';
+        });
+    }
+    document.getElementById('refreshFolders').addEventListener('click', loadGdriveFolders);
+    if (storageSelect.value === 'gdrive') loadGdriveFolders();
+    
+    /* === File handling === */
     uploadArea.addEventListener('click', () => fileInput.click());
     
     uploadArea.addEventListener('dragover', (e) => {
@@ -330,19 +383,31 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadBtn.disabled = selectedFiles.length === 0;
         
         if (selectedFiles.length > 0) {
-            const firstFile = selectedFiles[0];
-            if (firstFile.type.startsWith('video/')) mediaTypeSelect.value = 'video';
-            else if (firstFile.type.startsWith('audio/')) mediaTypeSelect.value = 'audio';
+            const firstMedia = selectedFiles.find(f => f.type.startsWith('video/') || f.type.startsWith('audio/'));
+            if (firstMedia) {
+                if (firstMedia.type.startsWith('video/')) mediaTypeSelect.value = 'video';
+                else if (firstMedia.type.startsWith('audio/')) mediaTypeSelect.value = 'audio';
+            }
         }
     }
     
     function updatePreview() {
         filePreview.innerHTML = '';
+        const videoExts = ['.mp4','.webm','.ogg','.mov','.flv','.avi','.m4v'];
+        const audioExts = ['.mp3','.wav','.m4a','.aac','.flac','.wma'];
+        const subExts = ['.vtt','.srt'];
+        
         selectedFiles.forEach((file, index) => {
             const item = document.createElement('span');
             item.className = 'file-item';
             const size = file.size < 1024*1024 ? (file.size/1024).toFixed(1) + ' KB' : (file.size/(1024*1024)).toFixed(1) + ' MB';
-            item.innerHTML = `${file.name} (${size}) <button type="button" class="remove" data-index="${index}">×</button>`;
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            let icon = '📄';
+            if (videoExts.includes(ext)) icon = '🎬';
+            else if (audioExts.includes(ext)) icon = '🎵';
+            else if (subExts.includes(ext)) icon = '📝';
+            else if (file.type.startsWith('image/')) icon = '🖼️';
+            item.innerHTML = `${icon} ${file.name} (${size}) <button type="button" class="remove" data-index="${index}">×</button>`;
             filePreview.appendChild(item);
         });
         
@@ -355,6 +420,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    /* === Upload === */
     uploadForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         if (selectedFiles.length === 0) return;
@@ -370,8 +436,11 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('media_type', mediaTypeSelect.value);
         formData.append('language', document.getElementById('mediaLanguage').value);
         formData.append('level', document.getElementById('mediaLevel').value);
-        formData.append('storage', document.getElementById('storage').value);
+        formData.append('storage', storageSelect.value);
         formData.append('is_public', document.getElementById('isPublic').value);
+        if (storageSelect.value === 'gdrive' && gdriveFolderSelect.value) {
+            formData.append('gdrive_folder', gdriveFolderSelect.value);
+        }
         
         selectedFiles.forEach(file => formData.append('files', file));
         
@@ -381,24 +450,33 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.lengthComputable) {
                 const percent = Math.round((e.loaded / e.total) * 100);
                 progressFill.style.width = percent + '%';
-                progressText.textContent = 'Uploading... ' + percent + '%';
+                const storage = storageSelect.value === 'gdrive' ? '→ GDrive' : '→ Local';
+                progressText.textContent = `Uploading ${storage}... ${percent}%`;
             }
         };
         
         xhr.onload = function() {
             uploadProgress.classList.remove('active');
             if (xhr.status === 200) {
+                let msg = '✓ Upload thành công!';
+                try {
+                    const result = JSON.parse(xhr.responseText);
+                    if (result.errors && result.errors.length > 0) {
+                        msg += ' (⚠️ ' + result.errors.join('; ') + ')';
+                    }
+                } catch(e) {}
                 uploadResult.className = 'upload-result success';
-                uploadResult.textContent = '✓ Upload thành công!';
+                uploadResult.textContent = msg;
                 uploadResult.style.display = 'block';
                 selectedFiles = [];
                 filePreview.innerHTML = '';
                 document.getElementById('mediaTitle').value = '';
                 setTimeout(() => window.location.reload(), 1500);
             } else {
-                const result = JSON.parse(xhr.responseText);
+                let errMsg = 'Upload failed';
+                try { errMsg = JSON.parse(xhr.responseText).error || errMsg; } catch(e) {}
                 uploadResult.className = 'upload-result error';
-                uploadResult.textContent = '✗ ' + (result.error || 'Upload failed');
+                uploadResult.textContent = '✗ ' + errMsg;
                 uploadResult.style.display = 'block';
                 uploadBtn.disabled = false;
             }

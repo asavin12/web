@@ -102,7 +102,8 @@ class StreamMediaAdmin(admin.ModelAdmin):
                 '<img src="{}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;" />',
                 obj.thumbnail.url
             )
-        icon = '🎬' if obj.media_type == 'video' else '🎵'
+        icons = {'video': '🎬', 'audio': '🎵', 'podcast': '🎙️'}
+        icon = icons.get(obj.media_type, '🎵')
         return format_html(
             '<span style="font-size:24px;display:block;text-align:center;">{}</span>',
             icon
@@ -110,8 +111,8 @@ class StreamMediaAdmin(admin.ModelAdmin):
     thumbnail_preview.short_description = ''
     
     def media_type_badge(self, obj):
-        colors = {'video': '#4CAF50', 'audio': '#2196F3'}
-        icons = {'video': '🎬', 'audio': '🎵'}
+        colors = {'video': '#4CAF50', 'audio': '#2196F3', 'podcast': '#9C27B0'}
+        icons = {'video': '🎬', 'audio': '🎵', 'podcast': '🎙️'}
         return format_html(
             '<span style="background:{};color:white;padding:2px 8px;border-radius:4px;font-size:11px;">'
             '{} {}</span>',

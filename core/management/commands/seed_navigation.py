@@ -48,18 +48,58 @@ class Command(BaseCommand):
              'url': '/', 'icon': '', 'order': 1},
             {'name': 'Thư viện', 'name_vi': 'Thư viện', 'name_en': 'Library', 'name_de': 'Bibliothek',
              'url': '/tai-lieu', 'icon': '', 'order': 2},
-            {'name': 'Video', 'name_vi': 'Video', 'name_en': 'Videos', 'name_de': 'Videos',
-             'url': '/video', 'icon': '', 'order': 3},
-            {'name': 'Stream', 'name_vi': 'Stream', 'name_en': 'Stream', 'name_de': 'Stream',
-             'url': '/stream', 'icon': '', 'order': 4},
         ]
         for d in direct_links:
             NavigationLink.objects.create(location='navbar', **d)
 
+        # ── Video dropdown ──
+        video_parent = NavigationLink.objects.create(
+            name='Video', name_vi='Video', name_en='Videos', name_de='Videos',
+            url='/video', icon='Play', location='navbar', order=3,
+        )
+        video_children = [
+            {'name': 'Tất cả video', 'name_vi': 'Tất cả video', 'name_en': 'All videos', 'name_de': 'Alle Videos',
+             'url': '/video', 'icon': 'Play', 'order': 1},
+            {'name': 'Bài giảng', 'name_vi': 'Bài giảng', 'name_en': 'Lectures', 'name_de': 'Vorlesungen',
+             'url': '/video/bai-giang', 'icon': 'GraduationCap', 'order': 2},
+            {'name': 'Bài học', 'name_vi': 'Bài học', 'name_en': 'Lessons', 'name_de': 'Lektionen',
+             'url': '/video/bai-hoc', 'icon': 'BookOpen', 'order': 3},
+            {'name': 'Phim', 'name_vi': 'Phim', 'name_en': 'Movies', 'name_de': 'Filme',
+             'url': '/video/phim', 'icon': 'Film', 'order': 4},
+            {'name': 'Ca nhạc', 'name_vi': 'Ca nhạc', 'name_en': 'Music Videos', 'name_de': 'Musikvideos',
+             'url': '/video/ca-nhac', 'icon': 'Music', 'order': 5},
+        ]
+        for c in video_children:
+            NavigationLink.objects.create(parent=video_parent, location='navbar', **c)
+
+        # ── Audio & Podcast dropdown ──
+        audio_parent = NavigationLink.objects.create(
+            name='Audio & Podcast', name_vi='Audio & Podcast', name_en='Audio & Podcast', name_de='Audio & Podcast',
+            url='/audio', icon='Headphones', location='navbar', order=4,
+        )
+        audio_children = [
+            {'name': 'Tất cả audio', 'name_vi': 'Tất cả audio', 'name_en': 'All audio', 'name_de': 'Alle Audio',
+             'url': '/audio', 'icon': 'Headphones', 'order': 1},
+            {'name': 'Podcast', 'name_vi': 'Podcast', 'name_en': 'Podcast', 'name_de': 'Podcast',
+             'url': '/audio/podcast', 'icon': 'Mic', 'order': 2},
+            {'name': 'Nghe chậm', 'name_vi': 'Nghe chậm', 'name_en': 'Slow listening', 'name_de': 'Langsam hören',
+             'url': '/audio/nghe-cham', 'icon': 'Volume2', 'order': 3},
+            {'name': 'Nhạc', 'name_vi': 'Nhạc', 'name_en': 'Music', 'name_de': 'Musik',
+             'url': '/audio/nhac', 'icon': 'Music', 'order': 4},
+        ]
+        for c in audio_children:
+            NavigationLink.objects.create(parent=audio_parent, location='navbar', **c)
+
+        # ── Stream ──
+        NavigationLink.objects.create(
+            name='Stream', name_vi='Stream', name_en='Stream', name_de='Stream',
+            url='/stream', icon='', location='navbar', order=5,
+        )
+
         # ── Tin tức dropdown ──
         news_parent = NavigationLink.objects.create(
             name='Tin tức', name_vi='Tin tức', name_en='News', name_de='Nachrichten',
-            url='/tin-tuc', icon='Newspaper', location='navbar', order=5,
+            url='/tin-tuc', icon='Newspaper', location='navbar', order=6,
         )
         news_children = [
             {'name': 'Tất cả tin tức', 'name_vi': 'Tất cả tin tức', 'name_en': 'All news', 'name_de': 'Alle Nachrichten',
@@ -79,7 +119,7 @@ class Command(BaseCommand):
         # ── Kiến thức dropdown ──
         knowledge_parent = NavigationLink.objects.create(
             name='Kiến thức', name_vi='Kiến thức', name_en='Knowledge', name_de='Wissen',
-            url='/kien-thuc', icon='BookOpen', location='navbar', order=6,
+            url='/kien-thuc', icon='BookOpen', location='navbar', order=7,
         )
         knowledge_children = [
             {'name': 'Tất cả kiến thức', 'name_vi': 'Tất cả kiến thức', 'name_en': 'All knowledge', 'name_de': 'Alle Wissen',
@@ -103,7 +143,7 @@ class Command(BaseCommand):
         # ── Công cụ dropdown ──
         tools_parent = NavigationLink.objects.create(
             name='Công cụ hỗ trợ', name_vi='Công cụ hỗ trợ', name_en='Tools', name_de='Werkzeuge',
-            url='/cong-cu', icon='Wrench', location='navbar', order=7,
+            url='/cong-cu', icon='Wrench', location='navbar', order=8,
         )
         tools_children = [
             {'name': 'Tất cả công cụ', 'name_vi': 'Tất cả công cụ', 'name_en': 'All tools', 'name_de': 'Alle Werkzeuge',
@@ -123,7 +163,7 @@ class Command(BaseCommand):
         # ── Cộng đồng dropdown ──
         community_parent = NavigationLink.objects.create(
             name='Cộng đồng', name_vi='Cộng đồng', name_en='Community', name_de='Gemeinschaft',
-            url='/cong-dong', icon='Users', location='navbar', order=8,
+            url='/cong-dong', icon='Users', location='navbar', order=9,
         )
         community_children = [
             {'name': 'Discord', 'name_vi': 'Discord', 'name_en': 'Discord', 'name_de': 'Discord',
