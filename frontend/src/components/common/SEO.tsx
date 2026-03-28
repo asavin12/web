@@ -38,16 +38,35 @@ export function SEO({
   const pageUrl = url || (typeof window !== 'undefined' ? window.location.href : SITE_URL);
   const imageUrl = image.startsWith('http') ? image : `${SITE_URL}${image}`;
 
-  // Structured data for Organization
+  // Structured data for Organization (EducationalOrganization for better SEO)
   const organizationSchema = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
+    '@type': 'EducationalOrganization',
     name: SITE_NAME,
+    alternateName: 'UnStress VN',
     url: SITE_URL,
     logo: `${SITE_URL}/static/logos/unstressvn-logo-full.webp`,
+    description: 'Dự án giáo dục phi lợi nhuận cung cấp công cụ học ngoại ngữ ứng dụng AI hoàn toàn miễn phí. Phương pháp Comprehensible Input & Shadowing.',
+    foundingDate: '2024',
+    nonprofitStatus: 'Nonprofit',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: '329A Mạc Đăng Doanh, Hưng Đạo, Dương Kinh',
+      addressLocality: 'Hải Phòng',
+      addressCountry: 'VN',
+    },
+    contactPoint: {
+      '@type': 'ContactPoint',
+      email: 'unstressvn@gmail.com',
+      contactType: 'customer service',
+      availableLanguage: ['Vietnamese', 'English', 'German'],
+    },
     sameAs: [
       'https://facebook.com/unstressvn',
       'https://youtube.com/@unstressvn',
+      'https://tiktok.com/@unstressvn',
+      'https://t.me/unstressvn',
+      'https://discord.gg/unstressvn',
     ],
   };
 

@@ -177,35 +177,59 @@ class Command(BaseCommand):
             NavigationLink.objects.create(parent=community_parent, location='navbar', **c)
 
     def _seed_footer(self):
-        """Seed footer links — grouped by section"""
+        """Seed footer links — grouped by section, SEO-optimized"""
         self.stdout.write('📌 Tạo footer links...')
 
-        # ── Khám phá (resources) ──
-        footer_explore = [
-            {'name': 'Kiến thức', 'name_vi': 'Kiến thức', 'name_en': 'Knowledge', 'name_de': 'Wissen',
-             'url': '/kien-thuc', 'footer_section': 'resources', 'order': 1},
-            {'name': 'Thư viện', 'name_vi': 'Thư viện', 'name_en': 'Library', 'name_de': 'Bibliothek',
-             'url': '/tai-lieu', 'footer_section': 'resources', 'order': 2},
-            {'name': 'Công cụ', 'name_vi': 'Công cụ', 'name_en': 'Tools', 'name_de': 'Werkzeuge',
-             'url': '/cong-cu', 'footer_section': 'resources', 'order': 3},
-            {'name': 'Tin tức', 'name_vi': 'Tin tức', 'name_en': 'News', 'name_de': 'Nachrichten',
-             'url': '/tin-tuc', 'footer_section': 'resources', 'order': 4},
+        # ── Học tập (resources) ──
+        footer_resources = [
+            {'name': 'Video học ngoại ngữ', 'name_vi': 'Video học ngoại ngữ', 'name_en': 'Learning Videos', 'name_de': 'Lernvideos',
+             'url': '/video', 'icon': 'Video', 'footer_section': 'resources', 'order': 1},
+            {'name': 'Thư viện tài liệu', 'name_vi': 'Thư viện tài liệu', 'name_en': 'Resource Library', 'name_de': 'Bibliothek',
+             'url': '/tai-lieu', 'icon': 'BookOpen', 'footer_section': 'resources', 'order': 2},
+            {'name': 'Xem phim học ngoại ngữ', 'name_vi': 'Xem phim học ngoại ngữ', 'name_en': 'Watch & Learn', 'name_de': 'Filme & Lernen',
+             'url': '/stream', 'icon': 'Play', 'footer_section': 'resources', 'order': 3},
+            {'name': 'Kiến thức & Bài giảng', 'name_vi': 'Kiến thức & Bài giảng', 'name_en': 'Knowledge', 'name_de': 'Wissen',
+             'url': '/kien-thuc', 'icon': 'GraduationCap', 'footer_section': 'resources', 'order': 4},
+            {'name': 'Tin tức giáo dục', 'name_vi': 'Tin tức giáo dục', 'name_en': 'Education News', 'name_de': 'Bildungsnachrichten',
+             'url': '/tin-tuc', 'icon': 'Newspaper', 'footer_section': 'resources', 'order': 5},
+            {'name': 'Công cụ học tập', 'name_vi': 'Công cụ học tập', 'name_en': 'Learning Tools', 'name_de': 'Lernwerkzeuge',
+             'url': '/cong-cu', 'icon': 'Wrench', 'footer_section': 'resources', 'order': 6},
         ]
-        for d in footer_explore:
+        for d in footer_resources:
             NavigationLink.objects.create(location='footer', **d)
 
-        # ── Hỗ trợ (company) ──
-        footer_support = [
+        # ── Về chúng tôi (company) ──
+        footer_company = [
             {'name': 'Giới thiệu', 'name_vi': 'Giới thiệu', 'name_en': 'About', 'name_de': 'Über uns',
              'url': '/gioi-thieu', 'footer_section': 'company', 'order': 1},
             {'name': 'Liên hệ', 'name_vi': 'Liên hệ', 'name_en': 'Contact', 'name_de': 'Kontakt',
              'url': '/lien-he', 'footer_section': 'company', 'order': 2},
-            {'name': 'Điều khoản', 'name_vi': 'Điều khoản', 'name_en': 'Terms', 'name_de': 'AGB',
+            {'name': 'Câu hỏi thường gặp', 'name_vi': 'Câu hỏi thường gặp', 'name_en': 'FAQ', 'name_de': 'Häufige Fragen',
+             'url': '/gioi-thieu#faq', 'icon': 'HelpCircle', 'footer_section': 'company', 'order': 3},
+        ]
+        for d in footer_company:
+            NavigationLink.objects.create(location='footer', **d)
+
+        # ── Cộng đồng (community) ──
+        footer_community = [
+            {'name': 'Discord', 'name_vi': 'Discord', 'name_en': 'Discord', 'name_de': 'Discord',
+             'url': 'https://discord.gg/unstressvn', 'icon': 'Users', 'footer_section': 'community',
+             'open_in_new_tab': True, 'order': 1},
+            {'name': 'Phòng học nhóm', 'name_vi': 'Phòng học nhóm', 'name_en': 'Study Rooms', 'name_de': 'Lernräume',
+             'url': '/study-rooms', 'footer_section': 'community',
+             'is_coming_soon': True, 'badge_text': 'Soon', 'order': 2},
+        ]
+        for d in footer_community:
+            NavigationLink.objects.create(location='footer', **d)
+
+        # ── Pháp lý (legal) ──
+        footer_legal = [
+            {'name': 'Điều khoản sử dụng', 'name_vi': 'Điều khoản sử dụng', 'name_en': 'Terms of Use', 'name_de': 'Nutzungsbedingungen',
              'url': '/dieu-khoan', 'footer_section': 'legal', 'order': 1},
-            {'name': 'Chính sách bảo mật', 'name_vi': 'Chính sách bảo mật', 'name_en': 'Privacy', 'name_de': 'Datenschutz',
+            {'name': 'Chính sách bảo mật', 'name_vi': 'Chính sách bảo mật', 'name_en': 'Privacy Policy', 'name_de': 'Datenschutz',
              'url': '/chinh-sach-bao-mat', 'footer_section': 'legal', 'order': 2},
         ]
-        for d in footer_support:
+        for d in footer_legal:
             NavigationLink.objects.create(location='footer', **d)
 
         # ── Social links ──
@@ -216,8 +240,10 @@ class Command(BaseCommand):
              'icon': 'Youtube', 'footer_section': 'social', 'open_in_new_tab': True, 'order': 2},
             {'name': 'TikTok', 'url': 'https://tiktok.com/@unstressvn',
              'icon': 'Music', 'footer_section': 'social', 'open_in_new_tab': True, 'order': 3},
-            {'name': 'Discord', 'url': 'https://discord.gg/unstressvn',
-             'icon': 'Users', 'footer_section': 'social', 'open_in_new_tab': True, 'order': 4},
+            {'name': 'Zalo', 'url': 'https://zalo.me/unstressvn',
+             'icon': 'MessageSquare', 'footer_section': 'social', 'open_in_new_tab': True, 'order': 4},
+            {'name': 'Telegram', 'url': 'https://t.me/unstressvn',
+             'icon': 'MessageSquare', 'footer_section': 'social', 'open_in_new_tab': True, 'order': 5},
         ]
         for d in social_links:
             NavigationLink.objects.create(location='footer', **d)

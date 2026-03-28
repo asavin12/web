@@ -694,12 +694,15 @@
     "privacy": "Chính sách bảo mật",
     "copyright": "© 2026 UnstressVN. Bản quyền thuộc về UnstressVN.",
     "allRightsReserved": "Bản quyền thuộc về UnstressVN.",
-    "craftedWith": "Được tạo ra với ❤️ cho người học ngoại ngữ",
+    "craftedWith": "Được tạo ra với",
+    "craftedFor": "cho người học ngoại ngữ",
     "knowledge": "Kiến thức",
     "resources": "Tài liệu",
     "tools": "Công cụ",
     "news": "Tin tức",
-    "tagline": "Học ngoại ngữ dễ dàng"
+    "tagline": "Học ngoại ngữ dễ dàng",
+    "orgType": "Dự án giáo dục phi lợi nhuận",
+    "description": "Cung cấp công cụ học ngoại ngữ ứng dụng AI hoàn toàn miễn phí. Xoá bỏ áp lực, tối ưu hoá lộ trình tự học với phương pháp Comprehensible Input & Shadowing."
   },
   "about": {
     "seo": {
@@ -972,7 +975,7 @@
     "noArticles": "Chưa có bài viết nào"
   },
   "seo": {
-    "defaultDescription": "Cộng đồng học ngoại ngữ UnstressVN - Chia sẻ tài liệu, video học tiếng Anh, tiếng Đức. Tin tức, kiến thức và công cụ học tập.",
-    "defaultKeywords": "học ngoại ngữ, tiếng anh, tiếng đức, tài liệu học, video học, cộng đồng"
+    "defaultDescription": "UnStress VN — Dự án giáo dục phi lợi nhuận cung cấp công cụ học ngoại ngữ ứng dụng AI hoàn toàn miễn phí. Lộ trình tự học với Comprehensible Input & Shadowing.",
+    "defaultKeywords": "tự học ngoại ngữ không áp lực, UnStress VN, học ngoại ngữ bằng AI, công cụ học ngoại ngữ miễn phí, lộ trình tự học ngoại ngữ, phương pháp Shadowing, Comprehensible Input, gia sư AI cá nhân, dự án giáo dục phi lợi nhuận, ứng dụng AI vào giáo dục, học tiếng Đức, học tiếng Anh"
   }
 }
