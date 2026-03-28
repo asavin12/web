@@ -7,6 +7,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from . import api_views
 from . import translation_views
+from . import smart_upload
 
 app_name = 'mediastream'
 
@@ -32,6 +33,12 @@ urlpatterns = [
     
     # ===== Translation API (Gemini) =====
     path('translate/', translation_views.translate_subtitle, name='translate'),
+    
+    # ===== Smart Upload (AI-powered) =====
+    path('smart-upload/', smart_upload.smart_upload_api, name='smart-upload'),
+    path('analyze-subtitle/', smart_upload.analyze_subtitle_api, name='analyze-subtitle'),
+    path('api/gemini-key-status/', smart_upload.gemini_key_status, name='gemini-key-status'),
+    path('api/gemini-key/', smart_upload.save_gemini_key, name='gemini-key-save'),
     
     # ===== Admin URLs =====
     # Upload page đã chuyển vào Django Admin (/admin/mediastream/streammedia/)
