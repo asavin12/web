@@ -274,7 +274,7 @@
                 <label style="font-size:12px;color:#417690;font-weight:bold;">📁 Thư mục Google Drive</label>
                 <div style="display:flex;gap:8px;margin-top:4px;align-items:center;">
                     <select name="gdrive_folder" id="gdriveFolder" style="flex:1;padding:6px 8px;border:1px solid #ccc;font-size:13px;">
-                        <option value="">— Thư mục mặc định (từ cấu hình) —</option>
+                        <option value="">— Thư mục mặc định —</option>
                     </select>
                     <button type="button" id="refreshFolders" style="background:#417690;color:#fff;border:none;padding:6px 12px;cursor:pointer;border-radius:3px;font-size:12px;white-space:nowrap;">🔄 Tải</button>
                 </div>
@@ -337,17 +337,31 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/media-stream/api/gdrive-folders/', {credentials: 'same-origin'})
         .then(r => r.json())
         .then(d => {
-            gdriveFolderSelect.innerHTML = '<option value="">— Thư mục mặc định —</option>';
+            var folderName = d.folder_name || '';
+            var defaultLabel = folderName
+                ? '📂 ' + folderName + ' (mặc định)'
+                : '— Thư mục mặc định (từ cấu hình) —';
+            gdriveFolderSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
             (d.folders || []).forEach(f => {
-                const opt = document.createElement('option');
+                var opt = document.createElement('option');
                 opt.value = f.id;
                 opt.textContent = '📁 ' + f.name;
                 gdriveFolderSelect.appendChild(opt);
             });
             gdriveFolderSelect.disabled = false;
-            gdriveStatus.innerHTML = d.folders && d.folders.length > 0
-                ? '<span style="color:#065f46">✅ ' + d.folders.length + ' thư mục</span>'
-                : '<span style="color:#92400e">⚠️ Không tìm thấy thư mục — kiểm tra cấu hình GDrive</span>';
+            if (d.connected && d.folder_accessible) {
+                var msg = '✅ Đã kết nối — thư mục: <strong>' + (folderName || d.configured_folder_id) + '</strong>';
+                if (d.folders && d.folders.length > 0) {
+                    msg += ' + ' + d.folders.length + ' thư mục con';
+                }
+                gdriveStatus.innerHTML = '<span style="color:#065f46">' + msg + '</span>';
+            } else if (d.connected) {
+                gdriveStatus.innerHTML = '<span style="color:#92400e">⚠️ Đã kết nối nhưng thư mục không truy cập được</span>';
+            } else if (d.configured_folder_id) {
+                gdriveStatus.innerHTML = '<span style="color:#92400e">⚠️ Không kết nối được Google Drive</span>';
+            } else {
+                gdriveStatus.innerHTML = '<span style="color:#92400e">⚠️ Chưa cấu hình Google Drive — vào Cấu hình hệ thống để thiết lập</span>';
+            }
         })
         .catch(e => {
             gdriveFolderSelect.disabled = false;

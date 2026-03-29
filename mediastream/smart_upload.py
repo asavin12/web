@@ -657,13 +657,34 @@ def gdrive_list_folders(request):
     """
     List folders inside a GDrive folder.
     GET /media-stream/api/gdrive-folders/?parent=FOLDER_ID
+    Also returns connection status so UI can distinguish
+    'no subfolders' from 'not configured'.
     """
     parent = request.GET.get('parent', '').strip() or None
 
     from .gdrive_upload import list_gdrive_folders
     folders = list_gdrive_folders(parent)
 
-    return JsonResponse({'folders': folders})
+    # Include connection info for UI
+    from core.models import SiteConfiguration
+    config = SiteConfiguration.get_instance()
+    folder_id = config.gdrive_folder_id or ''
+
+    result = {'folders': folders, 'configured_folder_id': folder_id}
+
+    # If no parent specified and default folder is configured, include its name
+    if not parent and folder_id:
+        from .gdrive_upload import check_gdrive_connection as _check
+        status = _check()
+        result['folder_name'] = status.get('folder_name', '')
+        result['connected'] = status.get('connected', False)
+        result['folder_accessible'] = status.get('folder_accessible', False)
+    else:
+        result['folder_name'] = ''
+        result['connected'] = bool(folder_id)
+        result['folder_accessible'] = False
+
+    return JsonResponse(result)
 
 
 @staff_member_required
