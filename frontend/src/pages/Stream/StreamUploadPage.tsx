@@ -188,7 +188,7 @@ export default function StreamUploadPage() {
 
   useEffect(() => {
     if (gdriveStatus?.configured && gdriveStatus?.folder_accessible) {
-      loadFolders(gdriveStatus.folder_id || undefined);
+      loadFolders();
     }
   }, [gdriveStatus, loadFolders]);
 
@@ -460,10 +460,12 @@ export default function StreamUploadPage() {
                 {uploadDest === 'gdrive' && gdriveFolders.length > 0 && (
                   <div className="mt-2">
                     <Select
-                      options={[
-                        { value: gdriveStatus?.folder_id || '', label: `📂 ${gdriveStatus?.folder_name || 'Mặc định'}` },
-                        ...gdriveFolders.map(f => ({ value: f.id, label: `📁 ${f.name}` })),
-                      ]}
+                      options={gdriveFolders.map(f => ({
+                        value: f.id,
+                        label: f.id === gdriveStatus?.folder_id
+                          ? `📂 ${f.name} ★ mặc định`
+                          : `📁 ${f.name}`,
+                      }))}
                       value={selectedFolder}
                       onChange={(e) => setSelectedFolder(e.target.value)}
                     />

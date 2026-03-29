@@ -337,26 +337,45 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/media-stream/api/gdrive-folders/', {credentials: 'same-origin'})
         .then(r => r.json())
         .then(d => {
+            var defaultFolderId = d.configured_folder_id || '';
             var folderName = d.folder_name || '';
-            var defaultLabel = folderName
-                ? '📂 ' + folderName + ' (mặc định)'
-                : '— Thư mục mặc định (từ cấu hình) —';
-            gdriveFolderSelect.innerHTML = '<option value="">' + defaultLabel + '</option>';
-            (d.folders || []).forEach(f => {
-                var opt = document.createElement('option');
-                opt.value = f.id;
-                opt.textContent = '📁 ' + f.name;
-                gdriveFolderSelect.appendChild(opt);
-            });
+            gdriveFolderSelect.innerHTML = '';
+
+            /* Build folder list: default on top (marked), then others */
+            var folders = d.folders || [];
+            var defaultOpt = document.createElement('option');
+            if (defaultFolderId) {
+                defaultOpt.value = defaultFolderId;
+                defaultOpt.textContent = '📂 ' + (folderName || defaultFolderId) + ' ★ mặc định';
+                defaultOpt.selected = true;
+                gdriveFolderSelect.appendChild(defaultOpt);
+                /* Add other folders (skip the default) */
+                folders.forEach(function(f) {
+                    if (f.id === defaultFolderId) return;
+                    var opt = document.createElement('option');
+                    opt.value = f.id;
+                    opt.textContent = '📁 ' + f.name;
+                    gdriveFolderSelect.appendChild(opt);
+                });
+            } else {
+                defaultOpt.value = '';
+                defaultOpt.textContent = '— Chưa cấu hình thư mục —';
+                gdriveFolderSelect.appendChild(defaultOpt);
+                folders.forEach(function(f) {
+                    var opt = document.createElement('option');
+                    opt.value = f.id;
+                    opt.textContent = '📁 ' + f.name;
+                    gdriveFolderSelect.appendChild(opt);
+                });
+            }
+
             gdriveFolderSelect.disabled = false;
+            var totalFolders = folders.filter(function(f){ return f.id !== defaultFolderId; }).length;
             if (d.connected && d.folder_accessible) {
-                var msg = '✅ Đã kết nối — thư mục: <strong>' + (folderName || d.configured_folder_id) + '</strong>';
-                if (d.folders && d.folders.length > 0) {
-                    msg += ' + ' + d.folders.length + ' thư mục con';
-                }
+                var msg = '✅ Đã kết nối — ' + (folders.length) + ' thư mục khả dụng';
                 gdriveStatus.innerHTML = '<span style="color:#065f46">' + msg + '</span>';
             } else if (d.connected) {
-                gdriveStatus.innerHTML = '<span style="color:#92400e">⚠️ Đã kết nối nhưng thư mục không truy cập được</span>';
+                gdriveStatus.innerHTML = '<span style="color:#92400e">⚠️ Đã kết nối nhưng thư mục mặc định không truy cập được</span>';
             } else if (d.configured_folder_id) {
                 gdriveStatus.innerHTML = '<span style="color:#92400e">⚠️ Không kết nối được Google Drive</span>';
             } else {

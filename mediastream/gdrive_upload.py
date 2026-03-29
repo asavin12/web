@@ -148,21 +148,23 @@ def check_gdrive_connection(sa_json_str=None):
 
 def list_gdrive_folders(parent_folder_id=None):
     """
-    List folders inside a parent folder (or root if None).
+    List folders visible to the service account.
+    - If parent_folder_id is given: list subfolders of that folder.
+    - If parent_folder_id is None: list ALL accessible folders
+      (so admin can pick any folder, not just subfolders of the default).
     Returns: list of {id, name}
     """
     sa_dict, default_folder_id = _get_gdrive_config()
     if not sa_dict:
         return []
 
-    target_folder = parent_folder_id or default_folder_id
-
     try:
         service = _build_drive_service(sa_dict)
 
         query = "mimeType='application/vnd.google-apps.folder' and trashed=false"
-        if target_folder:
-            query += f" and '{target_folder}' in parents"
+        if parent_folder_id:
+            # Explicit parent → list subfolders of that folder
+            query += f" and '{parent_folder_id}' in parents"
 
         results = service.files().list(
             q=query,
