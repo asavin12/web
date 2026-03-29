@@ -44,8 +44,7 @@ urlpatterns = [
     path('api/gdrive-status/', smart_upload.gdrive_status, name='gdrive-status'),
     path('api/gdrive-credentials/', smart_upload.save_gdrive_credentials, name='gdrive-credentials'),
     path('api/gdrive-check/', smart_upload.gdrive_check_connection, name='gdrive-check'),
-    path('api/gdrive-folders/', smart_upload.gdrive_list_folders, name='gdrive-folders'),
-    path('api/gdrive-folder/', smart_upload.save_gdrive_folder, name='gdrive-folder-save'),
+
     path('api/gdrive-ensure-folders/', smart_upload.gdrive_ensure_folders, name='gdrive-ensure-folders'),
     path('api/gdrive-folder-mapping/', smart_upload.gdrive_folder_mapping, name='gdrive-folder-mapping'),
     

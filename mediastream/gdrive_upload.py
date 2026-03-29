@@ -287,38 +287,6 @@ def check_gdrive_connection(sa_json_str=None):
     return result
 
 
-def list_gdrive_folders(parent_folder_id=None):
-    """
-    List folders visible to the service account.
-    - If parent_folder_id is given: list subfolders of that folder.
-    - If parent_folder_id is None: list ALL accessible folders
-      (so admin can pick any folder, not just subfolders of the default).
-    Returns: list of {id, name}
-    """
-    sa_dict, default_folder_id = _get_gdrive_config()
-    if not sa_dict:
-        return []
-
-    try:
-        service = _build_drive_service(sa_dict)
-
-        query = "mimeType='application/vnd.google-apps.folder' and trashed=false"
-        if parent_folder_id:
-            # Explicit parent → list subfolders of that folder
-            query += f" and '{parent_folder_id}' in parents"
-
-        results = service.files().list(
-            q=query,
-            pageSize=50,
-            fields='files(id,name)',
-            orderBy='name',
-        ).execute()
-
-        return [{'id': f['id'], 'name': f['name']} for f in results.get('files', [])]
-    except Exception as e:
-        logger.error(f"Error listing GDrive folders: {e}")
-        return []
-
 
 def upload_to_gdrive(file_obj, filename, mime_type='video/mp4', folder_id=None):
     """
@@ -397,31 +365,3 @@ def upload_to_gdrive(file_obj, filename, mime_type='video/mp4', folder_id=None):
         logger.error(f"GDrive upload error: {e}", exc_info=True)
         return {'success': False, 'error': f'Upload thất bại: {str(e)[:300]}'}
 
-
-def create_gdrive_folder(folder_name, parent_folder_id=None):
-    """Create a new folder on Google Drive."""
-    sa_dict, default_folder_id = _get_gdrive_config()
-    if not sa_dict:
-        return None
-
-    target_parent = parent_folder_id or default_folder_id
-
-    try:
-        service = _build_drive_service(sa_dict)
-
-        file_metadata = {
-            'name': folder_name,
-            'mimeType': 'application/vnd.google-apps.folder',
-        }
-        if target_parent:
-            file_metadata['parents'] = [target_parent]
-
-        folder = service.files().create(
-            body=file_metadata,
-            fields='id,name',
-        ).execute()
-
-        return {'id': folder['id'], 'name': folder['name']}
-    except Exception as e:
-        logger.error(f"Error creating GDrive folder: {e}")
-        return None

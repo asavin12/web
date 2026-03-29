@@ -654,11 +654,10 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
             ),
         }),
         ('☁️ Google Drive', {
-            'fields': ('gdrive_service_account_json', 'gdrive_folder_id', 'gdrive_folder_mapping'),
+            'fields': ('gdrive_service_account_json', 'gdrive_folder_mapping'),
             'description': (
                 'Cấu hình upload media lên Google Drive qua Service Account. '
-                'Dán nội dung JSON credentials hoặc upload file .json. '
-                'Có thể dán link thư mục Google Drive — tự động trích xuất Folder ID.<br>'
+                'Dán nội dung JSON credentials hoặc upload file .json.<br>'
                 '<strong>Folder Mapping:</strong> Tự động tạo thư mục Video/Audio/Podcast '
                 'bên trong thư mục gốc khi upload. Không cần chỉnh sửa thủ công.'
             ),
@@ -668,7 +667,7 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
         }),
     )
 
-    readonly_fields = ('updated_at', 'encryption_status')
+    readonly_fields = ('updated_at', 'encryption_status', 'gdrive_folder_mapping')
 
     def has_add_permission(self, request):
         """Chỉ cho tạo 1 bản ghi duy nhất."""

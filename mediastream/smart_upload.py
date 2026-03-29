@@ -10,8 +10,8 @@ Endpoints:
   GET  /media-stream/api/gdrive-status/      — Check GDrive connection (admin)
   POST /media-stream/api/gdrive-credentials/ — Save GDrive Service Account (admin)
   POST /media-stream/api/gdrive-check/       — Test GDrive connection (admin)
-  GET  /media-stream/api/gdrive-folders/     — List GDrive folders (admin)
-  POST /media-stream/api/gdrive-folder/      — Save default folder (admin)
+  POST /media-stream/api/gdrive-ensure-folders/ — Ensure media type folders exist (admin)
+  GET  /media-stream/api/gdrive-folder-mapping/ — Get folder mapping (admin)
 """
 
 import os
@@ -306,7 +306,6 @@ def smart_upload_api(request):
     subtitle_file = request.FILES.get('subtitle')
 
     upload_to_gdrive_flag = request.POST.get('upload_to_gdrive', '').lower() == 'true'
-    gdrive_folder = request.POST.get('gdrive_folder_id', '').strip()
 
     if not video_file and not gdrive_url:
         return JsonResponse({
@@ -400,7 +399,7 @@ def smart_upload_api(request):
             import mimetypes as mt
             mime = mt.guess_type(video_file.name)[0] or 'video/mp4'
             # Auto-resolve folder by media type
-            type_folder_id = gdrive_folder or get_folder_for_media_type(media_type)
+            type_folder_id = get_folder_for_media_type(media_type)
             upload_result = gdrive_upload_fn(
                 video_file, video_file.name, mime, type_folder_id
             )
@@ -652,42 +651,6 @@ def gdrive_check_connection(request):
     return JsonResponse(result)
 
 
-@staff_member_required
-@csrf_exempt
-@require_http_methods(['GET'])
-def gdrive_list_folders(request):
-    """
-    List folders inside a GDrive folder.
-    GET /media-stream/api/gdrive-folders/?parent=FOLDER_ID
-    Also returns connection status so UI can distinguish
-    'no subfolders' from 'not configured'.
-    """
-    parent = request.GET.get('parent', '').strip() or None
-
-    from .gdrive_upload import list_gdrive_folders
-    folders = list_gdrive_folders(parent)
-
-    # Include connection info for UI
-    from core.models import SiteConfiguration
-    config = SiteConfiguration.get_instance()
-    folder_id = config.gdrive_folder_id or ''
-
-    result = {'folders': folders, 'configured_folder_id': folder_id}
-
-    # If no parent specified and default folder is configured, include its name
-    if not parent and folder_id:
-        from .gdrive_upload import check_gdrive_connection as _check
-        status = _check()
-        result['folder_name'] = status.get('folder_name', '')
-        result['connected'] = status.get('connected', False)
-        result['folder_accessible'] = status.get('folder_accessible', False)
-    else:
-        result['folder_name'] = ''
-        result['connected'] = bool(folder_id)
-        result['folder_accessible'] = False
-
-    return JsonResponse(result)
-
 
 @staff_member_required
 @csrf_exempt
@@ -722,31 +685,6 @@ def gdrive_folder_mapping(request):
 
     return JsonResponse({'mapping': mapping})
 
-
-@staff_member_required
-@csrf_exempt
-@require_POST
-def save_gdrive_folder(request):
-    """
-    Update default GDrive folder ID.
-    POST /media-stream/api/gdrive-folder/
-    Body JSON: {"folder_id": "abc123"}
-    """
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    folder_id = body.get('folder_id', '').strip()
-
-    try:
-        from core.models import SiteConfiguration
-        config = SiteConfiguration.get_instance()
-        config.gdrive_folder_id = folder_id
-        config.save()
-        return JsonResponse({'success': True, 'folder_id': folder_id})
-    except Exception as e:
-        return JsonResponse({'error': str(e)[:200]}, status=500)
 
 
 # ============================================================================

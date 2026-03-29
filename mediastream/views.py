@@ -690,7 +690,6 @@ def upload_media(request):
     category_id = request.POST.get('category')
     is_public = request.POST.get('is_public', 'true') == 'true'
     storage_preference = request.POST.get('storage', 'gdrive')
-    gdrive_folder = request.POST.get('gdrive_folder', '').strip()
     
     # Validate extensions
     allowed_video = ['.mp4', '.webm', '.ogg', '.mov', '.flv', '.avi', '.m4v']
@@ -775,7 +774,7 @@ def upload_media(request):
                     from .gdrive_upload import upload_to_gdrive, get_folder_for_media_type
                     mime_type, _ = mimetypes.guess_type(uploaded_file.name)
                     # Auto-resolve folder by media type (auto-creates if needed)
-                    type_folder_id = gdrive_folder or get_folder_for_media_type(file_media_type)
+                    type_folder_id = get_folder_for_media_type(file_media_type)
                     result = upload_to_gdrive(
                         uploaded_file, uploaded_file.name,
                         mime_type=mime_type or 'video/mp4',
