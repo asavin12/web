@@ -396,11 +396,13 @@ def smart_upload_api(request):
 
         if video_file and upload_to_gdrive_flag:
             # Upload local file → Google Drive → save GDrive URL
-            from .gdrive_upload import upload_to_gdrive as gdrive_upload_fn
+            from .gdrive_upload import upload_to_gdrive as gdrive_upload_fn, get_folder_for_media_type
             import mimetypes as mt
             mime = mt.guess_type(video_file.name)[0] or 'video/mp4'
+            # Auto-resolve folder by media type
+            type_folder_id = gdrive_folder or get_folder_for_media_type(media_type)
             upload_result = gdrive_upload_fn(
-                video_file, video_file.name, mime, gdrive_folder or None
+                video_file, video_file.name, mime, type_folder_id
             )
             if not upload_result['success']:
                 return JsonResponse({'error': upload_result['error']}, status=500)
@@ -685,6 +687,40 @@ def gdrive_list_folders(request):
         result['folder_accessible'] = False
 
     return JsonResponse(result)
+
+
+@staff_member_required
+@csrf_exempt
+@require_http_methods(['POST'])
+def gdrive_ensure_folders(request):
+    """
+    Ensure all media type folders (Video, Audio, Podcast) exist on GDrive.
+    Auto-creates missing folders inside the root GDrive folder.
+    POST /media-stream/api/gdrive-ensure-folders/
+    Returns: {media_type: {id, name, created}} mapping
+    """
+    from .gdrive_upload import ensure_all_media_folders
+    result = ensure_all_media_folders()
+
+    if 'error' in result:
+        return JsonResponse({'error': result['error']}, status=400)
+
+    return JsonResponse({'success': True, 'folders': result})
+
+
+@staff_member_required
+@csrf_exempt
+@require_http_methods(['GET'])
+def gdrive_folder_mapping(request):
+    """
+    Get current media_type → folder mapping.
+    GET /media-stream/api/gdrive-folder-mapping/
+    """
+    from core.models import SiteConfiguration
+    config = SiteConfiguration.get_instance()
+    mapping = config.gdrive_folder_mapping or {}
+
+    return JsonResponse({'mapping': mapping})
 
 
 @staff_member_required

@@ -79,11 +79,6 @@ interface GDriveStatus {
   error: string | null;
 }
 
-interface GDriveFolder {
-  id: string;
-  name: string;
-}
-
 const api = axios.create({
   baseURL: '/media-stream',
   timeout: 300000,
@@ -139,9 +134,8 @@ export default function StreamUploadPage() {
   const [gdriveStatus, setGdriveStatus] = useState<GDriveStatus | null>(null);
   const [gdriveStatusLoading, setGdriveStatusLoading] = useState(false);
 
-  // GDrive folder picker
-  const [gdriveFolders, setGdriveFolders] = useState<GDriveFolder[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState('');
+  // GDrive folder mapping (auto per media type)
+  const [folderMapping, setFolderMapping] = useState<Record<string, string>>({});
 
   // --- Load statuses on mount ---
   const checkServerKey = useCallback(async () => {
@@ -158,11 +152,8 @@ export default function StreamUploadPage() {
     try {
       const res = await api.get('/api/gdrive-status/');
       setGdriveStatus(res.data);
-      if (res.data.configured && res.data.folder_id) {
-        setSelectedFolder(res.data.folder_id);
-        if (res.data.folder_accessible) {
-          setUploadDest('gdrive');
-        }
+      if (res.data.configured && res.data.folder_accessible) {
+        setUploadDest('gdrive');
       }
     } catch {
       setGdriveStatus(null);
@@ -171,13 +162,12 @@ export default function StreamUploadPage() {
     }
   }, []);
 
-  const loadFolders = useCallback(async (parentId?: string) => {
+  const loadFolderMapping = useCallback(async () => {
     try {
-      const params = parentId ? { parent: parentId } : {};
-      const res = await api.get('/api/gdrive-folders/', { params });
-      setGdriveFolders(res.data.folders || []);
+      const res = await api.get('/api/gdrive-folder-mapping/');
+      setFolderMapping(res.data.mapping || {});
     } catch {
-      setGdriveFolders([]);
+      setFolderMapping({});
     }
   }, []);
 
@@ -188,9 +178,9 @@ export default function StreamUploadPage() {
 
   useEffect(() => {
     if (gdriveStatus?.configured && gdriveStatus?.folder_accessible) {
-      loadFolders();
+      loadFolderMapping();
     }
-  }, [gdriveStatus, loadFolders]);
+  }, [gdriveStatus, loadFolderMapping]);
 
   // Access control
   if (!user?.is_staff && !user?.is_superuser) {
@@ -266,7 +256,7 @@ export default function StreamUploadPage() {
 
     if (uploadDest === 'gdrive' && videoFile) {
       formData.append('upload_to_gdrive', 'true');
-      if (selectedFolder) formData.append('gdrive_folder_id', selectedFolder);
+      // Folder auto-resolved by media_type on backend
     }
 
     const geminiKey = getStoredGeminiApiKey();
@@ -457,18 +447,25 @@ export default function StreamUploadPage() {
                     </div>
                   </button>
                 </div>
-                {uploadDest === 'gdrive' && gdriveFolders.length > 0 && (
-                  <div className="mt-2">
-                    <Select
-                      options={gdriveFolders.map(f => ({
-                        value: f.id,
-                        label: f.id === gdriveStatus?.folder_id
-                          ? `📂 ${f.name} ★ mặc định`
-                          : `📁 ${f.name}`,
-                      }))}
-                      value={selectedFolder}
-                      onChange={(e) => setSelectedFolder(e.target.value)}
-                    />
+                {uploadDest === 'gdrive' && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {(['video', 'audio', 'podcast'] as const).map(t => {
+                      const hasFolder = !!folderMapping[t];
+                      const icons = { video: '🎬', audio: '🎵', podcast: '🎙️' };
+                      const isActive = t === mediaType;
+                      return (
+                        <span
+                          key={t}
+                          className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
+                            hasFolder
+                              ? isActive ? 'bg-green-200 text-green-800' : 'bg-green-100 text-green-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                          }`}
+                        >
+                          {icons[t]} {t.charAt(0).toUpperCase() + t.slice(1)} {hasFolder ? '✅' : '⚠️'}
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

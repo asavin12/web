@@ -601,8 +601,12 @@ class SiteConfiguration(models.Model):
     )
     gdrive_folder_id = models.CharField(
         'Google Drive Folder ID', max_length=255, blank=True, default='',
-        help_text='ID thư mục mặc định trên Google Drive để upload video. '
+        help_text='ID thư mục gốc trên Google Drive. '
                   'Lấy từ URL: drive.google.com/drive/folders/FOLDER_ID',
+    )
+    gdrive_folder_mapping = models.JSONField(
+        'Thư mục GDrive theo loại media', default=dict, blank=True,
+        help_text='Tự động quản lý: {"video": "FOLDER_ID", "audio": "FOLDER_ID", "podcast": "FOLDER_ID"}',
     )
 
     # === Metadata ===

@@ -46,6 +46,8 @@ urlpatterns = [
     path('api/gdrive-check/', smart_upload.gdrive_check_connection, name='gdrive-check'),
     path('api/gdrive-folders/', smart_upload.gdrive_list_folders, name='gdrive-folders'),
     path('api/gdrive-folder/', smart_upload.save_gdrive_folder, name='gdrive-folder-save'),
+    path('api/gdrive-ensure-folders/', smart_upload.gdrive_ensure_folders, name='gdrive-ensure-folders'),
+    path('api/gdrive-folder-mapping/', smart_upload.gdrive_folder_mapping, name='gdrive-folder-mapping'),
     
     # ===== Admin URLs =====
     # Upload page đã chuyển vào Django Admin (/admin/mediastream/streammedia/)

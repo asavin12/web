@@ -22,6 +22,13 @@ logger = logging.getLogger(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
+# Folder names created automatically on GDrive per media type
+MEDIA_TYPE_FOLDER_NAMES = {
+    'video': 'Video',
+    'audio': 'Audio',
+    'podcast': 'Podcast',
+}
+
 
 def _get_gdrive_config():
     """Get Google Drive config from SiteConfiguration. Returns (sa_json_dict, folder_id) or (None, None)."""
@@ -45,6 +52,140 @@ def _build_drive_service(sa_dict):
         sa_dict, scopes=SCOPES
     )
     return build('drive', 'v3', credentials=credentials, cache_discovery=False)
+
+
+def _create_gdrive_folder(service, name, parent_folder_id=None):
+    """Create a folder on Google Drive. Returns folder ID."""
+    metadata = {
+        'name': name,
+        'mimeType': 'application/vnd.google-apps.folder',
+    }
+    if parent_folder_id:
+        metadata['parents'] = [parent_folder_id]
+    folder = service.files().create(body=metadata, fields='id,name').execute()
+    logger.info(f"Created GDrive folder '{name}' (id={folder['id']})")
+    return folder['id']
+
+
+def get_folder_for_media_type(media_type):
+    """
+    Get the GDrive folder ID for a specific media type.
+    Auto-creates the folder inside the root GDrive folder if it doesn't exist yet.
+    Updates SiteConfiguration.gdrive_folder_mapping automatically.
+
+    Returns: folder_id or None (if GDrive not configured)
+    """
+    from core.models import SiteConfiguration
+    config = SiteConfiguration.get_instance()
+
+    sa_dict, root_folder_id = _get_gdrive_config()
+    if not sa_dict:
+        return None
+
+    mapping = config.gdrive_folder_mapping or {}
+
+    # Check if already mapped
+    folder_id = mapping.get(media_type)
+    if folder_id:
+        return folder_id
+
+    # Auto-create: build service, create subfolder in root
+    folder_name = MEDIA_TYPE_FOLDER_NAMES.get(media_type, media_type.capitalize())
+    try:
+        service = _build_drive_service(sa_dict)
+
+        # First check if a folder with this name already exists under root
+        query = (
+            "mimeType='application/vnd.google-apps.folder' and trashed=false"
+            f" and name='{folder_name}'"
+        )
+        if root_folder_id:
+            query += f" and '{root_folder_id}' in parents"
+
+        existing = service.files().list(
+            q=query, pageSize=1, fields='files(id,name)',
+        ).execute()
+
+        if existing.get('files'):
+            folder_id = existing['files'][0]['id']
+            logger.info(f"Found existing GDrive folder '{folder_name}' (id={folder_id})")
+        else:
+            folder_id = _create_gdrive_folder(service, folder_name, root_folder_id)
+
+        # Save mapping
+        mapping[media_type] = folder_id
+        config.gdrive_folder_mapping = mapping
+        config.save(update_fields=['gdrive_folder_mapping'])
+
+        return folder_id
+
+    except Exception as e:
+        logger.error(f"Error getting/creating GDrive folder for '{media_type}': {e}")
+        return root_folder_id  # Fallback to root
+
+
+def ensure_all_media_folders():
+    """
+    Ensure all media type folders exist on GDrive.
+    Called from admin or management command.
+    Returns: {media_type: {id, name, created}} mapping
+    """
+    from core.models import SiteConfiguration
+    config = SiteConfiguration.get_instance()
+
+    sa_dict, root_folder_id = _get_gdrive_config()
+    if not sa_dict:
+        return {'error': 'GDrive chưa cấu hình Service Account'}
+
+    mapping = config.gdrive_folder_mapping or {}
+    results = {}
+
+    try:
+        service = _build_drive_service(sa_dict)
+
+        for media_type, folder_name in MEDIA_TYPE_FOLDER_NAMES.items():
+            existing_id = mapping.get(media_type)
+
+            # Verify existing folder still exists
+            if existing_id:
+                try:
+                    f = service.files().get(fileId=existing_id, fields='id,name,trashed').execute()
+                    if not f.get('trashed'):
+                        results[media_type] = {'id': existing_id, 'name': f['name'], 'created': False}
+                        continue
+                except Exception:
+                    pass  # Folder deleted/inaccessible, recreate
+
+            # Search for existing folder by name
+            query = (
+                "mimeType='application/vnd.google-apps.folder' and trashed=false"
+                f" and name='{folder_name}'"
+            )
+            if root_folder_id:
+                query += f" and '{root_folder_id}' in parents"
+
+            found = service.files().list(
+                q=query, pageSize=1, fields='files(id,name)',
+            ).execute()
+
+            if found.get('files'):
+                fid = found['files'][0]['id']
+                results[media_type] = {'id': fid, 'name': folder_name, 'created': False}
+            else:
+                fid = _create_gdrive_folder(service, folder_name, root_folder_id)
+                results[media_type] = {'id': fid, 'name': folder_name, 'created': True}
+
+            mapping[media_type] = fid
+
+        # Save all at once
+        config.gdrive_folder_mapping = mapping
+        config.save(update_fields=['gdrive_folder_mapping'])
+
+        return results
+
+    except Exception as e:
+        logger.error(f"Error ensuring GDrive folders: {e}")
+        return {'error': str(e)[:300]}
 
 
 def check_gdrive_connection(sa_json_str=None):

@@ -689,7 +689,7 @@ def upload_media(request):
     level = request.POST.get('level', 'all')
     category_id = request.POST.get('category')
     is_public = request.POST.get('is_public', 'true') == 'true'
-    storage_preference = request.POST.get('storage', 'local')
+    storage_preference = request.POST.get('storage', 'gdrive')
     gdrive_folder = request.POST.get('gdrive_folder', '').strip()
     
     # Validate extensions
@@ -722,14 +722,12 @@ def upload_media(request):
     # Google Drive upload setup
     use_gdrive = storage_preference == 'gdrive'
     gdrive_service = None
-    target_folder_id = None
     if use_gdrive:
         try:
-            from .gdrive_upload import _get_gdrive_config, _build_drive_service, upload_to_gdrive
+            from .gdrive_upload import _get_gdrive_config, _build_drive_service, upload_to_gdrive, get_folder_for_media_type
             sa_dict, cfg_folder_id = _get_gdrive_config()
             if sa_dict:
                 gdrive_service = _build_drive_service(sa_dict)
-                target_folder_id = gdrive_folder or cfg_folder_id
             else:
                 use_gdrive = False
                 errors.append('Google Drive chưa cấu hình — upload local thay thế')
@@ -774,12 +772,14 @@ def upload_media(request):
             # Upload to Google Drive or save locally
             if use_gdrive and gdrive_service:
                 try:
-                    from .gdrive_upload import upload_to_gdrive
+                    from .gdrive_upload import upload_to_gdrive, get_folder_for_media_type
                     mime_type, _ = mimetypes.guess_type(uploaded_file.name)
+                    # Auto-resolve folder by media type (auto-creates if needed)
+                    type_folder_id = gdrive_folder or get_folder_for_media_type(file_media_type)
                     result = upload_to_gdrive(
                         uploaded_file, uploaded_file.name,
                         mime_type=mime_type or 'video/mp4',
-                        folder_id=target_folder_id
+                        folder_id=type_folder_id
                     )
                     media.storage_type = 'gdrive'
                     media.gdrive_file_id = result['file_id']

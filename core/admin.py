@@ -654,11 +654,13 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
             ),
         }),
         ('☁️ Google Drive', {
-            'fields': ('gdrive_service_account_json', 'gdrive_folder_id'),
+            'fields': ('gdrive_service_account_json', 'gdrive_folder_id', 'gdrive_folder_mapping'),
             'description': (
-                'Cấu hình upload video lên Google Drive qua Service Account. '
+                'Cấu hình upload media lên Google Drive qua Service Account. '
                 'Dán nội dung JSON credentials hoặc upload file .json. '
-                'Có thể dán link thư mục Google Drive — tự động trích xuất Folder ID.'
+                'Có thể dán link thư mục Google Drive — tự động trích xuất Folder ID.<br>'
+                '<strong>Folder Mapping:</strong> Tự động tạo thư mục Video/Audio/Podcast '
+                'bên trong thư mục gốc khi upload. Không cần chỉnh sửa thủ công.'
             ),
         }),
         ('📊 Thông tin hệ thống', {
