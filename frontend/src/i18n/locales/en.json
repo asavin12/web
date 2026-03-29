@@ -694,12 +694,15 @@
     "privacy": "Privacy Policy",
     "copyright": "© 2026 UnstressVN. All rights reserved.",
     "allRightsReserved": "All rights reserved.",
-    "craftedWith": "Crafted with ❤️ for language learners worldwide",
+    "craftedWith": "Crafted with",
+    "craftedFor": "for language learners",
     "knowledge": "Knowledge",
     "resources": "Resources",
     "tools": "Tools",
     "news": "News",
-    "tagline": "Learn languages easily"
+    "tagline": "Learn languages easily",
+    "orgType": "Nonprofit Education Project",
+    "description": "Providing free AI-powered language learning tools. Remove stress, optimize your self-study journey with Comprehensible Input & Shadowing methods."
   },
   "about": {
     "seo": {

@@ -694,12 +694,15 @@
     "privacy": "Datenschutzrichtlinie",
     "copyright": "© 2026 UnstressVN. Alle Rechte vorbehalten.",
     "allRightsReserved": "Alle Rechte vorbehalten.",
-    "craftedWith": "Mit ❤️ für Sprachlernende weltweit erstellt",
+    "craftedWith": "Erstellt mit",
+    "craftedFor": "für Sprachlernende",
     "knowledge": "Wissen",
     "resources": "Materialien",
     "tools": "Werkzeuge",
     "news": "Nachrichten",
-    "tagline": "Sprachen leicht lernen"
+    "tagline": "Sprachen leicht lernen",
+    "orgType": "Gemeinnütziges Bildungsprojekt",
+    "description": "Kostenlose KI-gestützte Sprachlerntools. Stress abbauen, den Selbstlernweg mit Comprehensible Input & Shadowing optimieren."
   },
   "about": {
     "seo": {

@@ -107,7 +107,7 @@ export default function Footer() {
               itemScope itemType="https://schema.org/PostalAddress">
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                <span itemProp="streetAddress">329A Mạc Đăng Doanh, Hưng Đạo, Dương Kinh, Hải Phòng</span>
+                <span itemProp="streetAddress">Tầng 11, Chung cư CT1, Khu đô thị Văn Khê, Phường La Khê, Quận Hà Đông, Hà Nội</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 shrink-0" />
@@ -166,9 +166,9 @@ export default function Footer() {
         foundingDate: '2024',
         address: {
           '@type': 'PostalAddress',
-          streetAddress: '329A Mạc Đăng Doanh',
-          addressLocality: 'Hải Phòng',
-          addressRegion: 'Hải Phòng',
+          streetAddress: 'Tầng 11, Chung cư CT1, Khu đô thị Văn Khê, Phường La Khê',
+          addressLocality: 'Hà Nội',
+          addressRegion: 'Hà Nội',
           addressCountry: 'VN',
         },
         contactPoint: {

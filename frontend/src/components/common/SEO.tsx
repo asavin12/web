@@ -51,8 +51,8 @@ export function SEO({
     nonprofitStatus: 'Nonprofit',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: '329A Mạc Đăng Doanh, Hưng Đạo, Dương Kinh',
-      addressLocality: 'Hải Phòng',
+      streetAddress: 'Tầng 11, Chung cư CT1, Khu đô thị Văn Khê, Phường La Khê, Quận Hà Đông',
+      addressLocality: 'Hà Nội',
       addressCountry: 'VN',
     },
     contactPoint: {
