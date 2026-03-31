@@ -49,9 +49,7 @@ urlpatterns = [
     path('api/gdrive-folder-mapping/', smart_upload.gdrive_folder_mapping, name='gdrive-folder-mapping'),
     
     # ===== Admin URLs =====
-    # Upload page đã chuyển vào Django Admin (/admin/mediastream/streammedia/)
-    # Video chỉ được upload bởi admin hoặc n8n automation
-    # path('admin/upload/', views.upload_page, name='admin_upload'),  # DEPRECATED - Sử dụng Django Admin
+    # Upload qua Django Admin (/admin/mediastream/streammedia/)
     path('admin/upload/api/', views.upload_media, name='admin_upload_api'),  # API cho admin changelist và n8n
     path('admin/manage/', views.manage_page, name='admin_manage'),
     path('admin/delete/<uuid:uid>/', views.delete_media, name='admin_delete'),

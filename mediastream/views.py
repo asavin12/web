@@ -159,7 +159,7 @@ class RangeFileWrapper:
 def stream_media(request, uid):
     """
     Stream media với hỗ trợ HTTP Range (cho seeking video/audio)
-    Hỗ trợ cả local storage, MinIO/S3 và Google Drive
+    Hỗ trợ local storage và Google Drive
     URL: /media-stream/play/<uid>/
     """
     try:
@@ -179,118 +179,11 @@ def stream_media(request, uid):
     if media.storage_type == 'gdrive' and media.gdrive_file_id:
         return stream_from_gdrive(request, media)
     
-    # Check if using MinIO/S3 storage
+    # Local file storage
     if media.file:
-        storage = media.file.storage
-        is_s3_storage = hasattr(storage, 'bucket_name')
-        
-        if is_s3_storage:
-            return stream_from_minio(request, media)
-        else:
-            return stream_from_local(request, media)
+        return stream_from_local(request, media)
     
     return HttpResponseNotFound("No file available for this media")
-
-
-def stream_from_minio(request, media):
-    """
-    Stream media từ MinIO/S3
-    Option 1: Redirect to signed URL (không an toàn cho referrer protection)
-    Option 2: Proxy qua Django (an toàn hơn nhưng tốn bandwidth server)
-    
-    Chọn Option 2 để duy trì referrer protection
-    """
-    import boto3
-    from botocore.config import Config
-    
-    storage = media.file.storage
-    
-    # Get S3 client
-    s3_client = boto3.client(
-        's3',
-        endpoint_url=storage.endpoint_url,
-        aws_access_key_id=storage.access_key,
-        aws_secret_access_key=storage.secret_key,
-        region_name=getattr(storage, 'region_name', 'us-east-1'),
-        config=Config(signature_version='s3v4')
-    )
-    
-    bucket_name = storage.bucket_name
-    file_key = media.file.name
-    
-    try:
-        # Get object metadata
-        head_response = s3_client.head_object(Bucket=bucket_name, Key=file_key)
-        file_size = head_response['ContentLength']
-        content_type = head_response.get('ContentType', media.mime_type or 'application/octet-stream')
-    except Exception as e:
-        if settings.DEBUG:
-            print(f"[MediaStream] MinIO error: {e}")
-        return HttpResponseNotFound("File not found on storage")
-    
-    # Check for Range header
-    range_header = request.META.get('HTTP_RANGE', '')
-    
-    if range_header:
-        range_match = RANGE_RE.match(range_header)
-        if range_match:
-            first_byte = int(range_match.group(1))
-            last_byte = int(range_match.group(2)) if range_match.group(2) else file_size - 1
-            
-            if first_byte >= file_size:
-                return HttpResponse(status=416)
-            
-            length = last_byte - first_byte + 1
-            
-            # Get object with range
-            range_str = f'bytes={first_byte}-{last_byte}'
-            s3_response = s3_client.get_object(
-                Bucket=bucket_name,
-                Key=file_key,
-                Range=range_str
-            )
-            
-            response = StreamingHttpResponse(
-                s3_response['Body'].iter_chunks(chunk_size=8192),
-                status=206,
-                content_type=content_type
-            )
-            response['Content-Length'] = length
-            response['Content-Range'] = f'bytes {first_byte}-{last_byte}/{file_size}'
-        else:
-            # Invalid range, get full object
-            s3_response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
-            response = StreamingHttpResponse(
-                s3_response['Body'].iter_chunks(chunk_size=8192),
-                content_type=content_type
-            )
-            response['Content-Length'] = file_size
-    else:
-        # No range, get full object
-        s3_response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
-        response = StreamingHttpResponse(
-            s3_response['Body'].iter_chunks(chunk_size=8192),
-            content_type=content_type
-        )
-        response['Content-Length'] = file_size
-    
-    # Common headers
-    response['Accept-Ranges'] = 'bytes'
-    response['Cache-Control'] = 'public, max-age=86400'
-    
-    # CORS headers
-    origin = request.META.get('HTTP_ORIGIN', '')
-    if origin:
-        parsed_origin = urlparse(origin)
-        origin_domain = parsed_origin.netloc.split(':')[0] if ':' in parsed_origin.netloc else parsed_origin.netloc
-        if any(origin_domain == d or origin_domain.endswith('.' + d) for d in ALLOWED_DOMAINS):
-            response['Access-Control-Allow-Origin'] = origin
-    
-    # Increment view count (only for initial request)
-    if not range_header:
-        media.increment_view()
-    
-    return response
 
 
 def stream_from_local(request, media):
@@ -644,24 +537,6 @@ def list_categories(request):
 # ============================================================================
 # ADMIN UPLOAD VIEWS
 # ============================================================================
-
-@staff_member_required
-def upload_page(request):
-    """
-    Admin page for uploading media
-    URL: /media-stream/admin/upload/
-    """
-    categories = MediaCategory.objects.all()
-    
-    context = {
-        'categories': categories,
-        'media_types': StreamMedia.MEDIA_TYPE_CHOICES,
-        'languages': StreamMedia.LANGUAGE_CHOICES,
-        'levels': StreamMedia.LEVEL_CHOICES,
-    }
-    
-    return render(request, 'mediastream/upload.html', context)
-
 
 @staff_member_required
 @csrf_exempt
