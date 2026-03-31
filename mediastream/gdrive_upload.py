@@ -67,6 +67,44 @@ def _create_gdrive_folder(service, name, parent_folder_id=None):
     return folder['id']
 
 
+def _resolve_root_folder(service, config_folder_id):
+    """
+    Resolve the actual root folder. If gdrive_folder_id itself is a
+    media-type folder (e.g. named 'video'), go up to its parent so that
+    Video/Audio/Podcast are siblings, not children.
+    Returns the correct root folder ID (may update SiteConfiguration).
+    """
+    if not config_folder_id:
+        return None
+
+    try:
+        info = service.files().get(
+            fileId=config_folder_id, fields='id,name,parents'
+        ).execute()
+        folder_name = info.get('name', '').strip().lower()
+
+        # Check if this folder IS a media-type folder
+        media_type_names = {n.lower() for n in MEDIA_TYPE_FOLDER_NAMES.values()}
+        media_type_names.update(MEDIA_TYPE_FOLDER_NAMES.keys())  # also check keys like 'video'
+
+        if folder_name in media_type_names and info.get('parents'):
+            parent_id = info['parents'][0]
+            logger.info(
+                f"gdrive_folder_id points to media-type folder '{info['name']}' "
+                f"(id={config_folder_id}). Updating root to parent (id={parent_id})."
+            )
+            # Update config to use the parent as root
+            from core.models import SiteConfiguration
+            cfg = SiteConfiguration.get_instance()
+            cfg.gdrive_folder_id = parent_id
+            cfg.save(update_fields=['gdrive_folder_id'])
+            return parent_id
+    except Exception as e:
+        logger.warning(f"Could not resolve root folder: {e}")
+
+    return config_folder_id
+
+
 def get_folder_for_media_type(media_type):
     """
     Get the GDrive folder ID for a specific media type.
@@ -94,22 +132,29 @@ def get_folder_for_media_type(media_type):
     try:
         service = _build_drive_service(sa_dict)
 
-        # First check if a folder with this name already exists under root
-        query = (
-            "mimeType='application/vnd.google-apps.folder' and trashed=false"
-            f" and name='{folder_name}'"
-        )
-        if root_folder_id:
-            query += f" and '{root_folder_id}' in parents"
+        # Auto-fix: if root is itself a media-type folder, go up to parent
+        root_folder_id = _resolve_root_folder(service, root_folder_id)
 
-        existing = service.files().list(
-            q=query, pageSize=1, fields='files(id,name)',
-        ).execute()
+        # Search for existing folder (both 'Video' and 'video')
+        folder_id = None
+        for search_name in [folder_name, media_type]:
+            query = (
+                "mimeType='application/vnd.google-apps.folder' and trashed=false"
+                f" and name='{search_name}'"
+            )
+            if root_folder_id:
+                query += f" and '{root_folder_id}' in parents"
 
-        if existing.get('files'):
-            folder_id = existing['files'][0]['id']
-            logger.info(f"Found existing GDrive folder '{folder_name}' (id={folder_id})")
-        else:
+            existing = service.files().list(
+                q=query, pageSize=1, fields='files(id,name)',
+            ).execute()
+
+            if existing.get('files'):
+                folder_id = existing['files'][0]['id']
+                logger.info(f"Found existing GDrive folder '{search_name}' (id={folder_id})")
+                break
+
+        if not folder_id:
             folder_id = _create_gdrive_folder(service, folder_name, root_folder_id)
 
         # Save mapping
@@ -143,39 +188,38 @@ def ensure_all_media_folders():
     try:
         service = _build_drive_service(sa_dict)
 
+        # Auto-fix: if root is itself a media-type folder, go up to parent
+        root_folder_id = _resolve_root_folder(service, root_folder_id)
+
+        # Clear mapping so we re-discover at correct level
+        mapping = {}
+
         for media_type, folder_name in MEDIA_TYPE_FOLDER_NAMES.items():
-            existing_id = mapping.get(media_type)
 
-            # Verify existing folder still exists
-            if existing_id:
-                try:
-                    f = service.files().get(fileId=existing_id, fields='id,name,trashed').execute()
-                    if not f.get('trashed'):
-                        results[media_type] = {'id': existing_id, 'name': f['name'], 'created': False}
-                        continue
-                except Exception:
-                    pass  # Folder deleted/inaccessible, recreate
+            # Search for existing folder by name (both 'Video' and 'video')
+            found_id = None
+            for search_name in [folder_name, media_type]:
+                query = (
+                    "mimeType='application/vnd.google-apps.folder' and trashed=false"
+                    f" and name='{search_name}'"
+                )
+                if root_folder_id:
+                    query += f" and '{root_folder_id}' in parents"
 
-            # Search for existing folder by name
-            query = (
-                "mimeType='application/vnd.google-apps.folder' and trashed=false"
-                f" and name='{folder_name}'"
-            )
-            if root_folder_id:
-                query += f" and '{root_folder_id}' in parents"
+                found = service.files().list(
+                    q=query, pageSize=1, fields='files(id,name)',
+                ).execute()
 
-            found = service.files().list(
-                q=query, pageSize=1, fields='files(id,name)',
-            ).execute()
+                if found.get('files'):
+                    found_id = found['files'][0]['id']
+                    results[media_type] = {'id': found_id, 'name': found['files'][0]['name'], 'created': False}
+                    break
 
-            if found.get('files'):
-                fid = found['files'][0]['id']
-                results[media_type] = {'id': fid, 'name': folder_name, 'created': False}
-            else:
-                fid = _create_gdrive_folder(service, folder_name, root_folder_id)
-                results[media_type] = {'id': fid, 'name': folder_name, 'created': True}
+            if not found_id:
+                found_id = _create_gdrive_folder(service, folder_name, root_folder_id)
+                results[media_type] = {'id': found_id, 'name': folder_name, 'created': True}
 
-            mapping[media_type] = fid
+            mapping[media_type] = found_id
 
         # Save all at once
         config.gdrive_folder_mapping = mapping
