@@ -67,48 +67,30 @@ def _create_gdrive_folder(service, name, parent_folder_id=None):
     return folder['id']
 
 
-def _resolve_root_folder(service, config_folder_id):
+def _find_accessible_folder(service, name):
     """
-    Resolve the actual root folder. If gdrive_folder_id itself is a
-    media-type folder (e.g. named 'video'), go up to its parent so that
-    Video/Audio/Podcast are siblings, not children.
-    Returns the correct root folder ID (may update SiteConfiguration).
+    Search ALL accessible folders (globally) for a folder with the given name.
+    Returns folder ID or None.
     """
-    if not config_folder_id:
-        return None
-
+    query = (
+        "mimeType='application/vnd.google-apps.folder' and trashed=false"
+        f" and name='{name}'"
+    )
     try:
-        info = service.files().get(
-            fileId=config_folder_id, fields='id,name,parents'
+        result = service.files().list(
+            q=query, pageSize=1, fields='files(id,name)',
         ).execute()
-        folder_name = info.get('name', '').strip().lower()
-
-        # Check if this folder IS a media-type folder
-        media_type_names = {n.lower() for n in MEDIA_TYPE_FOLDER_NAMES.values()}
-        media_type_names.update(MEDIA_TYPE_FOLDER_NAMES.keys())  # also check keys like 'video'
-
-        if folder_name in media_type_names and info.get('parents'):
-            parent_id = info['parents'][0]
-            logger.info(
-                f"gdrive_folder_id points to media-type folder '{info['name']}' "
-                f"(id={config_folder_id}). Updating root to parent (id={parent_id})."
-            )
-            # Update config to use the parent as root
-            from core.models import SiteConfiguration
-            cfg = SiteConfiguration.get_instance()
-            cfg.gdrive_folder_id = parent_id
-            cfg.save(update_fields=['gdrive_folder_id'])
-            return parent_id
-    except Exception as e:
-        logger.warning(f"Could not resolve root folder: {e}")
-
-    return config_folder_id
+        files = result.get('files', [])
+        return files[0]['id'] if files else None
+    except Exception:
+        return None
 
 
 def get_folder_for_media_type(media_type):
     """
     Get the GDrive folder ID for a specific media type.
-    Auto-creates the folder inside the root GDrive folder if it doesn't exist yet.
+    Searches ALL accessible folders for existing video/audio/podcast.
+    Auto-creates the folder if not found.
     Updates SiteConfiguration.gdrive_folder_mapping automatically.
 
     Returns: folder_id or None (if GDrive not configured)
@@ -122,39 +104,31 @@ def get_folder_for_media_type(media_type):
 
     mapping = config.gdrive_folder_mapping or {}
 
-    # Check if already mapped
+    # Check if already mapped — verify folder still exists
     folder_id = mapping.get(media_type)
     if folder_id:
-        return folder_id
+        try:
+            service = _build_drive_service(sa_dict)
+            f = service.files().get(fileId=folder_id, fields='id,trashed').execute()
+            if not f.get('trashed'):
+                return folder_id
+        except Exception:
+            pass  # Folder gone, re-discover below
 
-    # Auto-create: build service, create subfolder in root
     folder_name = MEDIA_TYPE_FOLDER_NAMES.get(media_type, media_type.capitalize())
     try:
         service = _build_drive_service(sa_dict)
 
-        # Auto-fix: if root is itself a media-type folder, go up to parent
-        root_folder_id = _resolve_root_folder(service, root_folder_id)
-
-        # Search for existing folder (both 'Video' and 'video')
+        # Search ALL accessible folders (no parent filter) for both names
         folder_id = None
-        for search_name in [folder_name, media_type]:
-            query = (
-                "mimeType='application/vnd.google-apps.folder' and trashed=false"
-                f" and name='{search_name}'"
-            )
-            if root_folder_id:
-                query += f" and '{root_folder_id}' in parents"
-
-            existing = service.files().list(
-                q=query, pageSize=1, fields='files(id,name)',
-            ).execute()
-
-            if existing.get('files'):
-                folder_id = existing['files'][0]['id']
+        for search_name in [media_type, folder_name]:
+            folder_id = _find_accessible_folder(service, search_name)
+            if folder_id:
                 logger.info(f"Found existing GDrive folder '{search_name}' (id={folder_id})")
                 break
 
         if not folder_id:
+            # Create under root folder if configured, otherwise at top level
             folder_id = _create_gdrive_folder(service, folder_name, root_folder_id)
 
         # Save mapping
@@ -172,6 +146,7 @@ def get_folder_for_media_type(media_type):
 def ensure_all_media_folders():
     """
     Ensure all media type folders exist on GDrive.
+    Searches ALL accessible folders globally — not just inside root.
     Called from admin or management command.
     Returns: {media_type: {id, name, created}} mapping
     """
@@ -182,40 +157,26 @@ def ensure_all_media_folders():
     if not sa_dict:
         return {'error': 'GDrive chưa cấu hình Service Account'}
 
-    mapping = config.gdrive_folder_mapping or {}
     results = {}
+    mapping = {}
 
     try:
         service = _build_drive_service(sa_dict)
 
-        # Auto-fix: if root is itself a media-type folder, go up to parent
-        root_folder_id = _resolve_root_folder(service, root_folder_id)
-
-        # Clear mapping so we re-discover at correct level
-        mapping = {}
-
         for media_type, folder_name in MEDIA_TYPE_FOLDER_NAMES.items():
 
-            # Search for existing folder by name (both 'Video' and 'video')
+            # Search ALL accessible folders for both 'video' and 'Video'
             found_id = None
-            for search_name in [folder_name, media_type]:
-                query = (
-                    "mimeType='application/vnd.google-apps.folder' and trashed=false"
-                    f" and name='{search_name}'"
-                )
-                if root_folder_id:
-                    query += f" and '{root_folder_id}' in parents"
-
-                found = service.files().list(
-                    q=query, pageSize=1, fields='files(id,name)',
-                ).execute()
-
-                if found.get('files'):
-                    found_id = found['files'][0]['id']
-                    results[media_type] = {'id': found_id, 'name': found['files'][0]['name'], 'created': False}
+            found_name = None
+            for search_name in [media_type, folder_name]:
+                found_id = _find_accessible_folder(service, search_name)
+                if found_id:
+                    found_name = search_name
                     break
 
-            if not found_id:
+            if found_id:
+                results[media_type] = {'id': found_id, 'name': found_name, 'created': False}
+            else:
                 found_id = _create_gdrive_folder(service, folder_name, root_folder_id)
                 results[media_type] = {'id': found_id, 'name': folder_name, 'created': True}
 
@@ -302,18 +263,23 @@ def check_gdrive_connection(sa_json_str=None):
                 else:
                     result['error'] = f'Không truy cập được folder: {err[:200]}'
 
-        # List visible folders for debugging
+        # List visible folders — only actual existing non-trashed folders
         try:
             visible = service.files().list(
                 q="mimeType='application/vnd.google-apps.folder' and trashed=false",
-                pageSize=10,
+                pageSize=50,
                 fields='files(id,name)',
-                orderBy='modifiedTime desc',
+                orderBy='name',
             ).execute()
-            result['visible_folders'] = [
-                {'id': f['id'], 'name': f['name']}
-                for f in visible.get('files', [])
-            ]
+            # Deduplicate: if multiple folders have same name, only show unique ones
+            seen_names = set()
+            unique_folders = []
+            for f in visible.get('files', []):
+                key = f['name'].lower()
+                if key not in seen_names:
+                    seen_names.add(key)
+                    unique_folders.append({'id': f['id'], 'name': f['name']})
+            result['visible_folders'] = unique_folders
         except Exception:
             result['visible_folders'] = []
 
