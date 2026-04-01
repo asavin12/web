@@ -67,6 +67,15 @@ def _create_gdrive_folder(service, name, parent_folder_id=None):
     return folder['id']
 
 
+def _folder_exists(service, folder_id):
+    """Check if a folder still exists on GDrive (not trashed). Returns True/False."""
+    try:
+        f = service.files().get(fileId=folder_id, fields='id,trashed').execute()
+        return not f.get('trashed', False)
+    except Exception:
+        return False
+
+
 def _find_accessible_folder(service, name):
     """
     Search ALL accessible folders (globally) for a folder with the given name.
@@ -86,12 +95,21 @@ def _find_accessible_folder(service, name):
         return None
 
 
+def _save_mapping(mapping):
+    """Save folder mapping to SiteConfiguration."""
+    from core.models import SiteConfiguration
+    config = SiteConfiguration.get_instance()
+    config.gdrive_folder_mapping = mapping
+    config.save(update_fields=['gdrive_folder_mapping'])
+
+
 def get_folder_for_media_type(media_type):
     """
     Get the GDrive folder ID for a specific media type.
-    Searches ALL accessible folders for existing video/audio/podcast.
-    Auto-creates the folder if not found.
-    Updates SiteConfiguration.gdrive_folder_mapping automatically.
+    1. Check cached mapping — VERIFY folder still exists on GDrive
+    2. If stale/missing, search all accessible folders globally
+    3. If not found, create new folder
+    4. Save updated mapping
 
     Returns: folder_id or None (if GDrive not configured)
     """
@@ -103,69 +121,50 @@ def get_folder_for_media_type(media_type):
         return None
 
     mapping = config.gdrive_folder_mapping or {}
+    service = _build_drive_service(sa_dict)
 
-    # Check if already mapped — verify folder still exists
-    folder_id = mapping.get(media_type)
-    if folder_id:
-        try:
-            service = _build_drive_service(sa_dict)
-            f = service.files().get(fileId=folder_id, fields='id,trashed').execute()
-            if not f.get('trashed'):
-                return folder_id
-        except Exception:
-            pass  # Folder gone, re-discover below
+    # Check cached mapping — verify it's still alive on GDrive
+    cached_id = mapping.get(media_type)
+    if cached_id and _folder_exists(service, cached_id):
+        return cached_id
 
+    # Cache miss or stale — search GDrive globally
     folder_name = MEDIA_TYPE_FOLDER_NAMES.get(media_type, media_type.capitalize())
-    try:
-        service = _build_drive_service(sa_dict)
+    folder_id = None
+    for search_name in [media_type, folder_name]:
+        folder_id = _find_accessible_folder(service, search_name)
+        if folder_id:
+            logger.info(f"Found existing GDrive folder '{search_name}' (id={folder_id})")
+            break
 
-        # Search ALL accessible folders (no parent filter) for both names
-        folder_id = None
-        for search_name in [media_type, folder_name]:
-            folder_id = _find_accessible_folder(service, search_name)
-            if folder_id:
-                logger.info(f"Found existing GDrive folder '{search_name}' (id={folder_id})")
-                break
+    if not folder_id:
+        folder_id = _create_gdrive_folder(service, folder_name, root_folder_id)
 
-        if not folder_id:
-            # Create under root folder if configured, otherwise at top level
-            folder_id = _create_gdrive_folder(service, folder_name, root_folder_id)
-
-        # Save mapping
-        mapping[media_type] = folder_id
-        config.gdrive_folder_mapping = mapping
-        config.save(update_fields=['gdrive_folder_mapping'])
-
-        return folder_id
-
-    except Exception as e:
-        logger.error(f"Error getting/creating GDrive folder for '{media_type}': {e}")
-        return root_folder_id  # Fallback to root
+    # Update mapping
+    mapping[media_type] = folder_id
+    _save_mapping(mapping)
+    return folder_id
 
 
 def ensure_all_media_folders():
     """
     Ensure all media type folders exist on GDrive.
-    Searches ALL accessible folders globally — not just inside root.
-    Called from admin or management command.
+    ALWAYS verifies on GDrive — never trusts cached mapping.
+    Overwrites mapping with fresh verified data.
     Returns: {media_type: {id, name, created}} mapping
     """
-    from core.models import SiteConfiguration
-    config = SiteConfiguration.get_instance()
-
     sa_dict, root_folder_id = _get_gdrive_config()
     if not sa_dict:
         return {'error': 'GDrive chưa cấu hình Service Account'}
 
     results = {}
-    mapping = {}
+    fresh_mapping = {}
 
     try:
         service = _build_drive_service(sa_dict)
 
         for media_type, folder_name in MEDIA_TYPE_FOLDER_NAMES.items():
-
-            # Search ALL accessible folders for both 'video' and 'Video'
+            # Always search GDrive fresh — ignore cached mapping
             found_id = None
             found_name = None
             for search_name in [media_type, folder_name]:
@@ -180,12 +179,10 @@ def ensure_all_media_folders():
                 found_id = _create_gdrive_folder(service, folder_name, root_folder_id)
                 results[media_type] = {'id': found_id, 'name': folder_name, 'created': True}
 
-            mapping[media_type] = found_id
+            fresh_mapping[media_type] = found_id
 
-        # Save all at once
-        config.gdrive_folder_mapping = mapping
-        config.save(update_fields=['gdrive_folder_mapping'])
-
+        # Overwrite mapping with fresh verified data
+        _save_mapping(fresh_mapping)
         return results
 
     except Exception as e:
@@ -264,6 +261,7 @@ def check_gdrive_connection(sa_json_str=None):
                     result['error'] = f'Không truy cập được folder: {err[:200]}'
 
         # List visible folders — only actual existing non-trashed folders
+        # Also update folder_mapping with verified data
         try:
             visible = service.files().list(
                 q="mimeType='application/vnd.google-apps.folder' and trashed=false",
@@ -271,15 +269,29 @@ def check_gdrive_connection(sa_json_str=None):
                 fields='files(id,name)',
                 orderBy='name',
             ).execute()
-            # Deduplicate: if multiple folders have same name, only show unique ones
+            all_folders = visible.get('files', [])
+
+            # Deduplicate by name (case-insensitive), keep first occurrence
             seen_names = set()
             unique_folders = []
-            for f in visible.get('files', []):
+            for f in all_folders:
                 key = f['name'].lower()
                 if key not in seen_names:
                     seen_names.add(key)
                     unique_folders.append({'id': f['id'], 'name': f['name']})
             result['visible_folders'] = unique_folders
+
+            # Auto-update folder_mapping with real verified folder IDs
+            fresh_mapping = {}
+            for media_type, expected_name in MEDIA_TYPE_FOLDER_NAMES.items():
+                # Search for folder by media_type key ('video') or display name ('Video')
+                for f in all_folders:
+                    if f['name'].lower() == media_type or f['name'] == expected_name:
+                        fresh_mapping[media_type] = f['id']
+                        break
+            if fresh_mapping:
+                _save_mapping(fresh_mapping)
+
         except Exception:
             result['visible_folders'] = []
 
