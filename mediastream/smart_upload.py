@@ -552,16 +552,20 @@ def gdrive_status(request):
 
     from core.models import SiteConfiguration
     config = SiteConfiguration.get_instance()
-    folder_id = config.gdrive_folder_id or ''
+
+    root = result.get('root_folder') or {}
 
     return JsonResponse({
         'configured': result['connected'],
         'email': result['email'],
-        'folder_id': folder_id,
-        'folder_name': result['folder_name'],
+        'folder_id': root.get('id', config.gdrive_folder_id or ''),
+        'folder_name': root.get('name', result['folder_name']),
         'folder_accessible': result['folder_accessible'],
         'error': result['error'],
+        'root_folder': root,
+        'subfolders': result.get('subfolders', []),
         'visible_folders': result.get('visible_folders', []),
+        'folder_mapping': config.gdrive_folder_mapping or {},
     })
 
 

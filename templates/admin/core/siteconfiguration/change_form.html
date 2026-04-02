@@ -173,82 +173,7 @@
     }
   }
 
-  /* === 2. Folder ID — with Change button & URL Auto-Extract === */
-  var folderField=document.getElementById('id_gdrive_folder_id');
-  if(folderField){
-    var folderVal=folderField.value.trim();
-    var hasFolderData=!!folderVal;
-
-    // Create actions wrapper
-    var folderWrap=document.createElement('div');
-    folderWrap.id='gdrive-folder-wrapper';
-    folderWrap.style.marginTop='6px';
-
-    if(hasFolderData){
-      // Show current folder + Change/Clear buttons
-      folderField.style.display='none';
-      var folderStatus=document.createElement('div');
-      folderStatus.id='gdrive-folder-status';
-      folderStatus.style.cssText='padding:6px 12px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;font-size:13px;margin-bottom:6px';
-      folderStatus.innerHTML=
-        '📁 Folder ID: <code style="background:#dcfce7;padding:2px 6px;border-radius:3px;user-select:all;font-size:12px">'+esc(folderVal)+'</code>';
-      folderWrap.appendChild(folderStatus);
-
-      var folderActions=document.createElement('div');
-      folderActions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center';
-      folderActions.innerHTML=
-        '<button type="button" class="gdrive-btn gdrive-btn-outline" id="gdrive-folder-change-btn">✏️ Thay đổi thư mục</button>'+
-        '<button type="button" class="gdrive-btn gdrive-btn-danger" id="gdrive-folder-clear-btn" style="font-size:11px;padding:4px 10px">🗑️ Xoá</button>';
-      folderWrap.appendChild(folderActions);
-
-      folderField.parentElement.insertBefore(folderWrap,folderField.nextSibling);
-
-      document.getElementById('gdrive-folder-change-btn').onclick=function(){
-        if(folderField.style.display==='none'){
-          folderField.style.display='';
-          folderField.focus();
-          this.textContent='📌 Ẩn';
-        }else{
-          folderField.style.display='none';
-          this.textContent='✏️ Thay đổi thư mục';
-        }
-      };
-      document.getElementById('gdrive-folder-clear-btn').onclick=function(){
-        if(confirm('Xoá Folder ID?')){
-          folderField.value='';
-          folderField.style.display='';
-          folderStatus.innerHTML='📁 Folder ID: <span class="gdrive-tag gdrive-tag-warn">đã xoá — nhớ bấm Lưu</span>';
-        }
-      };
-    }else{
-      folderField.parentElement.insertBefore(folderWrap,folderField.nextSibling);
-    }
-
-    // URL Auto-Extract tip (always shown)
-    var tip=document.createElement('div');
-    tip.id='gdrive-folder-tip';
-    tip.style.cssText='margin-top:4px;font-size:12px;color:#666';
-    tip.innerHTML='💡 Có thể dán link thư mục Google Drive — tự động trích xuất Folder ID';
-    folderWrap.appendChild(tip);
-
-    folderField.addEventListener('input',function(){
-      var v=this.value.trim();
-      var m=v.match(/drive\.google\.com\/(?:drive\/)?(?:u\/\d+\/)?folders\/([a-zA-Z0-9_-]+)/)||
-            v.match(/drive\.google\.com\/.*[?&]id=([a-zA-Z0-9_-]+)/);
-      if(m){
-        this.value=m[1];
-        tip.innerHTML='✅ Đã trích xuất Folder ID: <code style="background:#e8f4e8;padding:2px 6px;border-radius:3px">'+esc(m[1])+'</code>';
-        tip.style.color='#065f46';
-        var st=document.getElementById('gdrive-folder-status');
-        if(st) st.innerHTML='📁 Folder ID: <code style="background:#dcfce7;padding:2px 6px;border-radius:3px;user-select:all;font-size:12px">'+esc(m[1])+'</code> <span class="gdrive-tag gdrive-tag-warn">chưa lưu</span>';
-      }else{
-        tip.innerHTML='💡 Có thể dán link thư mục Google Drive — tự động trích xuất Folder ID';
-        tip.style.color='#666';
-      }
-    });
-  }
-
-  /* === 3. Connection Status Panel === */
+  /* === 2. Connection Status Panel === */
   var fieldsets=document.querySelectorAll('fieldset');
   var gdriveFS=null;
   for(var i=0;i<fieldsets.length;i++){
@@ -300,44 +225,55 @@
         panel.className=folderOk?'gdrive-panel connected':'gdrive-panel checking';
         st.innerHTML=folderOk
           ?'<span class="gdrive-tag gdrive-tag-ok">✅ Đã kết nối</span>'
-          :'<span class="gdrive-tag gdrive-tag-warn">⚠️ Tài khoản OK — thư mục chưa truy cập được</span>';
+          :'<span class="gdrive-tag gdrive-tag-warn">⚠️ Tài khoản OK — chưa tìm thấy thư mục gốc</span>';
         var h='';
         if(d.email)
           h+='<div class="gdrive-info"><span class="gdrive-lbl">📧 Service Account:</span> '+esc(d.email)+'</div>';
-        if(d.folder_id){
-          h+='<div class="gdrive-info"><span class="gdrive-lbl">📁 Thư mục:</span> ';
-          if(d.folder_name) h+='<strong>'+esc(d.folder_name)+'</strong> ';
-          h+='<code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:11px">'+esc(d.folder_id)+'</code> ';
-          if(folderOk){
-            h+='<span class="gdrive-tag gdrive-tag-ok">✅ Truy cập được</span>';
-          }else{
-            h+='<span class="gdrive-tag gdrive-tag-err">❌ Không truy cập được</span>';
-            h+='</div>';
-            h+='<div class="gdrive-info" style="background:#fff3cd;padding:8px 12px;border-radius:6px;margin-top:6px">';
-            h+='<strong>💡 Để sửa lỗi:</strong> Mở Google Drive → chuột phải thư mục → <strong>Share</strong><br>';
-            h+='Thêm email: <code style="background:#e8f4e8;padding:2px 6px;border-radius:3px;user-select:all">'+esc(d.email)+'</code> (quyền <strong>Editor</strong>)';
-            if(d.error) h+='<br><small style="color:#991b1b">Chi tiết: '+esc(d.error)+'</small>';
-          }
+
+        // Root folder info
+        var root=d.root_folder;
+        if(root&&root.id){
+          h+='<div class="gdrive-info"><span class="gdrive-lbl">📁 Thư mục gốc:</span> ';
+          h+='<strong>'+esc(root.name||'')+'</strong> ';
+          h+='<code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:11px">'+esc(root.id)+'</code> ';
+          h+='<span class="gdrive-tag gdrive-tag-ok">✅ tự động phát hiện</span>';
           h+='</div>';
-        }else{
-          h+='<div class="gdrive-info"><span class="gdrive-tag gdrive-tag-warn">⚠️ Chưa cấu hình Folder ID</span></div>';
         }
-        /* Show visible folders if any */
-        if(d.visible_folders&&d.visible_folders.length>0){
-          h+='<div class="gdrive-info" style="margin-top:6px"><span class="gdrive-lbl">📂 Thư mục có thể truy cập:</span>';
-          h+='<ul style="margin:4px 0 0 20px;list-style:disc">';
-          for(var i=0;i<d.visible_folders.length;i++){
-            var f=d.visible_folders[i];
-            var isActive=d.folder_id&&f.id===d.folder_id;
-            h+='<li><strong>'+esc(f.name)+'</strong> ';
-            h+='<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:11px;user-select:all">'+esc(f.id)+'</code>';
-            if(isActive) h+=' <span class="gdrive-tag gdrive-tag-ok">← đang dùng</span>';
-            h+='</li>';
+
+        // Subfolders (media type mapping)
+        var subs=d.subfolders||[];
+        if(subs.length>0){
+          h+='<div class="gdrive-info" style="margin-top:6px"><span class="gdrive-lbl">📂 Thư mục media:</span>';
+          h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">';
+          var typeIcons={video:'🎬',audio:'🎵',podcast:'🎙️'};
+          for(var i=0;i<subs.length;i++){
+            var s=subs[i];
+            var icon=typeIcons[s.media_type]||'📁';
+            h+='<span style="background:#d1fae5;color:#065f46;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600">';
+            h+=icon+' '+esc(s.name)+' ✅</span>';
           }
-          h+='</ul></div>';
-        }else if(d.configured&&!folderOk){
-          h+='<div class="gdrive-info" style="color:#991b1b;margin-top:4px">⚠️ Service Account chưa có quyền truy cập bất kỳ thư mục nào. Hãy Share thư mục với email ở trên.</div>';
+          h+='</div></div>';
+          // Show which types are missing
+          var mapped={};subs.forEach(function(s){mapped[s.media_type]=true});
+          var missing=[];
+          ['video','audio','podcast'].forEach(function(t){if(!mapped[t]) missing.push(t)});
+          if(missing.length>0){
+            h+='<div class="gdrive-info" style="margin-top:4px;color:#92400e;font-size:12px">';
+            h+='⚠️ Chưa có thư mục: '+missing.join(', ')+' — sẽ tự tạo khi upload hoặc đồng bộ từ Media Streams</div>';
+          }
+        }else if(folderOk){
+          h+='<div class="gdrive-info" style="margin-top:4px;color:#92400e;font-size:12px">';
+          h+='⚠️ Chưa có thư mục con (Video/Audio/Podcast) — sẽ tự tạo khi upload hoặc bấm Đồng bộ trong Media Streams</div>';
         }
+
+        if(d.error){
+          h+='<div class="gdrive-info" style="background:#fff3cd;padding:8px 12px;border-radius:6px;margin-top:6px">';
+          h+='<strong>💡 Để sửa lỗi:</strong> Mở Google Drive → chuột phải thư mục → <strong>Share</strong><br>';
+          h+='Thêm email: <code style="background:#e8f4e8;padding:2px 6px;border-radius:3px;user-select:all">'+esc(d.email)+'</code> (quyền <strong>Editor</strong>)';
+          h+='<br><small style="color:#991b1b">Chi tiết: '+esc(d.error)+'</small>';
+          h+='</div>';
+        }
+
         det.innerHTML=h;det.style.display='block';
       }else if(d.error){
         panel.className='gdrive-panel error';
@@ -347,7 +283,7 @@
       }else{
         panel.className='gdrive-panel idle';
         st.innerHTML='<span class="gdrive-tag gdrive-tag-warn">⚠️ Chưa cấu hình</span>';
-        det.innerHTML='<div class="gdrive-info">Dán JSON Service Account và Folder ID rồi bấm <strong>Lưu</strong> để kích hoạt.</div>';
+        det.innerHTML='<div class="gdrive-info">Dán JSON Service Account rồi bấm <strong>Lưu</strong>. Hệ thống sẽ tự phát hiện thư mục được share.</div>';
         det.style.display='block';
       }
     })

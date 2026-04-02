@@ -1,13 +1,16 @@
 """
-Google Drive Upload Service — Upload video lên Google Drive qua Service Account.
+Google Drive Upload Service — Upload media lên Google Drive qua Service Account.
 
 Yêu cầu:
   1. Service Account JSON credentials (lưu trong SiteConfiguration.gdrive_service_account_json)
-  2. Folder ID trên Google Drive (lưu trong SiteConfiguration.gdrive_folder_id)
-  3. Folder phải được share với email của Service Account (Edit permission)
+  2. Một thư mục trên Google Drive được share với Service Account (root folder)
+  3. Hệ thống tự động phát hiện root folder, tạo subfolder Video/Audio/Podcast
 
 Luồng:
-  User upload video → Server → Google Drive API → shareable link → lưu vào StreamMedia
+  1. Auto-detect root folder (thư mục được share với SA)
+  2. Tạo subfolder nếu chưa có
+  3. Upload file vào đúng subfolder theo media type
+  4. Lưu mapping vào SiteConfiguration.gdrive_folder_mapping
 """
 
 import json
@@ -22,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
-# Folder names created automatically on GDrive per media type
+# Subfolder names created automatically on GDrive per media type
 MEDIA_TYPE_FOLDER_NAMES = {
     'video': 'Video',
     'audio': 'Audio',
@@ -68,7 +71,7 @@ def _create_gdrive_folder(service, name, parent_folder_id=None):
 
 
 def _folder_exists(service, folder_id):
-    """Check if a folder still exists on GDrive (not trashed). Returns True/False."""
+    """Check if a folder still exists and is accessible on GDrive."""
     try:
         f = service.files().get(fileId=folder_id, fields='id,trashed').execute()
         return not f.get('trashed', False)
@@ -76,23 +79,102 @@ def _folder_exists(service, folder_id):
         return False
 
 
-def _find_accessible_folder(service, name):
+def _find_root_folder(service):
     """
-    Search ALL accessible folders (globally) for a folder with the given name.
-    Returns folder ID or None.
+    Auto-detect the root folder shared with the Service Account.
+    Looks for the top-level folder that contains subfolders or is the main shared folder.
+    Returns: (folder_id, folder_name) or (None, None)
     """
-    query = (
-        "mimeType='application/vnd.google-apps.folder' and trashed=false"
-        f" and name='{name}'"
-    )
     try:
+        # List ALL accessible folders
         result = service.files().list(
-            q=query, pageSize=1, fields='files(id,name)',
+            q="mimeType='application/vnd.google-apps.folder' and trashed=false",
+            pageSize=100,
+            fields='files(id,name,parents)',
+            orderBy='name',
         ).execute()
-        files = result.get('files', [])
-        return files[0]['id'] if files else None
-    except Exception:
-        return None
+        folders = result.get('files', [])
+        if not folders:
+            return None, None
+
+        # Build set of all folder IDs
+        all_ids = {f['id'] for f in folders}
+
+        # Find folders whose parent is NOT in our accessible set → these are top-level
+        top_level = []
+        for f in folders:
+            parents = f.get('parents', [])
+            if not parents or not any(p in all_ids for p in parents):
+                top_level.append(f)
+
+        if not top_level:
+            # Fallback: use first folder
+            top_level = folders[:1]
+
+        # If there's exactly one top-level folder, that's the root
+        if len(top_level) == 1:
+            return top_level[0]['id'], top_level[0]['name']
+
+        # Multiple top-level folders: pick the one that is NOT a media-type name
+        media_names = {n.lower() for n in MEDIA_TYPE_FOLDER_NAMES.values()}
+        media_names.update(MEDIA_TYPE_FOLDER_NAMES.keys())
+
+        for f in top_level:
+            if f['name'].lower() not in media_names:
+                return f['id'], f['name']
+
+        # All top-level are media-type names → no clear root
+        return None, None
+
+    except Exception as e:
+        logger.error(f"Error finding root folder: {e}")
+        return None, None
+
+
+def _find_subfolder(service, parent_id, name):
+    """Find a subfolder by name inside parent. Case-insensitive search."""
+    for search_name in [name, name.lower(), name.capitalize()]:
+        query = (
+            "mimeType='application/vnd.google-apps.folder' and trashed=false"
+            f" and name='{search_name}'"
+        )
+        if parent_id:
+            query += f" and '{parent_id}' in parents"
+        try:
+            result = service.files().list(
+                q=query, pageSize=1, fields='files(id,name)',
+            ).execute()
+            if result.get('files'):
+                return result['files'][0]['id'], result['files'][0]['name']
+        except Exception:
+            pass
+    return None, None
+
+
+def _ensure_root_folder(service):
+    """
+    Ensure we have a valid root folder. Auto-detect if not configured or stale.
+    Updates SiteConfiguration.gdrive_folder_id if changed.
+    Returns root_folder_id or None.
+    """
+    from core.models import SiteConfiguration
+    config = SiteConfiguration.get_instance()
+    current_root = config.gdrive_folder_id or None
+
+    # Check if current root is valid
+    if current_root and _folder_exists(service, current_root):
+        return current_root
+
+    # Auto-detect root folder
+    root_id, root_name = _find_root_folder(service)
+    if root_id:
+        logger.info(f"Auto-detected root GDrive folder: '{root_name}' (id={root_id})")
+        config.gdrive_folder_id = root_id
+        config.save(update_fields=['gdrive_folder_id'])
+        return root_id
+
+    logger.warning("No root GDrive folder found")
+    return None
 
 
 def _save_mapping(mapping):
@@ -106,39 +188,38 @@ def _save_mapping(mapping):
 def get_folder_for_media_type(media_type):
     """
     Get the GDrive folder ID for a specific media type.
-    1. Check cached mapping — VERIFY folder still exists on GDrive
-    2. If stale/missing, search all accessible folders globally
-    3. If not found, create new folder
+    1. Check cached mapping — verify folder still exists
+    2. If stale, search inside root folder
+    3. If not found, create subfolder in root
     4. Save updated mapping
 
-    Returns: folder_id or None (if GDrive not configured)
+    Returns: folder_id or None
     """
     from core.models import SiteConfiguration
     config = SiteConfiguration.get_instance()
 
-    sa_dict, root_folder_id = _get_gdrive_config()
+    sa_dict, _ = _get_gdrive_config()
     if not sa_dict:
         return None
 
     mapping = config.gdrive_folder_mapping or {}
     service = _build_drive_service(sa_dict)
 
-    # Check cached mapping — verify it's still alive on GDrive
+    # Check cached mapping
     cached_id = mapping.get(media_type)
     if cached_id and _folder_exists(service, cached_id):
         return cached_id
 
-    # Cache miss or stale — search GDrive globally
+    # Ensure root folder
+    root_id = _ensure_root_folder(service)
+
+    # Search for subfolder inside root
     folder_name = MEDIA_TYPE_FOLDER_NAMES.get(media_type, media_type.capitalize())
-    folder_id = None
-    for search_name in [media_type, folder_name]:
-        folder_id = _find_accessible_folder(service, search_name)
-        if folder_id:
-            logger.info(f"Found existing GDrive folder '{search_name}' (id={folder_id})")
-            break
+    folder_id, _ = _find_subfolder(service, root_id, folder_name)
 
     if not folder_id:
-        folder_id = _create_gdrive_folder(service, folder_name, root_folder_id)
+        # Create subfolder in root
+        folder_id = _create_gdrive_folder(service, folder_name, root_id)
 
     # Update mapping
     mapping[media_type] = folder_id
@@ -149,40 +230,49 @@ def get_folder_for_media_type(media_type):
 def ensure_all_media_folders():
     """
     Ensure all media type folders exist on GDrive.
-    ALWAYS verifies on GDrive — never trusts cached mapping.
-    Overwrites mapping with fresh verified data.
-    Returns: {media_type: {id, name, created}} mapping
+    ALWAYS verifies on GDrive directly — never trusts cache.
+    Auto-detects root folder, creates missing subfolders.
+    Returns: {media_type: {id, name, created}} or {error: str}
     """
-    sa_dict, root_folder_id = _get_gdrive_config()
+    sa_dict, _ = _get_gdrive_config()
     if not sa_dict:
         return {'error': 'GDrive chưa cấu hình Service Account'}
-
-    results = {}
-    fresh_mapping = {}
 
     try:
         service = _build_drive_service(sa_dict)
 
+        # Ensure root folder exists
+        root_id = _ensure_root_folder(service)
+        if not root_id:
+            return {'error': 'Không tìm thấy thư mục gốc. Hãy share thư mục với Service Account.'}
+
+        results = {}
+        fresh_mapping = {}
+
         for media_type, folder_name in MEDIA_TYPE_FOLDER_NAMES.items():
-            # Always search GDrive fresh — ignore cached mapping
-            found_id = None
-            found_name = None
-            for search_name in [media_type, folder_name]:
-                found_id = _find_accessible_folder(service, search_name)
-                if found_id:
-                    found_name = search_name
-                    break
+            # Search inside root folder
+            folder_id, found_name = _find_subfolder(service, root_id, folder_name)
 
-            if found_id:
-                results[media_type] = {'id': found_id, 'name': found_name, 'created': False}
+            if folder_id:
+                results[media_type] = {'id': folder_id, 'name': found_name, 'created': False}
             else:
-                found_id = _create_gdrive_folder(service, folder_name, root_folder_id)
-                results[media_type] = {'id': found_id, 'name': folder_name, 'created': True}
+                folder_id = _create_gdrive_folder(service, folder_name, root_id)
+                results[media_type] = {'id': folder_id, 'name': folder_name, 'created': True}
 
-            fresh_mapping[media_type] = found_id
+            fresh_mapping[media_type] = folder_id
 
-        # Overwrite mapping with fresh verified data
+        # Overwrite mapping
         _save_mapping(fresh_mapping)
+
+        # Get root info for response
+        from core.models import SiteConfiguration
+        config = SiteConfiguration.get_instance()
+        try:
+            root_info = service.files().get(fileId=root_id, fields='id,name').execute()
+            results['_root'] = {'id': root_id, 'name': root_info.get('name', '')}
+        except Exception:
+            results['_root'] = {'id': root_id, 'name': ''}
+
         return results
 
     except Exception as e:
@@ -192,13 +282,17 @@ def ensure_all_media_folders():
 
 def check_gdrive_connection(sa_json_str=None):
     """
-    Test Google Drive connection with service account credentials.
+    Test Google Drive connection. Auto-detects root folder.
+    Updates gdrive_folder_id and gdrive_folder_mapping with verified data.
     
     Returns: {
         'connected': bool,
-        'email': str,        # Service account email
-        'folder_name': str,  # Target folder name (if folder_id configured)
+        'email': str,
+        'root_folder': {id, name} | None,
+        'folder_name': str,
         'folder_accessible': bool,
+        'subfolders': [{id, name, media_type}],
+        'visible_folders': [{id, name}],
         'error': str | None,
     }
     """
@@ -207,61 +301,67 @@ def check_gdrive_connection(sa_json_str=None):
         'email': '',
         'folder_name': '',
         'folder_accessible': False,
+        'root_folder': None,
+        'subfolders': [],
+        'visible_folders': [],
         'error': None,
     }
 
     try:
-        # Use provided JSON or load from config
         if sa_json_str:
             sa_dict = json.loads(sa_json_str)
-            from core.models import SiteConfiguration
-            config = SiteConfiguration.get_instance()
-            folder_id = config.gdrive_folder_id or None
         else:
-            sa_dict, folder_id = _get_gdrive_config()
+            sa_dict, _ = _get_gdrive_config()
 
         if not sa_dict:
             result['error'] = 'Service Account JSON chưa được cấu hình'
             return result
 
         result['email'] = sa_dict.get('client_email', '')
-
-        # Build service and test
         service = _build_drive_service(sa_dict)
 
-        # Test: list files (limit 1) to verify credentials work
+        # Test credentials
         service.files().list(pageSize=1, fields='files(id)').execute()
         result['connected'] = True
 
-        # Check folder access if configured
-        if folder_id:
-            try:
-                folder = service.files().get(
-                    fileId=folder_id, fields='id,name,mimeType'
-                ).execute()
-                if folder.get('mimeType') == 'application/vnd.google-apps.folder':
-                    result['folder_name'] = folder.get('name', '')
-                    result['folder_accessible'] = True
-                else:
-                    result['error'] = f'ID "{folder_id}" không phải folder'
-            except Exception as e:
-                result['folder_accessible'] = False
-                err = str(e)
-                if '404' in err or 'not found' in err.lower() or 'notFound' in err:
-                    result['error'] = (
-                        f'Folder "{folder_id}" không tìm thấy. '
-                        f'Hãy chia sẻ (Share) thư mục với email: {result["email"]} (quyền Editor)'
-                    )
-                elif '403' in err or 'forbidden' in err.lower():
-                    result['error'] = (
-                        f'Không có quyền truy cập folder. '
-                        f'Hãy Share thư mục với {result["email"]} (quyền Editor)'
-                    )
-                else:
-                    result['error'] = f'Không truy cập được folder: {err[:200]}'
+        # Auto-detect root folder
+        root_id = _ensure_root_folder(service)
 
-        # List visible folders — only actual existing non-trashed folders
-        # Also update folder_mapping with verified data
+        if root_id:
+            try:
+                root_info = service.files().get(fileId=root_id, fields='id,name').execute()
+                result['root_folder'] = {'id': root_id, 'name': root_info.get('name', '')}
+                result['folder_name'] = root_info.get('name', '')
+                result['folder_accessible'] = True
+            except Exception:
+                result['root_folder'] = {'id': root_id, 'name': ''}
+                result['folder_accessible'] = False
+
+            # Find subfolders inside root
+            fresh_mapping = {}
+            subfolders = []
+            for media_type, folder_name in MEDIA_TYPE_FOLDER_NAMES.items():
+                fid, fname = _find_subfolder(service, root_id, folder_name)
+                if fid:
+                    subfolders.append({'id': fid, 'name': fname, 'media_type': media_type})
+                    fresh_mapping[media_type] = fid
+            result['subfolders'] = subfolders
+
+            # Update mapping with verified data
+            _save_mapping(fresh_mapping)
+
+            # Also update folder_id back into result for legacy API compatibility
+            from core.models import SiteConfiguration
+            config = SiteConfiguration.get_instance()
+            result['folder_id'] = config.gdrive_folder_id or ''
+        else:
+            result['folder_accessible'] = False
+            result['error'] = (
+                'Không tìm thấy thư mục gốc. Hãy share một thư mục với email: '
+                f'{result["email"]} (quyền Editor)'
+            )
+
+        # List all visible folders for info
         try:
             visible = service.files().list(
                 q="mimeType='application/vnd.google-apps.folder' and trashed=false",
@@ -269,31 +369,12 @@ def check_gdrive_connection(sa_json_str=None):
                 fields='files(id,name)',
                 orderBy='name',
             ).execute()
-            all_folders = visible.get('files', [])
-
-            # Deduplicate by name (case-insensitive), keep first occurrence
-            seen_names = set()
-            unique_folders = []
-            for f in all_folders:
-                key = f['name'].lower()
-                if key not in seen_names:
-                    seen_names.add(key)
-                    unique_folders.append({'id': f['id'], 'name': f['name']})
-            result['visible_folders'] = unique_folders
-
-            # Auto-update folder_mapping with real verified folder IDs
-            fresh_mapping = {}
-            for media_type, expected_name in MEDIA_TYPE_FOLDER_NAMES.items():
-                # Search for folder by media_type key ('video') or display name ('Video')
-                for f in all_folders:
-                    if f['name'].lower() == media_type or f['name'] == expected_name:
-                        fresh_mapping[media_type] = f['id']
-                        break
-            if fresh_mapping:
-                _save_mapping(fresh_mapping)
-
+            result['visible_folders'] = [
+                {'id': f['id'], 'name': f['name']}
+                for f in visible.get('files', [])
+            ]
         except Exception:
-            result['visible_folders'] = []
+            pass
 
     except json.JSONDecodeError:
         result['error'] = 'Service Account JSON không hợp lệ'

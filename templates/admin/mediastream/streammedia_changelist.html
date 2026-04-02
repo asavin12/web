@@ -389,8 +389,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             var folders = d.folders || {};
             folderMapping = {};
-            var html = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">';
+            var rootInfo = folders._root;
+            var html = '';
+            if (rootInfo && rootInfo.name) {
+                html += '<div style="margin-bottom:6px;font-size:11px;color:#417690">📁 Thư mục gốc: <strong>' + rootInfo.name + '</strong></div>';
+            }
+            html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">';
             Object.keys(folders).forEach(function(t) {
+                if (t === '_root') return;
                 var f = folders[t];
                 folderMapping[t] = f.id;
                 var icon = typeIcons[t] || '📁';
