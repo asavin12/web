@@ -152,6 +152,17 @@
         transition: width 0.3s;
     }
     
+    .progress-fill.processing {
+        background: linear-gradient(90deg, #417690 0%, #79aec8 50%, #417690 100%);
+        background-size: 200% 100%;
+        animation: progressPulse 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes progressPulse {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    
     .progress-text {
         font-size: 12px;
         color: #666;
@@ -503,18 +514,43 @@ document.addEventListener('DOMContentLoaded', function() {
         
         selectedFiles.forEach(file => formData.append('files', file));
         
+        // File size warning (Cloudflare Free ≤ 100MB)
+        const maxCF = 95 * 1024 * 1024;
+        const oversized = selectedFiles.filter(f => f.size > maxCF);
+        if (oversized.length > 0) {
+            const names = oversized.map(f => f.name + ' (' + (f.size / 1024 / 1024).toFixed(0) + 'MB)').join(', ');
+            if (!confirm('⚠️ File lớn hơn 95MB: ' + names + '\nCloudflare giới hạn ~100MB. Upload có thể thất bại.\nBấm OK để tiếp tục.')) {
+                uploadBtn.disabled = false;
+                uploadProgress.classList.remove('active');
+                return;
+            }
+        }
+        
         const xhr = new XMLHttpRequest();
         
         xhr.upload.onprogress = function(e) {
             if (e.lengthComputable) {
                 const percent = Math.round((e.loaded / e.total) * 100);
                 progressFill.style.width = percent + '%';
+                progressFill.classList.remove('processing');
                 const storage = storageSelect.value === 'gdrive' ? '→ GDrive' : '→ Local';
                 progressText.textContent = `Uploading ${storage}... ${percent}%`;
             }
         };
         
+        // Client→Server upload finished — now server processes & uploads to GDrive
+        xhr.upload.onload = function() {
+            if (storageSelect.value === 'gdrive') {
+                progressFill.style.width = '100%';
+                progressFill.classList.add('processing');
+                progressText.textContent = '⏳ Đang upload lên Google Drive... vui lòng chờ';
+            } else {
+                progressText.textContent = 'Đang xử lý...';
+            }
+        };
+        
         xhr.onload = function() {
+            progressFill.classList.remove('processing');
             uploadProgress.classList.remove('active');
             if (xhr.status === 200) {
                 let msg = '✓ Upload thành công!';
@@ -542,9 +578,19 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         xhr.onerror = function() {
+            progressFill.classList.remove('processing');
             uploadProgress.classList.remove('active');
             uploadResult.className = 'upload-result error';
-            uploadResult.textContent = '✗ Network error';
+            uploadResult.textContent = '✗ Lỗi mạng — kiểm tra kết nối và thử lại';
+            uploadResult.style.display = 'block';
+            uploadBtn.disabled = false;
+        };
+        
+        xhr.ontimeout = function() {
+            progressFill.classList.remove('processing');
+            uploadProgress.classList.remove('active');
+            uploadResult.className = 'upload-result error';
+            uploadResult.textContent = '✗ Timeout — file quá lớn hoặc kết nối chậm. Thử lại hoặc giảm kích thước file.';
             uploadResult.style.display = 'block';
             uploadBtn.disabled = false;
         };

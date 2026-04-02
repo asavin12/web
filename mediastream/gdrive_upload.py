@@ -423,19 +423,21 @@ def upload_to_gdrive(file_obj, filename, mime_type='video/mp4', folder_id=None):
         if target_folder:
             file_metadata['parents'] = [target_folder]
 
-        # Read file into BytesIO for the API
-        if hasattr(file_obj, 'read'):
-            content = file_obj.read()
-            if hasattr(file_obj, 'seek'):
-                file_obj.seek(0)
+        # Prepare file for upload — avoid double-buffering large files
+        if hasattr(file_obj, 'file'):
+            # Django UploadedFile → use underlying file directly
+            fd = file_obj.file
+        elif hasattr(file_obj, 'read'):
+            fd = file_obj
         else:
-            content = file_obj
+            fd = BytesIO(file_obj)
+        fd.seek(0)
 
         media_body = MediaIoBaseUpload(
-            BytesIO(content),
+            fd,
             mimetype=mime_type,
             resumable=True,
-            chunksize=5 * 1024 * 1024,  # 5MB chunks
+            chunksize=10 * 1024 * 1024,  # 10MB chunks
         )
 
         # Upload

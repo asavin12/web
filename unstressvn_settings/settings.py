@@ -249,6 +249,10 @@ FRONTEND_DIR = BASE_DIR / 'frontend' / 'dist'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# File upload limits — cho phép upload file lớn (video/audio)
+DATA_UPLOAD_MAX_MEMORY_SIZE = None  # Không giới hạn POST body
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # >10MB → ghi ra temp file
+
 # =============================================
 # PROXY & SECURITY (behind Traefik / Cloudflare)
 # =============================================
