@@ -493,6 +493,161 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /* === Upload === */
+    const CHUNK_SIZE = 50 * 1024 * 1024;  // 50MB per chunk
+    const CHUNK_THRESHOLD = 50 * 1024 * 1024;  // Use chunked upload for files > 50MB
+    
+    function generateUploadId() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+    }
+    
+    function getCSRFToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+    
+    function getFormMeta() {
+        return {
+            title: document.getElementById('mediaTitle').value,
+            media_type: mediaTypeSelect.value,
+            language: document.getElementById('mediaLanguage').value,
+            level: document.getElementById('mediaLevel').value,
+            storage: storageSelect.value,
+            is_public: document.getElementById('isPublic').value,
+        };
+    }
+    
+    // --- Chunked upload for a single large file ---
+    async function uploadFileChunked(file, meta) {
+        const uploadId = generateUploadId();
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const csrfToken = getCSRFToken();
+        
+        // Phase 1: Upload chunks
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+            
+            const chunkForm = new FormData();
+            chunkForm.append('csrfmiddlewaretoken', csrfToken);
+            chunkForm.append('upload_id', uploadId);
+            chunkForm.append('chunk_index', i);
+            chunkForm.append('total_chunks', totalChunks);
+            chunkForm.append('filename', file.name);
+            chunkForm.append('file', chunk);
+            
+            // Upload chunk with XHR for per-chunk progress
+            await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        const chunkProgress = e.loaded / e.total;
+                        const overallPercent = Math.round(((i + chunkProgress) / totalChunks) * 100);
+                        progressFill.style.width = overallPercent + '%';
+                        progressFill.classList.remove('processing');
+                        progressText.textContent = `Uploading chunk ${i + 1}/${totalChunks}... ${overallPercent}%`;
+                    }
+                };
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        resolve();
+                    } else {
+                        let errMsg = 'Chunk upload failed';
+                        try { errMsg = JSON.parse(xhr.responseText).error || errMsg; } catch(e) {}
+                        reject(new Error(errMsg));
+                    }
+                };
+                xhr.onerror = function() { reject(new Error('Network error on chunk ' + (i+1))); };
+                xhr.open('POST', '{% url "mediastream:admin_upload_chunk" %}');
+                xhr.send(chunkForm);
+            });
+        }
+        
+        // Phase 2: Tell server to assemble + upload to GDrive
+        progressFill.style.width = '100%';
+        progressFill.classList.add('processing');
+        if (meta.storage === 'gdrive') {
+            progressText.textContent = '⏳ Đang ghép file và upload lên Google Drive...';
+        } else {
+            progressText.textContent = '⏳ Đang ghép file...';
+        }
+        
+        const completeForm = new FormData();
+        completeForm.append('csrfmiddlewaretoken', csrfToken);
+        completeForm.append('upload_id', uploadId);
+        completeForm.append('title', meta.title);
+        completeForm.append('media_type', meta.media_type);
+        completeForm.append('language', meta.language);
+        completeForm.append('level', meta.level);
+        completeForm.append('storage', meta.storage);
+        completeForm.append('is_public', meta.is_public);
+        
+        const resp = await fetch('{% url "mediastream:admin_upload_complete" %}', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: completeForm,
+        });
+        
+        const result = await resp.json();
+        if (!resp.ok) throw new Error(result.error || 'Upload complete failed');
+        return result;
+    }
+    
+    // --- Standard single-request upload for small files ---
+    function uploadFilesStandard(files, meta) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', getCSRFToken());
+            formData.append('title', meta.title);
+            formData.append('media_type', meta.media_type);
+            formData.append('language', meta.language);
+            formData.append('level', meta.level);
+            formData.append('storage', meta.storage);
+            formData.append('is_public', meta.is_public);
+            files.forEach(file => formData.append('files', file));
+            
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressFill.style.width = percent + '%';
+                    progressFill.classList.remove('processing');
+                    const storage = meta.storage === 'gdrive' ? '→ GDrive' : '→ Local';
+                    progressText.textContent = `Uploading ${storage}... ${percent}%`;
+                }
+            };
+            
+            xhr.upload.onload = function() {
+                if (meta.storage === 'gdrive') {
+                    progressFill.style.width = '100%';
+                    progressFill.classList.add('processing');
+                    progressText.textContent = '⏳ Đang upload lên Google Drive... vui lòng chờ';
+                } else {
+                    progressText.textContent = 'Đang xử lý...';
+                }
+            };
+            
+            xhr.onload = function() {
+                progressFill.classList.remove('processing');
+                if (xhr.status === 200) {
+                    resolve(JSON.parse(xhr.responseText));
+                } else {
+                    let errMsg = 'Upload failed';
+                    try { errMsg = JSON.parse(xhr.responseText).error || errMsg; } catch(e) {}
+                    reject(new Error(errMsg));
+                }
+            };
+            xhr.onerror = function() { reject(new Error('Lỗi mạng — kiểm tra kết nối và thử lại')); };
+            xhr.ontimeout = function() { reject(new Error('Timeout — file quá lớn hoặc kết nối chậm')); };
+            
+            xhr.open('POST', '{% url "mediastream:admin_upload_api" %}');
+            xhr.send(formData);
+        });
+    }
+    
     uploadForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         if (selectedFiles.length === 0) return;
@@ -501,102 +656,65 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadProgress.classList.add('active');
         uploadResult.className = 'upload-result';
         uploadResult.style.display = 'none';
+        progressFill.style.width = '0%';
+        progressFill.classList.remove('processing');
         
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-        formData.append('title', document.getElementById('mediaTitle').value);
-        formData.append('media_type', mediaTypeSelect.value);
-        formData.append('language', document.getElementById('mediaLanguage').value);
-        formData.append('level', document.getElementById('mediaLevel').value);
-        formData.append('storage', storageSelect.value);
-        formData.append('is_public', document.getElementById('isPublic').value);
-        // Folder auto-resolved by media_type on backend — no manual selection needed
+        const meta = getFormMeta();
         
-        selectedFiles.forEach(file => formData.append('files', file));
-        
-        // File size warning (Cloudflare Free ≤ 100MB)
-        const maxCF = 95 * 1024 * 1024;
-        const oversized = selectedFiles.filter(f => f.size > maxCF);
-        if (oversized.length > 0) {
-            const names = oversized.map(f => f.name + ' (' + (f.size / 1024 / 1024).toFixed(0) + 'MB)').join(', ');
-            if (!confirm('⚠️ File lớn hơn 95MB: ' + names + '\nCloudflare giới hạn ~100MB. Upload có thể thất bại.\nBấm OK để tiếp tục.')) {
-                uploadBtn.disabled = false;
-                uploadProgress.classList.remove('active');
-                return;
-            }
-        }
-        
-        const xhr = new XMLHttpRequest();
-        
-        xhr.upload.onprogress = function(e) {
-            if (e.lengthComputable) {
-                const percent = Math.round((e.loaded / e.total) * 100);
-                progressFill.style.width = percent + '%';
-                progressFill.classList.remove('processing');
-                const storage = storageSelect.value === 'gdrive' ? '→ GDrive' : '→ Local';
-                progressText.textContent = `Uploading ${storage}... ${percent}%`;
-            }
-        };
-        
-        // Client→Server upload finished — now server processes & uploads to GDrive
-        xhr.upload.onload = function() {
-            if (storageSelect.value === 'gdrive') {
-                progressFill.style.width = '100%';
-                progressFill.classList.add('processing');
-                progressText.textContent = '⏳ Đang upload lên Google Drive... vui lòng chờ';
-            } else {
-                progressText.textContent = 'Đang xử lý...';
-            }
-        };
-        
-        xhr.onload = function() {
-            progressFill.classList.remove('processing');
-            uploadProgress.classList.remove('active');
-            if (xhr.status === 200) {
-                let msg = '✓ Upload thành công!';
-                try {
-                    const result = JSON.parse(xhr.responseText);
-                    if (result.errors && result.errors.length > 0) {
-                        msg += ' (⚠️ ' + result.errors.join('; ') + ')';
+        try {
+            // Check if any file needs chunked upload
+            const needsChunked = selectedFiles.some(f => f.size > CHUNK_THRESHOLD);
+            let result;
+            
+            if (needsChunked && selectedFiles.length === 1) {
+                // Single large file → chunked upload
+                result = await uploadFileChunked(selectedFiles[0], meta);
+            } else if (needsChunked) {
+                // Multiple files with at least one large → upload each separately
+                const allMedia = [];
+                const allErrors = [];
+                for (let fi = 0; fi < selectedFiles.length; fi++) {
+                    const file = selectedFiles[fi];
+                    progressText.textContent = `File ${fi + 1}/${selectedFiles.length}: ${file.name}`;
+                    if (file.size > CHUNK_THRESHOLD) {
+                        const r = await uploadFileChunked(file, meta);
+                        if (r.media) allMedia.push(r.media);
+                        if (r.errors) allErrors.push(...r.errors);
+                    } else {
+                        const r = await uploadFilesStandard([file], meta);
+                        if (r.media) allMedia.push(r.media);
+                        if (r.errors) allErrors.push(...r.errors);
                     }
-                } catch(e) {}
-                uploadResult.className = 'upload-result success';
-                uploadResult.textContent = msg;
-                uploadResult.style.display = 'block';
-                selectedFiles = [];
-                filePreview.innerHTML = '';
-                document.getElementById('mediaTitle').value = '';
-                setTimeout(() => window.location.reload(), 1500);
+                }
+                result = {success: true, media: allMedia, count: allMedia.length, errors: allErrors.length ? allErrors : null};
             } else {
-                let errMsg = 'Upload failed';
-                try { errMsg = JSON.parse(xhr.responseText).error || errMsg; } catch(e) {}
-                uploadResult.className = 'upload-result error';
-                uploadResult.textContent = '✗ ' + errMsg;
-                uploadResult.style.display = 'block';
-                uploadBtn.disabled = false;
+                // All files small → single standard upload
+                result = await uploadFilesStandard(selectedFiles, meta);
             }
-        };
-        
-        xhr.onerror = function() {
+            
+            // Success
+            progressFill.classList.remove('processing');
+            uploadProgress.classList.remove('active');
+            let msg = '✓ Upload thành công!';
+            if (result.errors && result.errors.length > 0) {
+                msg += ' (⚠️ ' + result.errors.join('; ') + ')';
+            }
+            uploadResult.className = 'upload-result success';
+            uploadResult.textContent = msg;
+            uploadResult.style.display = 'block';
+            selectedFiles = [];
+            filePreview.innerHTML = '';
+            document.getElementById('mediaTitle').value = '';
+            setTimeout(() => window.location.reload(), 1500);
+            
+        } catch (err) {
             progressFill.classList.remove('processing');
             uploadProgress.classList.remove('active');
             uploadResult.className = 'upload-result error';
-            uploadResult.textContent = '✗ Lỗi mạng — kiểm tra kết nối và thử lại';
+            uploadResult.textContent = '✗ ' + err.message;
             uploadResult.style.display = 'block';
             uploadBtn.disabled = false;
-        };
-        
-        xhr.ontimeout = function() {
-            progressFill.classList.remove('processing');
-            uploadProgress.classList.remove('active');
-            uploadResult.className = 'upload-result error';
-            uploadResult.textContent = '✗ Timeout — file quá lớn hoặc kết nối chậm. Thử lại hoặc giảm kích thước file.';
-            uploadResult.style.display = 'block';
-            uploadBtn.disabled = false;
-        };
-        
-        xhr.open('POST', '{% url "mediastream:admin_upload_api" %}');
-        xhr.send(formData);
+        }
     });
     
 });
