@@ -934,6 +934,35 @@ def upload_complete(request):
 
         media.save()
 
+        # Handle auxiliary files (subtitles, thumbnails) sent with the complete request
+        aux_files = request.FILES.getlist('files')
+        allowed_subs = ['.vtt', '.srt']
+        allowed_image = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+
+        for af in aux_files:
+            af_ext = os.path.splitext(af.name)[1].lower()
+            if af_ext in allowed_image:
+                media.thumbnail = af
+                media.save(update_fields=['thumbnail'])
+            elif af_ext in allowed_subs:
+                sub_name = os.path.splitext(af.name)[0].lower()
+                sub_lang = 'vi'
+                if '_en' in sub_name or '.en' in sub_name or 'english' in sub_name:
+                    sub_lang = 'en'
+                elif '_de' in sub_name or '.de' in sub_name or 'deutsch' in sub_name or 'german' in sub_name:
+                    sub_lang = 'de'
+                try:
+                    from .models import MediaSubtitle
+                    MediaSubtitle.objects.create(
+                        media=media,
+                        language=sub_lang,
+                        label=af.name,
+                        file=af,
+                        is_default=(sub_lang == language),
+                    )
+                except Exception as e:
+                    errors.append(f'Subtitle {af.name}: {str(e)[:80]}')
+
         result_data = {
             'success': True,
             'media': {

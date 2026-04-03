@@ -496,6 +496,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const CHUNK_SIZE = 50 * 1024 * 1024;  // 50MB per chunk
     const CHUNK_THRESHOLD = 50 * 1024 * 1024;  // Use chunked upload for files > 50MB
     
+    const mediaExts = ['.mp4','.webm','.ogg','.mov','.flv','.avi','.m4v','.mp3','.wav','.m4a','.aac','.flac','.wma'];
+    const auxExts = ['.vtt','.srt','.jpg','.jpeg','.png','.gif','.webp'];
+    
+    function getFileExt(name) {
+        return '.' + name.split('.').pop().toLowerCase();
+    }
+    
+    function isMediaFile(file) {
+        return mediaExts.includes(getFileExt(file.name));
+    }
+    
     function generateUploadId() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             var r = Math.random() * 16 | 0;
@@ -518,8 +529,8 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
     
-    // --- Chunked upload for a single large file ---
-    async function uploadFileChunked(file, meta) {
+    // --- Chunked upload for a single large media file (+ optional aux files) ---
+    async function uploadFileChunked(file, meta, auxFiles) {
         const uploadId = generateUploadId();
         const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
         const csrfToken = getCSRFToken();
@@ -538,7 +549,6 @@ document.addEventListener('DOMContentLoaded', function() {
             chunkForm.append('filename', file.name);
             chunkForm.append('file', chunk);
             
-            // Upload chunk with XHR for per-chunk progress
             await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.upload.onprogress = function(e) {
@@ -583,6 +593,11 @@ document.addEventListener('DOMContentLoaded', function() {
         completeForm.append('level', meta.level);
         completeForm.append('storage', meta.storage);
         completeForm.append('is_public', meta.is_public);
+        
+        // Attach auxiliary files (subtitles, thumbnails) to complete request
+        if (auxFiles && auxFiles.length > 0) {
+            auxFiles.forEach(f => completeForm.append('files', f));
+        }
         
         const resp = await fetch('{% url "mediastream:admin_upload_complete" %}', {
             method: 'POST',
@@ -661,34 +676,50 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const meta = getFormMeta();
         
+        // Separate media files from auxiliary files (subtitles, thumbnails)
+        const mediaFiles = selectedFiles.filter(f => isMediaFile(f));
+        const auxFiles = selectedFiles.filter(f => !isMediaFile(f));
+        
+        if (mediaFiles.length === 0) {
+            uploadResult.className = 'upload-result error';
+            uploadResult.textContent = '✗ Không có file media hợp lệ (video/audio)';
+            uploadResult.style.display = 'block';
+            uploadBtn.disabled = false;
+            uploadProgress.classList.remove('active');
+            return;
+        }
+        
         try {
-            // Check if any file needs chunked upload
-            const needsChunked = selectedFiles.some(f => f.size > CHUNK_THRESHOLD);
+            // Check if any MEDIA file needs chunked upload
+            const needsChunked = mediaFiles.some(f => f.size > CHUNK_THRESHOLD);
             let result;
             
-            if (needsChunked && selectedFiles.length === 1) {
-                // Single large file → chunked upload
-                result = await uploadFileChunked(selectedFiles[0], meta);
+            if (needsChunked && mediaFiles.length === 1) {
+                // Single large media file (+aux) → chunked upload, pass aux files to complete
+                result = await uploadFileChunked(mediaFiles[0], meta, auxFiles);
             } else if (needsChunked) {
-                // Multiple files with at least one large → upload each separately
+                // Multiple media files with at least one large → upload each media file separately
                 const allMedia = [];
                 const allErrors = [];
-                for (let fi = 0; fi < selectedFiles.length; fi++) {
-                    const file = selectedFiles[fi];
-                    progressText.textContent = `File ${fi + 1}/${selectedFiles.length}: ${file.name}`;
+                for (let fi = 0; fi < mediaFiles.length; fi++) {
+                    const file = mediaFiles[fi];
+                    progressText.textContent = `File ${fi + 1}/${mediaFiles.length}: ${file.name}`;
+                    // Attach aux files only to the first media file
+                    const fileAux = (fi === 0) ? auxFiles : [];
                     if (file.size > CHUNK_THRESHOLD) {
-                        const r = await uploadFileChunked(file, meta);
+                        const r = await uploadFileChunked(file, meta, fileAux);
                         if (r.media) allMedia.push(r.media);
                         if (r.errors) allErrors.push(...r.errors);
                     } else {
-                        const r = await uploadFilesStandard([file], meta);
+                        // Small media + its aux files → standard upload
+                        const r = await uploadFilesStandard([file, ...fileAux], meta);
                         if (r.media) allMedia.push(r.media);
                         if (r.errors) allErrors.push(...r.errors);
                     }
                 }
                 result = {success: true, media: allMedia, count: allMedia.length, errors: allErrors.length ? allErrors : null};
             } else {
-                // All files small → single standard upload
+                // All files small → single standard upload (all files together)
                 result = await uploadFilesStandard(selectedFiles, meta);
             }
             
