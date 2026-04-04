@@ -427,6 +427,7 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
     'x-api-key',  # Cho N8N automation API
+    'x-upload-token',  # Cho direct upload bypass Cloudflare
 ]
 
 # =============================================

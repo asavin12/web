@@ -102,7 +102,7 @@ def apply_dynamic_settings():
     # === Direct Upload Domain (bypass Cloudflare) ===
     upload_domain = getattr(config, 'direct_upload_domain', '').strip()
     if upload_domain:
-        # Auto-add to ALLOWED_HOSTS
+        # Auto-add upload subdomain to ALLOWED_HOSTS
         if upload_domain not in settings.ALLOWED_HOSTS:
             settings.ALLOWED_HOSTS.append(upload_domain)
         # Auto-add to CSRF_TRUSTED_ORIGINS
@@ -111,18 +111,19 @@ def apply_dynamic_settings():
             settings.CSRF_TRUSTED_ORIGINS = []
         if upload_origin not in settings.CSRF_TRUSTED_ORIGINS:
             settings.CSRF_TRUSTED_ORIGINS.append(upload_origin)
-        # Auto-add to CORS_ALLOWED_ORIGINS
+        # Auto-add main site origins to CORS so browser allows cross-origin XHR
+        # Request: from unstressvn.com → to upload.unstressvn.com
         if not hasattr(settings, 'CORS_ALLOWED_ORIGINS'):
             settings.CORS_ALLOWED_ORIGINS = []
+        if config.allowed_hosts:
+            for host in config.allowed_hosts.split(','):
+                host = host.strip()
+                if host and host not in ('localhost', '127.0.0.1', 'host.docker.internal'):
+                    origin = f'https://{host}'
+                    if origin not in settings.CORS_ALLOWED_ORIGINS:
+                        settings.CORS_ALLOWED_ORIGINS.append(origin)
         if upload_origin not in settings.CORS_ALLOWED_ORIGINS:
             settings.CORS_ALLOWED_ORIGINS.append(upload_origin)
-        # Share session cookie across subdomains so auth works on upload subdomain
-        # Extract parent domain: upload.unstressvn.com → .unstressvn.com
-        parts = upload_domain.split('.')
-        if len(parts) >= 3:
-            parent_domain = '.' + '.'.join(parts[-2:])
-            settings.SESSION_COOKIE_DOMAIN = parent_domain
-            settings.CSRF_COOKIE_DOMAIN = parent_domain
         logger.info('📤 Direct upload domain: %s', upload_domain)
 
     # === Email ===

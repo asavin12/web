@@ -577,14 +577,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         /* Direct upload URL: bypass Cloudflare 100MB limit */
         const directUploadUrl = '{{ direct_upload_url|default:"" }}';
+        const uploadToken = '{{ upload_token|default:"" }}';
         const defaultUploadUrl = '{% url "mediastream:admin_upload_api" %}';
         const uploadUrl = directUploadUrl || defaultUploadUrl;
         
-        if (directUploadUrl) {
-            xhr.withCredentials = true;  /* Send session cookie cross-subdomain */
-        }
-        
         xhr.open('POST', uploadUrl);
+        if (directUploadUrl && uploadToken) {
+            xhr.setRequestHeader('X-Upload-Token', uploadToken);
+        }
         xhr.send(formData);
     });
     
