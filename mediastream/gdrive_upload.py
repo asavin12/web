@@ -3,15 +3,21 @@ Google Drive Upload Service — Upload media lên Google Drive qua Service Accou
 
 Yêu cầu:
   1. Service Account JSON credentials (lưu trong SiteConfiguration.gdrive_service_account_json)
-  2. Một thư mục trên Google Drive được share với Service Account (root folder)
+  2. Một Shared Drive (Team Drive) trên Google Workspace được share với Service Account
+     HOẶC thư mục trên Shared Drive được share với SA
   3. Hệ thống tự động phát hiện root folder, tạo subfolder Video/Audio/Podcast
 
+Lưu ý:
+  Google đã xóa storage quota cho Service Account trên Drive cá nhân (My Drive).
+  SA chỉ có thể upload vào Shared Drive (Team Drive) hoặc nơi có quota riêng.
+  Tất cả API call đều dùng supportsAllDrives=True.
+
 Luồng:
-  1. Auto-detect root folder (thư mục được share với SA)
+  1. Auto-detect root folder (Shared Drive hoặc folder được share)
   2. Tạo subfolder nếu chưa có
   3. Upload file vào đúng subfolder theo media type
   4. Lưu mapping vào SiteConfiguration.gdrive_folder_mapping
-"""
+"
 
 import json
 import logging
@@ -58,14 +64,17 @@ def _build_drive_service(sa_dict):
 
 
 def _create_gdrive_folder(service, name, parent_folder_id=None):
-    """Create a folder on Google Drive. Returns folder ID."""
+    """Create a folder on Google Drive (supports Shared Drives). Returns folder ID."""
     metadata = {
         'name': name,
         'mimeType': 'application/vnd.google-apps.folder',
     }
     if parent_folder_id:
         metadata['parents'] = [parent_folder_id]
-    folder = service.files().create(body=metadata, fields='id,name').execute()
+    folder = service.files().create(
+        body=metadata, fields='id,name',
+        supportsAllDrives=True,
+    ).execute()
     logger.info(f"Created GDrive folder '{name}' (id={folder['id']})")
     return folder['id']
 
@@ -73,7 +82,10 @@ def _create_gdrive_folder(service, name, parent_folder_id=None):
 def _folder_exists(service, folder_id):
     """Check if a folder still exists and is accessible on GDrive."""
     try:
-        f = service.files().get(fileId=folder_id, fields='id,trashed').execute()
+        f = service.files().get(
+            fileId=folder_id, fields='id,trashed',
+            supportsAllDrives=True,
+        ).execute()
         return not f.get('trashed', False)
     except Exception:
         return False
@@ -86,12 +98,14 @@ def _find_root_folder(service):
     Returns: (folder_id, folder_name) or (None, None)
     """
     try:
-        # List ALL accessible folders
+        # List ALL accessible folders (including Shared Drives)
         result = service.files().list(
             q="mimeType='application/vnd.google-apps.folder' and trashed=false",
             pageSize=100,
             fields='files(id,name,parents)',
             orderBy='name',
+            includeItemsFromAllDrives=True,
+            supportsAllDrives=True,
         ).execute()
         folders = result.get('files', [])
         if not folders:
@@ -143,6 +157,8 @@ def _find_subfolder(service, parent_id, name):
         try:
             result = service.files().list(
                 q=query, pageSize=1, fields='files(id,name)',
+                includeItemsFromAllDrives=True,
+                supportsAllDrives=True,
             ).execute()
             if result.get('files'):
                 return result['files'][0]['id'], result['files'][0]['name']
@@ -268,7 +284,10 @@ def ensure_all_media_folders():
         from core.models import SiteConfiguration
         config = SiteConfiguration.get_instance()
         try:
-            root_info = service.files().get(fileId=root_id, fields='id,name').execute()
+            root_info = service.files().get(
+                fileId=root_id, fields='id,name',
+                supportsAllDrives=True,
+            ).execute()
             results['_root'] = {'id': root_id, 'name': root_info.get('name', '')}
         except Exception:
             results['_root'] = {'id': root_id, 'name': ''}
@@ -321,7 +340,11 @@ def check_gdrive_connection(sa_json_str=None):
         service = _build_drive_service(sa_dict)
 
         # Test credentials
-        service.files().list(pageSize=1, fields='files(id)').execute()
+        service.files().list(
+            pageSize=1, fields='files(id)',
+            includeItemsFromAllDrives=True,
+            supportsAllDrives=True,
+        ).execute()
         result['connected'] = True
 
         # Auto-detect root folder
@@ -329,7 +352,10 @@ def check_gdrive_connection(sa_json_str=None):
 
         if root_id:
             try:
-                root_info = service.files().get(fileId=root_id, fields='id,name').execute()
+                root_info = service.files().get(
+                    fileId=root_id, fields='id,name',
+                    supportsAllDrives=True,
+                ).execute()
                 result['root_folder'] = {'id': root_id, 'name': root_info.get('name', '')}
                 result['folder_name'] = root_info.get('name', '')
                 result['folder_accessible'] = True
@@ -368,6 +394,8 @@ def check_gdrive_connection(sa_json_str=None):
                 pageSize=50,
                 fields='files(id,name)',
                 orderBy='name',
+                includeItemsFromAllDrives=True,
+                supportsAllDrives=True,
             ).execute()
             result['visible_folders'] = [
                 {'id': f['id'], 'name': f['name']}
@@ -440,11 +468,12 @@ def upload_to_gdrive(file_obj, filename, mime_type='video/mp4', folder_id=None):
             chunksize=10 * 1024 * 1024,  # 10MB chunks
         )
 
-        # Upload
+        # Upload (supportsAllDrives for Shared Drive compatibility)
         uploaded = service.files().create(
             body=file_metadata,
             media_body=media_body,
             fields='id,name,webViewLink,webContentLink',
+            supportsAllDrives=True,
         ).execute()
 
         file_id = uploaded['id']
@@ -453,6 +482,7 @@ def upload_to_gdrive(file_obj, filename, mime_type='video/mp4', folder_id=None):
         service.permissions().create(
             fileId=file_id,
             body={'type': 'anyone', 'role': 'reader'},
+            supportsAllDrives=True,
         ).execute()
 
         gdrive_url = f"https://drive.google.com/file/d/{file_id}/view?usp=sharing"
