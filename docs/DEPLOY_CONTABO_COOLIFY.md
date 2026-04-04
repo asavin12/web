@@ -267,11 +267,30 @@ Trong Cloudflare Dashboard → **DNS** → **Records**:
 | A | `unstressvn.com` | `45.88.223.89` | ☁️ **Proxied** | Auto |
 | A | `www` | `45.88.223.89` | ☁️ **Proxied** | Auto |
 | A | `coolify` | `45.88.223.89` | ⬜ **DNS only** | Auto |
+| A | `upload` | `45.88.223.89` | ⬜ **DNS only** | Auto |
 
 > **Quan trọng:**
 > - Website (`unstressvn.com`, `www`) → **Proxied** (đám mây cam ☁️) để ẩn IP VPS
 > - Coolify dashboard (`coolify.unstressvn.com`) → **DNS only** (đám mây xám ⬜) — **BẮT BUỘC!** Coolify chạy trên port 9000 không có SSL, nếu để Proxied sẽ bị lỗi **526 Invalid SSL Certificate**
+> - Upload trực tiếp (`upload.unstressvn.com`) → **DNS only** (đám mây xám ⬜) — bypass giới hạn upload 100MB của Cloudflare Free plan. Traefik/Coolify tự cấp SSL Let's Encrypt cho subdomain này
 > - Truy cập Coolify: `http://coolify.unstressvn.com:9000` hoặc `http://45.88.223.89:9000`
+
+### 5.3.1 Cấu hình Direct Upload (Bypass Cloudflare 100MB)
+
+Cloudflare Free plan giới hạn upload tối đa **100MB/request**. Để upload file lớn (video), hệ thống hỗ trợ luồng upload trực tiếp lên VPS:
+
+```
+Browser → upload.unstressvn.com (DNS only, no Cloudflare) → Traefik (SSL) → Django → GDrive
+```
+
+**Các bước:**
+
+1. **Cloudflare DNS**: Thêm A record `upload` → IP VPS, chọn **DNS only** (⬜ grey cloud)
+2. **Coolify**: Thêm `upload.unstressvn.com` vào danh sách domain của app (Settings → Domains) để Traefik cấp SSL
+3. **Django Admin** → Cấu hình website → **Direct Upload Domain**: nhập `upload.unstressvn.com`
+4. **Đăng xuất và đăng nhập lại** (1 lần) để session cookie hoạt động trên subdomain mới
+
+> Sau khi cấu hình, trang upload trong admin sẽ tự động POST trực tiếp lên `upload.unstressvn.com` — không giới hạn dung lượng file.
 
 ### 5.4 Cấu hình SSL/TLS
 

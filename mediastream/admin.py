@@ -181,6 +181,12 @@ class StreamMediaAdmin(admin.ModelAdmin):
         """Add extra context for upload panel"""
         extra_context = extra_context or {}
         extra_context['total_media'] = StreamMedia.objects.count()
+        # Direct upload URL (bypass Cloudflare)
+        from core.models import SiteConfiguration
+        config = SiteConfiguration.get_instance()
+        upload_domain = getattr(config, 'direct_upload_domain', '').strip()
+        if upload_domain:
+            extra_context['direct_upload_url'] = f'https://{upload_domain}/media-stream/admin/upload/api/'
         return super().changelist_view(request, extra_context=extra_context)
 
 

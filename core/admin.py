@@ -634,6 +634,15 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
             'fields': ('allowed_hosts', 'csrf_trusted_origins', 'cors_allowed_origins'),
             'description': 'Phân cách nhiều giá trị bằng dấu phẩy.',
         }),
+        ('📤 Direct Upload (Bypass Cloudflare)', {
+            'fields': ('direct_upload_domain',),
+            'description': (
+                'Upload file lớn trực tiếp lên VPS, bypass giới hạn 100MB của Cloudflare Free plan.<br>'
+                '<strong>Cách dùng:</strong> Tạo A record <code>upload.unstressvn.com</code> → IP VPS '
+                'với Proxy OFF (grey cloud ⬜) trên Cloudflare. '
+                'Traefik/Coolify sẽ tự cấp SSL Let\'s Encrypt.'
+            ),
+        }),
         ('📧 Email SMTP', {
             'fields': (
                 'email_host', 'email_port', 'email_use_tls',

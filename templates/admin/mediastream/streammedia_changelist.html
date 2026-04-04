@@ -523,7 +523,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 progressFill.style.width = percent + '%';
                 progressFill.classList.remove('processing');
                 const storage = storageSelect.value === 'gdrive' ? '→ GDrive' : '→ Local';
-                progressText.textContent = `Uploading ${storage}... ${percent}%`;
+                const route = directUploadUrl ? '(Direct VPS) ' : '';
+                progressText.textContent = `${route}Uploading ${storage}... ${percent}%`;
             }
         };
         
@@ -574,7 +575,16 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadBtn.disabled = false;
         };
         
-        xhr.open('POST', '{% url "mediastream:admin_upload_api" %}');
+        /* Direct upload URL: bypass Cloudflare 100MB limit */
+        const directUploadUrl = '{{ direct_upload_url|default:"" }}';
+        const defaultUploadUrl = '{% url "mediastream:admin_upload_api" %}';
+        const uploadUrl = directUploadUrl || defaultUploadUrl;
+        
+        if (directUploadUrl) {
+            xhr.withCredentials = true;  /* Send session cookie cross-subdomain */
+        }
+        
+        xhr.open('POST', uploadUrl);
         xhr.send(formData);
     });
     

@@ -566,6 +566,16 @@ class SiteConfiguration(models.Model):
         help_text='Origin frontend được phép CORS, phân cách bằng dấu phẩy.',
     )
 
+    # === Direct Upload (bypass Cloudflare) ===
+    direct_upload_domain = models.CharField(
+        'Direct Upload Domain',
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Subdomain upload trực tiếp VPS (bypass Cloudflare 100MB limit). '
+                  'VD: upload.unstressvn.com — Cần cấu hình DNS-only (grey cloud) trên Cloudflare.',
+    )
+
     # === Email SMTP ===
     email_host = models.CharField(
         'SMTP Host', max_length=255, default='smtp.gmail.com',

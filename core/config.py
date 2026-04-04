@@ -99,6 +99,32 @@ def apply_dynamic_settings():
                     cors_origins.append(o)
         settings.CORS_ALLOWED_ORIGINS = cors_origins
 
+    # === Direct Upload Domain (bypass Cloudflare) ===
+    upload_domain = getattr(config, 'direct_upload_domain', '').strip()
+    if upload_domain:
+        # Auto-add to ALLOWED_HOSTS
+        if upload_domain not in settings.ALLOWED_HOSTS:
+            settings.ALLOWED_HOSTS.append(upload_domain)
+        # Auto-add to CSRF_TRUSTED_ORIGINS
+        upload_origin = f'https://{upload_domain}'
+        if not hasattr(settings, 'CSRF_TRUSTED_ORIGINS'):
+            settings.CSRF_TRUSTED_ORIGINS = []
+        if upload_origin not in settings.CSRF_TRUSTED_ORIGINS:
+            settings.CSRF_TRUSTED_ORIGINS.append(upload_origin)
+        # Auto-add to CORS_ALLOWED_ORIGINS
+        if not hasattr(settings, 'CORS_ALLOWED_ORIGINS'):
+            settings.CORS_ALLOWED_ORIGINS = []
+        if upload_origin not in settings.CORS_ALLOWED_ORIGINS:
+            settings.CORS_ALLOWED_ORIGINS.append(upload_origin)
+        # Share session cookie across subdomains so auth works on upload subdomain
+        # Extract parent domain: upload.unstressvn.com → .unstressvn.com
+        parts = upload_domain.split('.')
+        if len(parts) >= 3:
+            parent_domain = '.' + '.'.join(parts[-2:])
+            settings.SESSION_COOKIE_DOMAIN = parent_domain
+            settings.CSRF_COOKIE_DOMAIN = parent_domain
+        logger.info('📤 Direct upload domain: %s', upload_domain)
+
     # === Email ===
     settings.EMAIL_HOST = config.email_host
     settings.EMAIL_PORT = config.email_port
