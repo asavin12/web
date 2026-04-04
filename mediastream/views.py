@@ -962,3 +962,108 @@ def gdrive_delete_account(request, account_id):
         return JsonResponse({'success': True, 'email': email})
     except GDriveAccount.DoesNotExist:
         return JsonResponse({'error': 'Account not found'}, status=404)
+
+
+@staff_member_required
+@csrf_exempt
+@require_http_methods(['POST'])
+def gdrive_oauth_upload_json(request):
+    """
+    API: Upload OAuth2 JSON credentials file.
+    Accepts the JSON file downloaded from Google Cloud Console.
+    Auto-parses client_id + client_secret, saves to SiteConfiguration,
+    and returns status.
+    """
+    import json as _json
+    from core.models import SiteConfiguration
+
+    # Accept either file upload or JSON body
+    json_str = None
+    if request.FILES.get('json_file'):
+        json_str = request.FILES['json_file'].read().decode('utf-8')
+    else:
+        json_str = request.body.decode('utf-8')
+
+    if not json_str or not json_str.strip():
+        return JsonResponse({'error': 'Không nhận được file JSON'}, status=400)
+
+    try:
+        data = _json.loads(json_str)
+    except _json.JSONDecodeError as e:
+        return JsonResponse({'error': f'File JSON không hợp lệ: {e}'}, status=400)
+
+    # Google OAuth2 JSON can be nested under "web" or "installed"
+    inner = data.get('web') or data.get('installed') or data
+    client_id = inner.get('client_id', '').strip()
+    client_secret = inner.get('client_secret', '').strip()
+    project_id = inner.get('project_id', '')
+    redirect_uris = inner.get('redirect_uris', [])
+
+    if not client_id or not client_secret:
+        return JsonResponse({
+            'error': 'File JSON thiếu client_id hoặc client_secret. '
+                     'Hãy tải file JSON từ Google Cloud Console → Credentials → OAuth 2.0 Client ID.'
+        }, status=400)
+
+    # Save to SiteConfiguration
+    config = SiteConfiguration.get_instance()
+    config.gdrive_oauth_client_id = client_id
+    config.gdrive_oauth_client_secret = client_secret
+    config.save(update_fields=['gdrive_oauth_client_id', 'gdrive_oauth_client_secret'])
+
+    # Check configured redirect URI
+    expected_redirect = request.build_absolute_uri('/media-stream/admin/gdrive/callback/')
+    if not request.is_secure() and not settings.DEBUG:
+        expected_redirect = expected_redirect.replace('http://', 'https://')
+    redirect_ok = any(expected_redirect in uri for uri in redirect_uris)
+
+    return JsonResponse({
+        'success': True,
+        'client_id': client_id[:20] + '...' if len(client_id) > 20 else client_id,
+        'project_id': project_id,
+        'redirect_uris': redirect_uris,
+        'redirect_ok': redirect_ok,
+        'expected_redirect': expected_redirect,
+    })
+
+
+@staff_member_required
+@require_http_methods(['GET'])
+def gdrive_oauth_status(request):
+    """
+    API: Check OAuth2 configuration status.
+    Returns current config state + number of connected accounts.
+    """
+    from core.models import SiteConfiguration
+    from .models import GDriveAccount
+
+    config = SiteConfiguration.get_instance()
+    client_id = (config.gdrive_oauth_client_id or '').strip()
+    client_secret = (config.gdrive_oauth_client_secret or '').strip()
+    configured = bool(client_id and client_secret)
+
+    accounts = GDriveAccount.objects.filter(is_active=True)
+    account_count = accounts.count()
+    total_free = sum(a.storage_free for a in accounts)
+    total_storage = sum(a.storage_total for a in accounts)
+
+    return JsonResponse({
+        'configured': configured,
+        'client_id_preview': (client_id[:20] + '...') if len(client_id) > 20 else client_id,
+        'account_count': account_count,
+        'total_free': total_free,
+        'total_storage': total_storage,
+        'total_free_display': _format_bytes(total_free),
+        'total_storage_display': _format_bytes(total_storage),
+    })
+
+
+def _format_bytes(b):
+    """Format bytes to human-readable string."""
+    if b <= 0:
+        return '0 B'
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if b < 1024:
+            return f'{b:.1f} {unit}'
+        b /= 1024
+    return f'{b:.1f} PB'

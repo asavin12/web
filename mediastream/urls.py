@@ -52,4 +52,6 @@ urlpatterns = [
     path('admin/gdrive/accounts/', views.gdrive_accounts_api, name='gdrive_accounts_api'),
     path('admin/gdrive/accounts/<int:account_id>/storage/', views.gdrive_update_storage, name='gdrive_update_storage'),
     path('admin/gdrive/accounts/<int:account_id>/delete/', views.gdrive_delete_account, name='gdrive_delete_account'),
+    path('admin/gdrive/upload-json/', views.gdrive_oauth_upload_json, name='gdrive_oauth_upload_json'),
+    path('admin/gdrive/status/', views.gdrive_oauth_status, name='gdrive_oauth_status'),
 ]

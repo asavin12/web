@@ -665,11 +665,7 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
         ('☁️ Google Drive OAuth2 (Multi-Account Gmail)', {
             'fields': ('gdrive_oauth_client_id', 'gdrive_oauth_client_secret'),
             'description': (
-                'Cấu hình OAuth2 để thêm nhiều tài khoản Gmail miễn phí.<br>'
-                'Mỗi Gmail = 15GB dung lượng. Tạo OAuth2 credentials tại '
-                '<a href="https://console.cloud.google.com/apis/credentials" target="_blank">'
-                'Google Cloud Console → Credentials → OAuth 2.0 Client ID</a> (loại Web application).<br>'
-                '<strong>Redirect URI:</strong> <code>https://unstressvn.com/media-stream/admin/gdrive/callback/</code>'
+                'Upload file JSON OAuth2 từ Google Cloud Console để tự động cấu hình.'
             ),
         }),
         ('📊 Thông tin hệ thống', {

@@ -3,11 +3,32 @@
 {% block extrastyle %}
 {{ block.super }}
 <style>
-/* === Google Drive OAuth2 Panel === */
-.gdrive-panel{margin:0 0 15px;padding:12px 16px;border-radius:8px;font-size:13px;line-height:1.6}
-.gdrive-panel.info{background:#d1ecf1;border:1px solid #bee5eb}
-.gdrive-tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}
-.gdrive-tag-ok{background:#d1fae5;color:#065f46}
+.oauth-panel{padding:16px;border-radius:8px;font-size:13px;line-height:1.6;margin-bottom:12px}
+.oauth-panel.idle{background:#f8f9fa;border:1px solid #dee2e6}
+.oauth-panel.configured{background:#d4edda;border:1px solid #28a745}
+.oauth-panel.error{background:#f8d7da;border:1px solid #dc3545}
+.oauth-panel.loading{background:#fff3cd;border:1px solid #ffc107}
+.oauth-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;color:#fff;text-decoration:none;transition:opacity .15s}
+.oauth-btn:hover{opacity:.85;color:#fff}
+.oauth-btn-primary{background:#417690}
+.oauth-btn-success{background:#28a745}
+.oauth-btn-danger{background:#dc3545}
+.oauth-btn-outline{background:transparent;color:#417690;border:2px solid #417690}
+.oauth-btn-outline:hover{background:#417690;color:#fff}
+.oauth-btn:disabled{opacity:.5;cursor:not-allowed}
+.oauth-status-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:8px 0;font-size:12px}
+.oauth-status-grid dt{font-weight:600;color:#555}
+.oauth-status-grid dd{margin:0;color:#333}
+.oauth-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.oauth-tag-ok{background:#d1fae5;color:#065f46}
+.oauth-tag-warn{background:#fef3c7;color:#92400e}
+.oauth-tag-err{background:#fee2e2;color:#991b1b}
+.oauth-accounts{margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.1)}
+.oauth-step{display:flex;align-items:flex-start;gap:10px;margin:6px 0}
+.oauth-step-num{background:#417690;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.oauth-step-text{font-size:12px;color:#555;line-height:1.5}
+.oauth-step-text a{color:#417690;font-weight:600}
+.oauth-redirect-uri{display:flex;align-items:center;gap:6px;background:#f0f0f0;padding:4px 10px;border-radius:4px;font-family:monospace;font-size:11px;margin-top:4px;user-select:all;cursor:text}
 </style>
 {% endblock %}
 
@@ -15,24 +36,199 @@
 {{ block.super }}
 <script>
 (function(){
-  /* Find OAuth2 fieldset and add account management link */
-  var fieldsets = document.querySelectorAll('fieldset');
-  for (var i = 0; i < fieldsets.length; i++) {
-    var h = fieldsets[i].querySelector('h2');
-    if (h && h.textContent.indexOf('OAuth2') !== -1) {
-      var panel = document.createElement('div');
-      panel.className = 'gdrive-panel info';
-      panel.innerHTML =
-        '<strong>💡 Quản lý tài khoản Gmail:</strong> ' +
-        'Sau khi cấu hình Client ID + Secret, vào ' +
-        '<a href="/admin/mediastream/gdriveaccount/" style="font-weight:bold">Tài khoản GDrive</a> hoặc ' +
-        '<a href="/admin/mediastream/streammedia/" style="font-weight:bold">Media Streams</a> ' +
-        'để thêm tài khoản Gmail (nút <strong>➕ Thêm tài khoản Gmail</strong>).';
-      var firstRow = fieldsets[i].querySelector('.form-row');
-      if (firstRow) firstRow.parentElement.insertBefore(panel, firstRow);
-      break;
+  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+  /* Find OAuth2 fieldset */
+  var fieldsets=document.querySelectorAll('fieldset');
+  var oauthFS=null;
+  for(var i=0;i<fieldsets.length;i++){
+    var h=fieldsets[i].querySelector('h2');
+    if(h&&h.textContent.indexOf('OAuth2')!==-1){oauthFS=fieldsets[i];break}
+  }
+  if(!oauthFS) return;
+
+  /* Hide raw form fields — we manage them via JS */
+  var clientIdField=document.getElementById('id_gdrive_oauth_client_id');
+  var clientSecretField=document.getElementById('id_gdrive_oauth_client_secret');
+  var formRows=oauthFS.querySelectorAll('.form-row');
+  formRows.forEach(function(r){r.style.display='none'});
+
+  /* Build smart panel */
+  var panel=document.createElement('div');
+  panel.id='oauth-smart-panel';
+  panel.className='oauth-panel loading';
+  panel.innerHTML='<span>⏳ Đang kiểm tra cấu hình...</span>';
+  oauthFS.querySelector('.description')
+    ? oauthFS.querySelector('.description').after(panel)
+    : oauthFS.appendChild(panel);
+
+  /* Load status */
+  loadStatus();
+
+  function loadStatus(){
+    panel.className='oauth-panel loading';
+    panel.innerHTML='<span>⏳ Đang kiểm tra cấu hình...</span>';
+    fetch('/media-stream/admin/gdrive/status/',{credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}})
+    .then(function(r){return r.json()})
+    .then(function(d){renderPanel(d)})
+    .catch(function(e){
+      panel.className='oauth-panel error';
+      panel.innerHTML='<span>❌ Lỗi kiểm tra: '+esc(e.message)+'</span>';
+    });
+  }
+
+  function renderPanel(data){
+    if(data.configured){
+      panel.className='oauth-panel configured';
+      var h='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
+      h+='<div><strong>✅ OAuth2 đã cấu hình</strong></div>';
+      h+='<div style="display:flex;gap:6px">';
+      h+='<button type="button" class="oauth-btn oauth-btn-outline" id="oauth-change-btn">🔄 Thay đổi JSON</button>';
+      h+='</div></div>';
+
+      h+='<dl class="oauth-status-grid">';
+      h+='<dt>Client ID:</dt><dd><code>'+esc(data.client_id_preview)+'</code></dd>';
+      h+='<dt>Tài khoản Gmail:</dt><dd>';
+      if(data.account_count>0){
+        h+='<span class="oauth-tag oauth-tag-ok">'+data.account_count+' tài khoản</span> — ';
+        h+=data.total_free_display+' trống / '+data.total_storage_display+' tổng';
+      }else{
+        h+='<span class="oauth-tag oauth-tag-warn">Chưa có tài khoản</span>';
+      }
+      h+='</dd></dl>';
+
+      /* Account management links */
+      h+='<div class="oauth-accounts">';
+      h+='<a href="/media-stream/admin/gdrive/authorize/" class="oauth-btn oauth-btn-success">➕ Thêm tài khoản Gmail</a> ';
+      h+='<a href="/admin/mediastream/gdriveaccount/" class="oauth-btn oauth-btn-primary">📋 Quản lý tài khoản</a> ';
+      h+='<a href="/admin/mediastream/streammedia/" class="oauth-btn oauth-btn-outline">🎬 Media Streams</a>';
+      h+='</div>';
+
+      /* Hidden upload area */
+      h+='<div id="oauth-upload-area" style="display:none;margin-top:12px;padding:12px;background:#fff;border:2px dashed #ccc;border-radius:8px;text-align:center">';
+      h+='<p style="margin:0 0 8px;font-size:12px;color:#666">Chọn file JSON OAuth2 mới từ Google Cloud Console</p>';
+      h+='<input type="file" accept=".json,application/json" id="oauth-json-file-replace" style="display:none">';
+      h+='<button type="button" class="oauth-btn oauth-btn-primary" id="oauth-pick-replace">📁 Chọn file JSON</button>';
+      h+='<span id="oauth-replace-status" style="margin-left:8px;font-size:12px"></span>';
+      h+='</div>';
+
+      panel.innerHTML=h;
+
+      document.getElementById('oauth-change-btn').onclick=function(){
+        var area=document.getElementById('oauth-upload-area');
+        area.style.display=area.style.display==='none'?'block':'none';
+      };
+      setupFileUpload('oauth-pick-replace','oauth-json-file-replace','oauth-replace-status');
+
+    }else{
+      /* Not configured — show setup wizard */
+      panel.className='oauth-panel idle';
+      var h='<div style="margin-bottom:12px">';
+      h+='<strong style="font-size:14px">☁️ Cấu hình Google Drive OAuth2</strong>';
+      h+='<p style="margin:4px 0 0;color:#666;font-size:12px">Cho phép thêm nhiều tài khoản Gmail miễn phí (15GB/tài khoản) để upload media.</p>';
+      h+='</div>';
+
+      /* Step-by-step instructions */
+      h+='<div class="oauth-step"><span class="oauth-step-num">1</span><div class="oauth-step-text">';
+      h+='Vào <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console → Credentials</a>';
+      h+='<br>Tạo <strong>OAuth 2.0 Client ID</strong> (loại <em>Web application</em>)';
+      h+='</div></div>';
+
+      h+='<div class="oauth-step"><span class="oauth-step-num">2</span><div class="oauth-step-text">';
+      h+='Thêm Redirect URI sau vào cấu hình OAuth2:';
+      h+='<div class="oauth-redirect-uri" onclick="this.querySelector(\'code\').select&&window.getSelection().selectAllChildren(this.querySelector(\'code\'))"><code>'+esc(location.origin+'/media-stream/admin/gdrive/callback/')+'</code>';
+      h+=' <button type="button" onclick="navigator.clipboard.writeText(\''+esc(location.origin+'/media-stream/admin/gdrive/callback/')+'\');this.textContent=\'✅\';var b=this;setTimeout(function(){b.textContent=\'📋\'},1500)" style="background:none;border:1px solid #ccc;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:11px">📋</button>';
+      h+='</div></div></div>';
+
+      h+='<div class="oauth-step"><span class="oauth-step-num">3</span><div class="oauth-step-text">';
+      h+='Tải file JSON credentials → Upload vào đây:';
+      h+='</div></div>';
+
+      /* Upload area */
+      h+='<div style="margin:12px 0 0 34px;padding:16px;background:#fff;border:2px dashed #79aec8;border-radius:8px;text-align:center" id="oauth-drop-zone">';
+      h+='<input type="file" accept=".json,application/json" id="oauth-json-file" style="display:none">';
+      h+='<button type="button" class="oauth-btn oauth-btn-primary" id="oauth-pick-btn" style="font-size:14px;padding:10px 24px">📁 Chọn file JSON từ máy tính</button>';
+      h+='<p style="margin:8px 0 0;color:#999;font-size:11px">hoặc kéo thả file vào đây</p>';
+      h+='<div id="oauth-upload-status" style="margin-top:8px;font-size:12px"></div>';
+      h+='</div>';
+
+      panel.innerHTML=h;
+
+      /* Drag & drop */
+      var dropZone=document.getElementById('oauth-drop-zone');
+      if(dropZone){
+        dropZone.addEventListener('dragover',function(e){e.preventDefault();this.style.borderColor='#28a745';this.style.background='#f0fff4'});
+        dropZone.addEventListener('dragleave',function(){this.style.borderColor='#79aec8';this.style.background='#fff'});
+        dropZone.addEventListener('drop',function(e){
+          e.preventDefault();
+          this.style.borderColor='#79aec8';this.style.background='#fff';
+          if(e.dataTransfer.files.length>0) processFile(e.dataTransfer.files[0],'oauth-upload-status');
+        });
+      }
+
+      setupFileUpload('oauth-pick-btn','oauth-json-file','oauth-upload-status');
     }
   }
+
+  function setupFileUpload(btnId,inputId,statusId){
+    var btn=document.getElementById(btnId);
+    var input=document.getElementById(inputId);
+    if(!btn||!input) return;
+    btn.onclick=function(){input.click()};
+    input.onchange=function(){
+      if(this.files.length>0) processFile(this.files[0],statusId);
+    };
+  }
+
+  function processFile(file,statusElId){
+    var statusEl=document.getElementById(statusElId);
+    if(!file.name.endsWith('.json')){
+      statusEl.innerHTML='<span class="oauth-tag oauth-tag-err">❌ Chỉ chấp nhận file .json</span>';
+      return;
+    }
+    statusEl.innerHTML='<span>⏳ Đang xử lý...</span>';
+
+    var formData=new FormData();
+    formData.append('json_file',file);
+
+    var csrfToken=document.querySelector('[name=csrfmiddlewaretoken]');
+    fetch('/media-stream/admin/gdrive/upload-json/',{
+      method:'POST',
+      credentials:'same-origin',
+      headers:{'X-CSRFToken':csrfToken?csrfToken.value:''},
+      body:formData
+    })
+    .then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d}})})
+    .then(function(res){
+      if(res.ok&&res.data.success){
+        var d=res.data;
+        var h='<span class="oauth-tag oauth-tag-ok">✅ Đã cấu hình thành công!</span>';
+        h+=' Client ID: <code>'+esc(d.client_id)+'</code>';
+        if(d.project_id) h+=' | Project: <code>'+esc(d.project_id)+'</code>';
+
+        if(!d.redirect_ok){
+          h+='<br><span class="oauth-tag oauth-tag-warn" style="margin-top:4px">⚠️ Redirect URI chưa được cấu hình trong Google Cloud Console</span>';
+          h+='<br><small style="color:#92400e">Cần thêm: <code>'+esc(d.expected_redirect)+'</code> vào Authorized redirect URIs</small>';
+        }else{
+          h+='<br><span class="oauth-tag oauth-tag-ok" style="margin-top:4px">✅ Redirect URI đã đúng</span>';
+        }
+
+        statusEl.innerHTML=h;
+
+        /* Update hidden form fields so Django save works */
+        if(clientIdField){
+          /* Re-fetch full values from response not available — reload page instead */
+          setTimeout(function(){location.reload()},2000);
+        }
+      }else{
+        statusEl.innerHTML='<span class="oauth-tag oauth-tag-err">❌ '+esc(res.data.error||'Lỗi không xác định')+'</span>';
+      }
+    })
+    .catch(function(e){
+      statusEl.innerHTML='<span class="oauth-tag oauth-tag-err">❌ Lỗi: '+esc(e.message)+'</span>';
+    });
+  }
+
 })();
 </script>
 {% endblock %}
