@@ -274,6 +274,21 @@
         border-color: #c44;
         color: #a00;
     }
+    .token-badge {
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+    .token-badge.valid {
+        background: #d4edda;
+        color: #155724;
+    }
+    .token-badge.invalid {
+        background: #f8d7da;
+        color: #721c24;
+    }
     .gdrive-add-btn {
         display: inline-block;
         background: #28a745;
@@ -363,9 +378,14 @@
                     </select>
                 </div>
                 <div class="field">
-                    <label>Storage</label>
-                    <select name="storage" id="storage">
-                        <option value="gdrive" selected>☁️ Google Drive</option>
+                    <label>Lưu trữ</label>
+                    <select name="gdrive_account_id" id="gdriveAccountSelect">
+                        {% if has_oauth_config and gdrive_accounts %}
+                        <option value="auto" selected>☁️ Auto (nhiều dung lượng nhất)</option>
+                        {% for account in gdrive_accounts %}
+                        <option value="{{ account.id }}">{% if account.token_valid %}✅{% else %}❌{% endif %} {{ account.email }} ({{ account.storage_free_display }} trống)</option>
+                        {% endfor %}
+                        {% endif %}
                         <option value="local">💾 Local</option>
                     </select>
                 </div>
@@ -393,6 +413,11 @@
                         {% for account in gdrive_accounts %}
                         <div class="gdrive-account-item" data-account-id="{{ account.id }}">
                             <span class="gdrive-account-email">📧 {{ account.email }}</span>
+                            {% if account.token_valid %}
+                            <span class="token-badge valid" title="Token hoạt động">✅ OK</span>
+                            {% else %}
+                            <span class="token-badge invalid" title="{{ account.token_error|default:'Token lỗi' }}">❌ Lỗi</span>
+                            {% endif %}
                             <div class="gdrive-storage-bar">
                                 <div class="gdrive-storage-bar-fill" style="width:{{ account.storage_percent }}%;background:{% if account.storage_percent < 70 %}#28a745{% elif account.storage_percent < 90 %}#ffc107{% else %}#dc3545{% endif %};"></div>
                             </div>
@@ -450,17 +475,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const progressText = document.getElementById('progressText');
     const uploadResult = document.getElementById('uploadResult');
     const mediaTypeSelect = document.getElementById('mediaType');
-    const storageSelect = document.getElementById('storage');
+    const gdriveAccountSelect = document.getElementById('gdriveAccountSelect');
     const gdriveAccountsPanel = document.getElementById('gdriveAccountsPanel');
     
     let selectedFiles = [];
     
     /* === Storage toggle === */
     function toggleGdriveSection() {
-        const isGdrive = storageSelect.value === 'gdrive';
-        if (gdriveAccountsPanel) gdriveAccountsPanel.style.display = isGdrive ? 'block' : 'none';
+        const isLocal = gdriveAccountSelect.value === 'local';
+        if (gdriveAccountsPanel) gdriveAccountsPanel.style.display = isLocal ? 'none' : 'block';
     }
-    storageSelect.addEventListener('change', toggleGdriveSection);
+    gdriveAccountSelect.addEventListener('change', toggleGdriveSection);
     toggleGdriveSection();
     
     /* === GDrive OAuth2 Account Management === */
@@ -490,6 +515,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 bar.style.width = pct + '%';
                 bar.style.background = color;
                 row.querySelector('.gdrive-account-info').textContent = d.storage_free_display + ' trống / ' + d.storage_total_display;
+                // Update token badge
+                var badge = row.querySelector('.token-badge');
+                if (badge) {
+                    if (d.token_valid) {
+                        badge.className = 'token-badge valid';
+                        badge.textContent = '✅ OK';
+                        badge.title = 'Token hoạt động';
+                    } else {
+                        badge.className = 'token-badge invalid';
+                        badge.textContent = '❌ Lỗi';
+                        badge.title = d.token_error || 'Token lỗi';
+                    }
+                }
             }
         })
         .catch(function(e) {
@@ -597,8 +635,15 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('media_type', mediaTypeSelect.value);
         formData.append('language', document.getElementById('mediaLanguage').value);
         formData.append('level', document.getElementById('mediaLevel').value);
-        formData.append('storage', storageSelect.value);
         formData.append('is_public', document.getElementById('isPublic').value);
+        
+        const accountVal = gdriveAccountSelect.value;
+        if (accountVal === 'local') {
+            formData.append('storage', 'local');
+        } else {
+            formData.append('storage', 'gdrive');
+            formData.append('gdrive_account_id', accountVal);
+        }
         
         selectedFiles.forEach(file => formData.append('files', file));
         
@@ -609,14 +654,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const percent = Math.round((e.loaded / e.total) * 100);
                 progressFill.style.width = percent + '%';
                 progressFill.classList.remove('processing');
-                const storage = storageSelect.value === 'gdrive' ? '→ GDrive' : '→ Local';
+                const storage = accountVal === 'local' ? '→ Local' : '→ GDrive';
                 const route = directUploadUrl ? '(Direct VPS) ' : '';
                 progressText.textContent = `${route}Uploading ${storage}... ${percent}%`;
             }
         };
         
         xhr.upload.onload = function() {
-            if (storageSelect.value === 'gdrive') {
+            if (accountVal !== 'local') {
                 progressFill.style.width = '100%';
                 progressFill.classList.add('processing');
                 progressText.textContent = '⏳ Đang upload lên Google Drive... vui lòng chờ';
@@ -629,29 +674,55 @@ document.addEventListener('DOMContentLoaded', function() {
             progressFill.classList.remove('processing');
             uploadProgress.classList.remove('active');
             if (xhr.status === 200) {
-                let msg = '✓ Upload thành công!';
                 let hasWarnings = false;
                 try {
                     const result = JSON.parse(xhr.responseText);
                     if (result.errors && result.errors.length > 0) {
                         hasWarnings = true;
-                        msg = '⚠️ Upload hoàn tất nhưng có lỗi:\n' + result.errors.join('\n');
+                        uploadResult.className = 'upload-result error';
+                        uploadResult.style.whiteSpace = 'pre-wrap';
+                        uploadResult.textContent = '⚠️ Upload hoàn tất nhưng có lỗi:\n' + result.errors.join('\n');
+                        uploadResult.style.display = 'block';
+                        uploadBtn.disabled = false;
+                    } else {
+                        // Build detailed success message
+                        const media = Array.isArray(result.media) ? result.media : [result.media];
+                        let html = '<strong>✓ Upload thành công!</strong>';
+                        media.forEach(function(m) {
+                            html += '<div style="margin:6px 0;padding:6px;background:#f0f8f0;border-radius:4px;font-size:12px;">';
+                            html += '<strong>' + m.title + '</strong>';
+                            if (m.storage_type === 'gdrive' && m.gdrive_account) {
+                                html += ' — ☁️ ' + m.gdrive_account;
+                            } else {
+                                html += ' — 💾 Local';
+                            }
+                            if (m.file_size) html += ' (' + m.file_size + ')';
+                            if (m.stream_url) {
+                                html += '<br><a href="' + m.stream_url + '" target="_blank">▶️ Stream URL</a>';
+                            }
+                            if (m.subtitles && m.subtitles.length > 0) {
+                                html += '<br>📝 Phụ đề: ';
+                                m.subtitles.forEach(function(s, idx) {
+                                    if (idx > 0) html += ', ';
+                                    html += '<a href="' + s.url + '" target="_blank">' + s.label + ' (' + s.language + ')</a>';
+                                });
+                            }
+                            html += '</div>';
+                        });
+                        uploadResult.className = 'upload-result success';
+                        uploadResult.innerHTML = html;
+                        uploadResult.style.display = 'block';
+                        selectedFiles = [];
+                        filePreview.innerHTML = '';
+                        document.getElementById('mediaTitle').value = '';
+                        setTimeout(() => window.location.reload(), 4000);
                     }
-                } catch(e) {}
-                if (hasWarnings) {
-                    uploadResult.className = 'upload-result error';
-                    uploadResult.style.whiteSpace = 'pre-wrap';
-                    uploadResult.textContent = msg;
-                    uploadResult.style.display = 'block';
-                    uploadBtn.disabled = false;
-                    /* Don't auto-reload — let user see the error */
-                } else {
+                } catch(e) {
                     uploadResult.className = 'upload-result success';
-                    uploadResult.textContent = msg;
+                    uploadResult.textContent = '✓ Upload thành công!';
                     uploadResult.style.display = 'block';
                     selectedFiles = [];
                     filePreview.innerHTML = '';
-                    document.getElementById('mediaTitle').value = '';
                     setTimeout(() => window.location.reload(), 1500);
                 }
             } else {

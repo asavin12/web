@@ -175,6 +175,26 @@ def update_storage_info(account):
         return False
 
 
+def check_token_status(account):
+    """
+    Check if account's refresh_token is still valid.
+    Returns dict: {valid: bool, error: str|None}
+    """
+    try:
+        creds = _build_credentials(account)
+        if not creds:
+            return {'valid': False, 'error': 'Không thể tạo credentials (thiếu OAuth2 config)'}
+        # Force a token refresh
+        from google.auth.transport.requests import Request
+        creds.refresh(Request())
+        return {'valid': True, 'error': None}
+    except Exception as e:
+        err_msg = str(e)
+        if 'invalid_grant' in err_msg.lower() or 'token' in err_msg.lower():
+            return {'valid': False, 'error': 'Token hết hạn hoặc bị thu hồi — cần cấp phép lại'}
+        return {'valid': False, 'error': err_msg[:200]}
+
+
 def select_best_account(min_free_bytes=0):
     """
     Select the GDrive account with most free space.

@@ -635,7 +635,15 @@ def upload_media(request):
     if use_gdrive:
         from . import gdrive_oauth
         from .models import GDriveAccount
-        gdrive_account = gdrive_oauth.select_best_account()
+        # Allow user to pick specific account
+        account_id = request.POST.get('gdrive_account_id', '').strip()
+        if account_id and account_id != 'auto':
+            try:
+                gdrive_account = GDriveAccount.objects.get(id=int(account_id), is_active=True)
+            except (GDriveAccount.DoesNotExist, ValueError):
+                gdrive_account = None
+        if not gdrive_account:
+            gdrive_account = gdrive_oauth.select_best_account()
         if not gdrive_account:
             use_gdrive = False
             errors.append('Google Drive chưa cấu hình — cần thêm tài khoản Gmail trong phần OAuth2')
@@ -739,6 +747,12 @@ def upload_media(request):
                 'stream_url': media.get_stream_url(),
                 'embed_code': media.get_embed_code(),
                 'file_size': media.file_size_display,
+                'storage_type': media.storage_type,
+                'gdrive_account': gdrive_account.email if gdrive_account and media.storage_type == 'gdrive' else None,
+                'subtitles': [
+                    {'language': s.language, 'label': s.label, 'url': s.file.url if s.file else ''}
+                    for s in media.subtitles.all()
+                ],
             })
             
         except Exception as e:
@@ -934,6 +948,7 @@ def gdrive_update_storage(request, account_id):
     from . import gdrive_oauth
     try:
         account = GDriveAccount.objects.get(id=account_id)
+        token_status = gdrive_oauth.check_token_status(account)
         success = gdrive_oauth.update_storage_info(account)
         if success:
             return JsonResponse({
@@ -943,8 +958,15 @@ def gdrive_update_storage(request, account_id):
                 'storage_percent': account.storage_percent,
                 'storage_used_display': account.storage_used_display,
                 'storage_free_display': account.storage_free_display,
+                'token_valid': token_status['valid'],
+                'token_error': token_status['error'],
             })
-        return JsonResponse({'success': False, 'error': 'Không thể kết nối'}, status=500)
+        return JsonResponse({
+            'success': False,
+            'error': 'Không thể kết nối',
+            'token_valid': token_status['valid'],
+            'token_error': token_status['error'],
+        }, status=500)
     except GDriveAccount.DoesNotExist:
         return JsonResponse({'error': 'Account not found'}, status=404)
 

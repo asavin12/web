@@ -191,7 +191,15 @@ class StreamMediaAdmin(admin.ModelAdmin):
             extra_context['upload_token'] = _generate_upload_token(request.user)
         # GDrive OAuth2 accounts
         gdrive_accounts = GDriveAccount.objects.filter(is_active=True).order_by('storage_used')
-        extra_context['gdrive_accounts'] = gdrive_accounts
+        # Pre-check token status for each account
+        from . import gdrive_oauth
+        accounts_with_status = []
+        for a in gdrive_accounts:
+            token_info = gdrive_oauth.check_token_status(a)
+            a.token_valid = token_info['valid']
+            a.token_error = token_info['error']
+            accounts_with_status.append(a)
+        extra_context['gdrive_accounts'] = accounts_with_status
         extra_context['gdrive_total_free'] = sum(a.storage_free for a in gdrive_accounts)
         extra_context['has_oauth_config'] = bool(
             config.gdrive_oauth_client_id and config.gdrive_oauth_client_secret
