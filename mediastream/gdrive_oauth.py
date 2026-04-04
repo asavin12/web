@@ -27,7 +27,10 @@ logger = logging.getLogger(__name__)
 
 GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
-SCOPES = ['https://www.googleapis.com/auth/drive']
+SCOPES = [
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/userinfo.email',
+]
 
 # Subfolder names
 MEDIA_TYPE_FOLDER_NAMES = {
@@ -124,14 +127,33 @@ def build_drive_service(account):
 
 
 def get_account_email(access_token):
-    """Get Gmail email from access token via userinfo endpoint."""
-    resp = requests.get(
-        'https://www.googleapis.com/oauth2/v2/userinfo',
-        headers={'Authorization': f'Bearer {access_token}'},
-        timeout=10,
-    )
-    if resp.status_code == 200:
-        return resp.json().get('email', '')
+    """Get Gmail email from access token via userinfo or Drive API."""
+    # Try userinfo endpoint first
+    try:
+        resp = requests.get(
+            'https://www.googleapis.com/oauth2/v2/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            email = resp.json().get('email', '')
+            if email:
+                return email
+    except Exception:
+        pass
+
+    # Fallback: get email from Drive API about endpoint
+    try:
+        resp = requests.get(
+            'https://www.googleapis.com/drive/v3/about?fields=user',
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            return resp.json().get('user', {}).get('emailAddress', '')
+    except Exception:
+        pass
+
     return ''
 
 
