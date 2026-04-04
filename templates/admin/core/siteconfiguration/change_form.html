@@ -3,30 +3,11 @@
 {% block extrastyle %}
 {{ block.super }}
 <style>
-/* === Google Drive Status Panel === */
+/* === Google Drive OAuth2 Panel === */
 .gdrive-panel{margin:0 0 15px;padding:12px 16px;border-radius:8px;font-size:13px;line-height:1.6}
-.gdrive-panel.checking{background:#fff3cd;border:1px solid #ffc107}
-.gdrive-panel.connected{background:#d4edda;border:1px solid #28a745}
-.gdrive-panel.error{background:#f8d7da;border:1px solid #dc3545}
-.gdrive-panel.idle{background:#e2e8f0;border:1px solid #cbd5e0}
-.gdrive-btn{display:inline-block;padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;margin-right:6px;vertical-align:middle;text-decoration:none;color:#fff}
-.gdrive-btn:hover{opacity:.85}
-.gdrive-btn-primary{background:#417690}
-.gdrive-btn-file{background:#79aec8}
-.gdrive-btn-danger{background:#dc3545}
-.gdrive-btn-success{background:#28a745}
-.gdrive-btn-outline{background:transparent;color:#417690;border:2px solid #417690}
-.gdrive-btn-outline:hover{background:#417690;color:#fff}
-.gdrive-info{margin:4px 0}
-.gdrive-lbl{font-weight:600;color:#555;min-width:140px;display:inline-block}
+.gdrive-panel.info{background:#d1ecf1;border:1px solid #bee5eb}
 .gdrive-tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}
 .gdrive-tag-ok{background:#d1fae5;color:#065f46}
-.gdrive-tag-warn{background:#fef3c7;color:#92400e}
-.gdrive-tag-err{background:#fee2e2;color:#991b1b}
-/* JSON field wrapper */
-.gdrive-json-current{padding:10px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;margin-bottom:8px;font-size:13px}
-.gdrive-json-current.corrupted{background:#fef2f2;border-color:#fca5a5}
-.gdrive-json-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
 </style>
 {% endblock %}
 
@@ -34,267 +15,26 @@
 {{ block.super }}
 <script>
 (function(){
-  /* Helpers */
-  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
-  var FERNET_PREFIX='gAAAAA';
-
-  /* === 1. JSON Field — Smart Display with Change/Clear buttons === */
-  var jsonField=document.getElementById('id_gdrive_service_account_json');
-  if(jsonField){
-    var currentVal=jsonField.value.trim();
-    var hasData=!!currentVal;
-    var isCorrupted=hasData&&currentVal.indexOf(FERNET_PREFIX)===0;
-    var isValidJson=false;
-    var jsonEmail='';
-    if(hasData&&!isCorrupted){
-      try{var parsed=JSON.parse(currentVal);isValidJson=true;jsonEmail=parsed.client_email||'';}catch(e){}
+  /* Find OAuth2 fieldset and add account management link */
+  var fieldsets = document.querySelectorAll('fieldset');
+  for (var i = 0; i < fieldsets.length; i++) {
+    var h = fieldsets[i].querySelector('h2');
+    if (h && h.textContent.indexOf('OAuth2') !== -1) {
+      var panel = document.createElement('div');
+      panel.className = 'gdrive-panel info';
+      panel.innerHTML =
+        '<strong>💡 Quản lý tài khoản Gmail:</strong> ' +
+        'Sau khi cấu hình Client ID + Secret, vào ' +
+        '<a href="/admin/mediastream/gdriveaccount/" style="font-weight:bold">Tài khoản GDrive</a> hoặc ' +
+        '<a href="/admin/mediastream/streammedia/" style="font-weight:bold">Media Streams</a> ' +
+        'để thêm tài khoản Gmail (nút <strong>➕ Thêm tài khoản Gmail</strong>).';
+      var firstRow = fieldsets[i].querySelector('.form-row');
+      if (firstRow) firstRow.parentElement.insertBefore(panel, firstRow);
+      break;
     }
-
-    // Create wrapper above textarea
-    var wrapper=document.createElement('div');
-    wrapper.id='gdrive-json-wrapper';
-
-    if(hasData){
-      // Show current status + Change/Clear buttons, hide textarea by default
-      var statusDiv=document.createElement('div');
-      statusDiv.id='gdrive-json-status';
-      if(isCorrupted){
-        statusDiv.className='gdrive-json-current corrupted';
-        statusDiv.innerHTML=
-          '<strong>⚠️ Dữ liệu JSON đang bị lỗi mã hoá</strong> (SECRET_KEY đã thay đổi)<br>'+
-          '<small style="color:#991b1b">Cần nhập lại file JSON Service Account.</small>';
-      }else if(isValidJson){
-        statusDiv.className='gdrive-json-current';
-        statusDiv.innerHTML=
-          '<strong>✅ JSON Service Account đã cấu hình</strong>'+
-          (jsonEmail?' — <code style="background:#dcfce7;padding:2px 6px;border-radius:3px;user-select:all">'+esc(jsonEmail)+'</code>':'')+
-          '<br><small style="color:#065f46">Dữ liệu được mã hoá Fernet trong database.</small>';
-      }else{
-        statusDiv.className='gdrive-json-current';
-        statusDiv.innerHTML='<strong>📄 Có dữ liệu JSON</strong> (không thể parse hiển thị)';
-      }
-      wrapper.appendChild(statusDiv);
-
-      var actionsDiv=document.createElement('div');
-      actionsDiv.className='gdrive-json-actions';
-      actionsDiv.innerHTML=
-        '<button type="button" class="gdrive-btn gdrive-btn-outline" id="gdrive-change-btn">✏️ Thay đổi JSON</button>'+
-        '<input type="file" accept=".json,application/json" id="gdrive-json-file" style="display:none">'+
-        '<button type="button" class="gdrive-btn gdrive-btn-file" id="gdrive-upload-btn">📁 Upload file JSON mới</button>'+
-        '<button type="button" class="gdrive-btn gdrive-btn-danger" id="gdrive-clear-btn">🗑️ Xoá JSON</button>'+
-        '<span id="gdrive-file-name" style="color:#666;font-size:12px"></span>';
-      wrapper.appendChild(actionsDiv);
-
-      // Hide textarea by default when data exists
-      jsonField.style.display='none';
-
-      // Change button — show/hide textarea
-      jsonField.parentElement.insertBefore(wrapper,jsonField);
-      document.getElementById('gdrive-change-btn').onclick=function(){
-        if(jsonField.style.display==='none'){
-          jsonField.style.display='';
-          this.textContent='📌 Ẩn trình soạn thảo';
-          // If corrupted, clear the ciphertext so user can paste new value
-          if(isCorrupted){
-            jsonField.value='';
-            jsonField.focus();
-          }
-        }else{
-          jsonField.style.display='none';
-          this.textContent='✏️ Thay đổi JSON';
-        }
-      };
-
-      // Clear button
-      document.getElementById('gdrive-clear-btn').onclick=function(){
-        if(confirm('⚠️ Bạn có chắc muốn xoá JSON Service Account?\nGoogle Drive sẽ ngừng hoạt động.')){
-          jsonField.value='';
-          jsonField.style.display='';
-          statusDiv.className='gdrive-json-current corrupted';
-          statusDiv.innerHTML='<strong>🗑️ JSON đã bị xoá</strong> — nhớ bấm <strong>Lưu</strong> để áp dụng.';
-        }
-      };
-
-      // If corrupted, auto-show textarea
-      if(isCorrupted){
-        jsonField.value='';
-        jsonField.style.display='';
-        document.getElementById('gdrive-change-btn').textContent='📌 Ẩn trình soạn thảo';
-      }
-
-    }else{
-      // No data — show upload button + textarea
-      jsonField.parentElement.insertBefore(wrapper,jsonField);
-      wrapper.innerHTML=
-        '<div class="gdrive-json-current corrupted" style="background:#f8f9fa;border-color:#e2e8f0">'+
-        '<strong>⚠️ Chưa cấu hình Service Account JSON</strong><br>'+
-        '<small>Dán nội dung JSON hoặc upload file .json bên dưới.</small></div>'+
-        '<div class="gdrive-json-actions">'+
-        '<input type="file" accept=".json,application/json" id="gdrive-json-file" style="display:none">'+
-        '<button type="button" class="gdrive-btn gdrive-btn-file" id="gdrive-upload-btn">📁 Chọn file JSON từ máy tính</button>'+
-        '<span id="gdrive-file-name" style="color:#666;font-size:12px"></span>'+
-        '</div>';
-    }
-
-    // File upload handler (shared)
-    var uploadBtn=document.getElementById('gdrive-upload-btn');
-    var fileInput=document.getElementById('gdrive-json-file');
-    if(uploadBtn&&fileInput){
-      uploadBtn.onclick=function(){fileInput.click()};
-      fileInput.onchange=function(){
-        var file=this.files[0];
-        if(!file) return;
-        document.getElementById('gdrive-file-name').textContent='📄 '+file.name;
-        var reader=new FileReader();
-        reader.onload=function(e){
-          try{
-            var obj=JSON.parse(e.target.result);
-            jsonField.value=JSON.stringify(obj,null,2);
-            jsonField.style.display='';
-            jsonField.dispatchEvent(new Event('change'));
-            document.getElementById('gdrive-file-name').innerHTML=
-              '📄 '+esc(file.name)+' <span class="gdrive-tag gdrive-tag-ok">✅ Đã nạp — nhớ bấm Lưu</span>';
-            // Update status
-            var st=document.getElementById('gdrive-json-status');
-            if(st){
-              st.className='gdrive-json-current';
-              var em=obj.client_email||'';
-              st.innerHTML='<strong>✅ JSON mới đã nạp</strong>'+(em?' — <code style="background:#dcfce7;padding:2px 6px;border-radius:3px">'+esc(em)+'</code>':'')+
-                '<br><span class="gdrive-tag gdrive-tag-warn">⚠️ Chưa lưu — bấm Lưu để áp dụng</span>';
-            }
-          }catch(err){
-            alert('❌ File JSON không hợp lệ:\n'+err.message);
-            document.getElementById('gdrive-file-name').innerHTML=
-              '<span class="gdrive-tag gdrive-tag-err">❌ File JSON lỗi</span>';
-          }
-        };
-        reader.readAsText(file);
-      };
-    }
-  }
-
-  /* === 2. Connection Status Panel === */
-  var fieldsets=document.querySelectorAll('fieldset');
-  var gdriveFS=null;
-  for(var i=0;i<fieldsets.length;i++){
-    var h=fieldsets[i].querySelector('h2');
-    if(h&&h.textContent.indexOf('Google Drive')!==-1){gdriveFS=fieldsets[i];break}
-  }
-
-  if(gdriveFS){
-    var panel=document.createElement('div');
-    panel.id='gdrive-panel';
-    panel.className='gdrive-panel idle';
-    panel.innerHTML=
-      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'+
-      '  <span><strong>📡 Trạng thái kết nối:</strong> <span id="gdrive-st">Đang kiểm tra...</span></span>'+
-      '  <button type="button" class="gdrive-btn gdrive-btn-primary" id="gdrive-ck-btn">🔄 Kiểm tra kết nối</button>'+
-      '</div>'+
-      '<div id="gdrive-det" style="margin-top:8px;display:none"></div>';
-
-    var firstRow=gdriveFS.querySelector('.form-row');
-    if(firstRow) firstRow.parentElement.insertBefore(panel,firstRow);
-    else gdriveFS.appendChild(panel);
-
-    document.getElementById('gdrive-ck-btn').onclick=checkConn;
-    setTimeout(checkConn,300);
-  }
-
-  function checkConn(){
-    var panel=document.getElementById('gdrive-panel');
-    var st=document.getElementById('gdrive-st');
-    var det=document.getElementById('gdrive-det');
-    var btn=document.getElementById('gdrive-ck-btn');
-    if(!panel) return;
-
-    panel.className='gdrive-panel checking';
-    st.textContent='⏳ Đang kiểm tra...';
-    det.style.display='none';
-    btn.disabled=true;btn.textContent='⏳ Đang kiểm tra...';
-
-    fetch('/media-stream/api/gdrive-status/',{
-      method:'GET',credentials:'same-origin',
-      headers:{'X-Requested-With':'XMLHttpRequest'}
-    })
-    .then(function(r){return r.json()})
-    .then(function(d){
-      btn.disabled=false;btn.textContent='🔄 Kiểm tra kết nối';
-
-      if(d.configured){
-        var folderOk=d.folder_accessible;
-        panel.className=folderOk?'gdrive-panel connected':'gdrive-panel checking';
-        st.innerHTML=folderOk
-          ?'<span class="gdrive-tag gdrive-tag-ok">✅ Đã kết nối</span>'
-          :'<span class="gdrive-tag gdrive-tag-warn">⚠️ Tài khoản OK — chưa tìm thấy thư mục gốc</span>';
-        var h='';
-        if(d.email)
-          h+='<div class="gdrive-info"><span class="gdrive-lbl">📧 Service Account:</span> '+esc(d.email)+'</div>';
-
-        // Root folder info
-        var root=d.root_folder;
-        if(root&&root.id){
-          h+='<div class="gdrive-info"><span class="gdrive-lbl">📁 Thư mục gốc:</span> ';
-          h+='<strong>'+esc(root.name||'')+'</strong> ';
-          h+='<code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:11px">'+esc(root.id)+'</code> ';
-          h+='<span class="gdrive-tag gdrive-tag-ok">✅ tự động phát hiện</span>';
-          h+='</div>';
-        }
-
-        // Subfolders (media type mapping)
-        var subs=d.subfolders||[];
-        if(subs.length>0){
-          h+='<div class="gdrive-info" style="margin-top:6px"><span class="gdrive-lbl">📂 Thư mục media:</span>';
-          h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">';
-          var typeIcons={video:'🎬',audio:'🎵',podcast:'🎙️'};
-          for(var i=0;i<subs.length;i++){
-            var s=subs[i];
-            var icon=typeIcons[s.media_type]||'📁';
-            h+='<span style="background:#d1fae5;color:#065f46;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600">';
-            h+=icon+' '+esc(s.name)+' ✅</span>';
-          }
-          h+='</div></div>';
-          // Show which types are missing
-          var mapped={};subs.forEach(function(s){mapped[s.media_type]=true});
-          var missing=[];
-          ['video','audio','podcast'].forEach(function(t){if(!mapped[t]) missing.push(t)});
-          if(missing.length>0){
-            h+='<div class="gdrive-info" style="margin-top:4px;color:#92400e;font-size:12px">';
-            h+='⚠️ Chưa có thư mục: '+missing.join(', ')+' — sẽ tự tạo khi upload hoặc đồng bộ từ Media Streams</div>';
-          }
-        }else if(folderOk){
-          h+='<div class="gdrive-info" style="margin-top:4px;color:#92400e;font-size:12px">';
-          h+='⚠️ Chưa có thư mục con (Video/Audio/Podcast) — sẽ tự tạo khi upload hoặc bấm Đồng bộ trong Media Streams</div>';
-        }
-
-        if(d.error){
-          h+='<div class="gdrive-info" style="background:#fff3cd;padding:8px 12px;border-radius:6px;margin-top:6px">';
-          h+='<strong>💡 Để sửa lỗi:</strong> Mở Google Drive → chuột phải thư mục → <strong>Share</strong><br>';
-          h+='Thêm email: <code style="background:#e8f4e8;padding:2px 6px;border-radius:3px;user-select:all">'+esc(d.email)+'</code> (quyền <strong>Editor</strong>)';
-          h+='<br><small style="color:#991b1b">Chi tiết: '+esc(d.error)+'</small>';
-          h+='</div>';
-        }
-
-        det.innerHTML=h;det.style.display='block';
-      }else if(d.error){
-        panel.className='gdrive-panel error';
-        st.innerHTML='<span class="gdrive-tag gdrive-tag-err">❌ Lỗi kết nối</span>';
-        det.innerHTML='<div class="gdrive-info" style="color:#991b1b">⚠️ '+esc(d.error)+'</div>';
-        det.style.display='block';
-      }else{
-        panel.className='gdrive-panel idle';
-        st.innerHTML='<span class="gdrive-tag gdrive-tag-warn">⚠️ Chưa cấu hình</span>';
-        det.innerHTML='<div class="gdrive-info">Dán JSON Service Account rồi bấm <strong>Lưu</strong>. Hệ thống sẽ tự phát hiện thư mục được share.</div>';
-        det.style.display='block';
-      }
-    })
-    .catch(function(err){
-      btn.disabled=false;btn.textContent='🔄 Kiểm tra kết nối';
-      panel.className='gdrive-panel error';
-      st.innerHTML='<span class="gdrive-tag gdrive-tag-err">❌ Lỗi</span>';
-      det.innerHTML='<div class="gdrive-info" style="color:#991b1b">Không thể kết nối API: '+esc(err.message)+'</div>';
-      det.style.display='block';
-    });
   }
 })();
 </script>
+{% endblock %}
+
 {% endblock %}

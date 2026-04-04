@@ -394,17 +394,19 @@ def smart_upload_api(request):
         )
 
         if video_file and upload_to_gdrive_flag:
-            # Upload local file → Google Drive → save GDrive URL
-            from .gdrive_upload import upload_to_gdrive as gdrive_upload_fn, get_folder_for_media_type
+            # Upload local file → Google Drive via OAuth2 multi-account
+            from . import gdrive_oauth
             import mimetypes as mt
             mime = mt.guess_type(video_file.name)[0] or 'video/mp4'
-            # Auto-resolve folder by media type
-            type_folder_id = get_folder_for_media_type(media_type)
-            upload_result = gdrive_upload_fn(
-                video_file, video_file.name, mime, type_folder_id
+            account = gdrive_oauth.select_best_account()
+            if not account:
+                return JsonResponse({'error': 'Chưa có tài khoản Gmail OAuth2 — thêm trong phần Media Streams'}, status=500)
+            upload_result = gdrive_oauth.upload_to_account(
+                account, video_file, video_file.name,
+                mime_type=mime, media_type=media_type,
             )
-            if not upload_result['success']:
-                return JsonResponse({'error': upload_result['error']}, status=500)
+            if not upload_result.get('success'):
+                return JsonResponse({'error': upload_result.get('error', 'GDrive upload failed')}, status=500)
             media.gdrive_url = upload_result['gdrive_url']
             media.gdrive_file_id = upload_result['file_id']
             media.storage_type = 'gdrive'
@@ -534,160 +536,6 @@ def save_gemini_key(request):
             'error': f'Lỗi lưu key: {str(e)[:200]}'
         }, status=500)
 
-
-# ============================================================================
-# Google Drive Credentials Management (admin)
-# ============================================================================
-
-@staff_member_required
-@csrf_exempt
-@require_http_methods(['GET'])
-def gdrive_status(request):
-    """
-    Check Google Drive connection status.
-    GET /media-stream/api/gdrive-status/
-    """
-    from .gdrive_upload import check_gdrive_connection as _check
-    result = _check()
-
-    from core.models import SiteConfiguration
-    config = SiteConfiguration.get_instance()
-
-    root = result.get('root_folder') or {}
-
-    return JsonResponse({
-        'configured': result['connected'],
-        'email': result['email'],
-        'folder_id': root.get('id', config.gdrive_folder_id or ''),
-        'folder_name': root.get('name', result['folder_name']),
-        'folder_accessible': result['folder_accessible'],
-        'error': result['error'],
-        'root_folder': root,
-        'subfolders': result.get('subfolders', []),
-        'visible_folders': result.get('visible_folders', []),
-        'folder_mapping': config.gdrive_folder_mapping or {},
-    })
-
-
-@staff_member_required
-@csrf_exempt
-@require_POST
-def save_gdrive_credentials(request):
-    """
-    Lưu Google Drive Service Account JSON + folder ID.
-    POST /media-stream/api/gdrive-credentials/
-    Body JSON: {"service_account_json": "{...}", "folder_id": "abc123"}
-    """
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    sa_json_str = body.get('service_account_json', '').strip()
-    folder_id = body.get('folder_id', '').strip()
-
-    if not sa_json_str:
-        return JsonResponse({'error': 'Thiếu service_account_json'}, status=400)
-
-    # Validate JSON structure
-    try:
-        sa_dict = json.loads(sa_json_str)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Service Account JSON không hợp lệ'}, status=400)
-
-    required_fields = ['type', 'project_id', 'private_key', 'client_email']
-    missing = [f for f in required_fields if f not in sa_dict]
-    if missing:
-        return JsonResponse({
-            'error': f'JSON thiếu các trường bắt buộc: {", ".join(missing)}'
-        }, status=400)
-
-    if sa_dict.get('type') != 'service_account':
-        return JsonResponse({'error': 'JSON phải có type="service_account"'}, status=400)
-
-    # Test connection before saving
-    from .gdrive_upload import check_gdrive_connection as _check
-    test = _check(sa_json_str)
-    if not test['connected']:
-        return JsonResponse({
-            'error': f'Không kết nối được: {test["error"]}'
-        }, status=400)
-
-    # Save to SiteConfiguration
-    try:
-        from core.models import SiteConfiguration
-        config = SiteConfiguration.get_instance()
-        config.gdrive_service_account_json = sa_json_str
-        if folder_id:
-            config.gdrive_folder_id = folder_id
-        config.save()
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Đã lưu Google Drive credentials',
-            'email': test['email'],
-            'folder_name': test.get('folder_name', ''),
-        })
-    except Exception as e:
-        logger.error(f"Error saving GDrive credentials: {e}", exc_info=True)
-        return JsonResponse({'error': f'Lỗi lưu: {str(e)[:200]}'}, status=500)
-
-
-@staff_member_required
-@csrf_exempt
-@require_POST
-def gdrive_check_connection(request):
-    """
-    Test Google Drive connection (có thể dùng JSON tạm để test trước khi lưu).
-    POST /media-stream/api/gdrive-check/
-    Body JSON (optional): {"service_account_json": "{...}"}
-    """
-    sa_json_str = None
-    try:
-        body = json.loads(request.body)
-        sa_json_str = body.get('service_account_json', '').strip() or None
-    except (json.JSONDecodeError, ValueError):
-        pass
-
-    from .gdrive_upload import check_gdrive_connection as _check
-    result = _check(sa_json_str)
-
-    return JsonResponse(result)
-
-
-
-@staff_member_required
-@csrf_exempt
-@require_http_methods(['POST'])
-def gdrive_ensure_folders(request):
-    """
-    Ensure all media type folders (Video, Audio, Podcast) exist on GDrive.
-    Auto-creates missing folders inside the root GDrive folder.
-    POST /media-stream/api/gdrive-ensure-folders/
-    Returns: {media_type: {id, name, created}} mapping
-    """
-    from .gdrive_upload import ensure_all_media_folders
-    result = ensure_all_media_folders()
-
-    if 'error' in result:
-        return JsonResponse({'error': result['error']}, status=400)
-
-    return JsonResponse({'success': True, 'folders': result})
-
-
-@staff_member_required
-@csrf_exempt
-@require_http_methods(['GET'])
-def gdrive_folder_mapping(request):
-    """
-    Get current media_type → folder mapping.
-    GET /media-stream/api/gdrive-folder-mapping/
-    """
-    from core.models import SiteConfiguration
-    config = SiteConfiguration.get_instance()
-    mapping = config.gdrive_folder_mapping or {}
-
-    return JsonResponse({'mapping': mapping})
 
 
 

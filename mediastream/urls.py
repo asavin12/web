@@ -40,14 +40,6 @@ urlpatterns = [
     path('api/gemini-key-status/', smart_upload.gemini_key_status, name='gemini-key-status'),
     path('api/gemini-key/', smart_upload.save_gemini_key, name='gemini-key-save'),
 
-    # ===== Google Drive Credentials (admin) =====
-    path('api/gdrive-status/', smart_upload.gdrive_status, name='gdrive-status'),
-    path('api/gdrive-credentials/', smart_upload.save_gdrive_credentials, name='gdrive-credentials'),
-    path('api/gdrive-check/', smart_upload.gdrive_check_connection, name='gdrive-check'),
-
-    path('api/gdrive-ensure-folders/', smart_upload.gdrive_ensure_folders, name='gdrive-ensure-folders'),
-    path('api/gdrive-folder-mapping/', smart_upload.gdrive_folder_mapping, name='gdrive-folder-mapping'),
-    
     # ===== Admin URLs =====
     # Upload qua Django Admin (/admin/mediastream/streammedia/)
     path('admin/upload/api/', views.upload_media, name='admin_upload_api'),  # API cho admin changelist và n8n

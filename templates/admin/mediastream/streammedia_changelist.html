@@ -414,15 +414,6 @@
                     {% endif %}
                 </div>
             </div>
-
-            <!-- GDrive Auto-Folder Status (Legacy SA) -->
-            <div id="gdriveFolderSection" style="margin-bottom:15px;padding:10px;background:#f0f6fa;border:1px solid #79aec8;border-radius:4px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-                    <label style="font-size:12px;color:#417690;font-weight:bold;">📁 Thư mục Google Drive — tự động theo loại</label>
-                    <button type="button" id="ensureFolders" style="background:#417690;color:#fff;border:none;padding:4px 10px;cursor:pointer;border-radius:3px;font-size:11px;white-space:nowrap;">🔄 Đồng bộ thư mục</button>
-                </div>
-                <div id="gdriveAutoFolders" style="margin-top:6px;font-size:12px;"></div>
-            </div>
             
             <div class="upload-progress" id="uploadProgress">
                 <div class="progress-bar">
@@ -460,115 +451,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadResult = document.getElementById('uploadResult');
     const mediaTypeSelect = document.getElementById('mediaType');
     const storageSelect = document.getElementById('storage');
-    const gdriveFolderSection = document.getElementById('gdriveFolderSection');
-    const gdriveAutoFolders = document.getElementById('gdriveAutoFolders');
     const gdriveAccountsPanel = document.getElementById('gdriveAccountsPanel');
-    const hasOAuthAccounts = {{ gdrive_accounts|length|default:"0" }} > 0;
-    const hasOAuthConfig = {{ has_oauth_config|yesno:"true,false" }};
     
     let selectedFiles = [];
-    let folderMapping = {};  // {video: "id", audio: "id", podcast: "id"}
     
     /* === Storage toggle === */
     function toggleGdriveSection() {
         const isGdrive = storageSelect.value === 'gdrive';
         if (gdriveAccountsPanel) gdriveAccountsPanel.style.display = isGdrive ? 'block' : 'none';
-        // Show legacy SA folder section only if gdrive selected AND no OAuth accounts
-        gdriveFolderSection.style.display = (isGdrive && !hasOAuthAccounts) ? 'block' : 'none';
     }
     storageSelect.addEventListener('change', toggleGdriveSection);
     toggleGdriveSection();
-    
-    /* === GDrive auto-folder management === */
-    var typeIcons = {video: '🎬', audio: '🎵', podcast: '🎙️'};
-    
-    function loadFolderMapping() {
-        gdriveAutoFolders.innerHTML = '<span style="color:#666">⏳ Đang tải mapping...</span>';
-        fetch('/media-stream/api/gdrive-folder-mapping/', {credentials: 'same-origin'})
-        .then(function(r){ return r.json(); })
-        .then(function(d) {
-            folderMapping = d.mapping || {};
-            renderFolderStatus();
-        })
-        .catch(function(e) {
-            gdriveAutoFolders.innerHTML = '<span style="color:#991b1b">❌ ' + e.message + '</span>';
-        });
-    }
-    
-    function renderFolderStatus() {
-        var types = ['video', 'audio', 'podcast'];
-        var html = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">';
-        var allOk = true;
-        types.forEach(function(t) {
-            var fid = folderMapping[t];
-            var icon = typeIcons[t] || '📁';
-            if (fid) {
-                html += '<span style="background:#d1fae5;color:#065f46;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600">';
-                html += icon + ' ' + t.charAt(0).toUpperCase() + t.slice(1) + ' ✅</span>';
-            } else {
-                allOk = false;
-                html += '<span style="background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600">';
-                html += icon + ' ' + t.charAt(0).toUpperCase() + t.slice(1) + ' ⚠️ chưa tạo</span>';
-            }
-        });
-        html += '</div>';
-        if (allOk) {
-            html += '<div style="margin-top:4px;color:#065f46;font-size:11px">✅ Tất cả thư mục đã sẵn sàng — upload tự động vào đúng thư mục theo loại</div>';
-        } else {
-            html += '<div style="margin-top:4px;color:#92400e;font-size:11px">Bấm <strong>Đồng bộ thư mục</strong> để tự động tạo thư mục thiếu</div>';
-        }
-        gdriveAutoFolders.innerHTML = html;
-    }
-    
-    function ensureFolders() {
-        var btn = document.getElementById('ensureFolders');
-        btn.disabled = true;
-        btn.textContent = '⏳ Đang tạo...';
-        gdriveAutoFolders.innerHTML = '<span style="color:#666">⏳ Đang tạo thư mục trên Google Drive...</span>';
-        
-        fetch('/media-stream/api/gdrive-ensure-folders/', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value}
-        })
-        .then(function(r){ return r.json(); })
-        .then(function(d) {
-            btn.disabled = false;
-            btn.textContent = '🔄 Đồng bộ thư mục';
-            if (d.error) {
-                gdriveAutoFolders.innerHTML = '<span style="color:#991b1b">❌ ' + d.error + '</span>';
-                return;
-            }
-            var folders = d.folders || {};
-            folderMapping = {};
-            var rootInfo = folders._root;
-            var html = '';
-            if (rootInfo && rootInfo.name) {
-                html += '<div style="margin-bottom:6px;font-size:11px;color:#417690">📁 Thư mục gốc: <strong>' + rootInfo.name + '</strong></div>';
-            }
-            html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">';
-            Object.keys(folders).forEach(function(t) {
-                if (t === '_root') return;
-                var f = folders[t];
-                folderMapping[t] = f.id;
-                var icon = typeIcons[t] || '📁';
-                var badge = f.created ? '🆕 tạo mới' : '✅';
-                html += '<span style="background:#d1fae5;color:#065f46;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600">';
-                html += icon + ' ' + f.name + ' ' + badge + '</span>';
-            });
-            html += '</div>';
-            html += '<div style="margin-top:4px;color:#065f46;font-size:11px">✅ Tất cả thư mục đã sẵn sàng</div>';
-            gdriveAutoFolders.innerHTML = html;
-        })
-        .catch(function(e) {
-            btn.disabled = false;
-            btn.textContent = '🔄 Đồng bộ thư mục';
-            gdriveAutoFolders.innerHTML = '<span style="color:#991b1b">❌ ' + e.message + '</span>';
-        });
-    }
-    
-    document.getElementById('ensureFolders').addEventListener('click', ensureFolders);
-    if (storageSelect.value === 'gdrive') loadFolderMapping();
     
     /* === GDrive OAuth2 Account Management === */
     window.refreshAccountStorage = function(accountId) {

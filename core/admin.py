@@ -662,16 +662,7 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
                 'Giá trị được mã hoá Fernet trước khi lưu vào database.'
             ),
         }),
-        ('☁️ Google Drive (Legacy: Service Account)', {
-            'fields': ('gdrive_service_account_json', 'gdrive_folder_mapping'),
-            'classes': ('collapse',),
-            'description': (
-                '<strong>⚠️ Service Account không còn hoạt động với Gmail miễn phí.</strong><br>'
-                'Nên dùng OAuth2 Multi-Account bên dưới thay thế.<br>'
-                'Giữ lại cho trường hợp dùng Google Workspace (Shared Drive).'
-            ),
-        }),
-        ('🔐 Google Drive OAuth2 (Multi-Account Gmail)', {
+        ('☁️ Google Drive OAuth2 (Multi-Account Gmail)', {
             'fields': ('gdrive_oauth_client_id', 'gdrive_oauth_client_secret'),
             'description': (
                 'Cấu hình OAuth2 để thêm nhiều tài khoản Gmail miễn phí.<br>'
@@ -686,7 +677,7 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
         }),
     )
 
-    readonly_fields = ('updated_at', 'encryption_status', 'gdrive_folder_mapping')
+    readonly_fields = ('updated_at', 'encryption_status')
 
     def has_add_permission(self, request):
         """Chỉ cho tạo 1 bản ghi duy nhất."""
@@ -713,7 +704,7 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
             'email_host_password': 'Mật khẩu SMTP',
             'youtube_api_key': 'YouTube API Key',
             'gemini_api_key': 'Gemini API Key',
-            'gdrive_service_account_json': 'Google Drive Service Account',
+            'gdrive_oauth_client_secret': 'Google Drive OAuth2 Client Secret',
         }
         
         ok_fields = []

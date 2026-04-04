@@ -604,21 +604,6 @@ class SiteConfiguration(models.Model):
         help_text='🔒 Google Gemini API key cho dịch phụ đề realtime. Mã hoá tự động khi lưu.',
     )
 
-    # === Google Drive Service Account ===
-    gdrive_service_account_json = EncryptedTextField(
-        'Google Drive Service Account JSON', blank=True, default='',
-        help_text='🔒 Nội dung file JSON Service Account (Google Cloud). Mã hoá tự động khi lưu.',
-    )
-    gdrive_folder_id = models.CharField(
-        'Google Drive Folder ID', max_length=255, blank=True, default='',
-        help_text='ID thư mục gốc trên Google Drive. '
-                  'Lấy từ URL: drive.google.com/drive/folders/FOLDER_ID',
-    )
-    gdrive_folder_mapping = models.JSONField(
-        'Thư mục GDrive theo loại media', default=dict, blank=True,
-        help_text='Tự động quản lý: {"video": "FOLDER_ID", "audio": "FOLDER_ID", "podcast": "FOLDER_ID"}',
-    )
-
     # === Google Drive OAuth2 (Multi-account Gmail) ===
     gdrive_oauth_client_id = models.CharField(
         'OAuth2 Client ID', max_length=255, blank=True, default='',

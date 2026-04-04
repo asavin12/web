@@ -631,26 +631,14 @@ def upload_media(request):
     
     # Google Drive upload setup
     use_gdrive = storage_preference == 'gdrive'
-    gdrive_account = None  # OAuth2 multi-account (preferred)
-    gdrive_service = None  # Service Account (legacy fallback)
+    gdrive_account = None  # OAuth2 multi-account
     if use_gdrive:
-        # Try OAuth2 multi-account first
         from . import gdrive_oauth
         from .models import GDriveAccount
         gdrive_account = gdrive_oauth.select_best_account()
         if not gdrive_account:
-            # Fallback to Service Account
-            try:
-                from .gdrive_upload import _get_gdrive_config, _build_drive_service
-                sa_dict, cfg_folder_id = _get_gdrive_config()
-                if sa_dict:
-                    gdrive_service = _build_drive_service(sa_dict)
-                else:
-                    use_gdrive = False
-                    errors.append('Google Drive chưa cấu hình — cần thêm tài khoản Gmail hoặc Service Account')
-            except Exception as e:
-                use_gdrive = False
-                errors.append(f'GDrive init error: {str(e)[:100]}')
+            use_gdrive = False
+            errors.append('Google Drive chưa cấu hình — cần thêm tài khoản Gmail trong phần OAuth2')
     
     # Upload each media file
     for i, uploaded_file in enumerate(media_files):
@@ -687,25 +675,14 @@ def upload_media(request):
             )
             
             # Upload to Google Drive or save locally
-            if use_gdrive and (gdrive_account or gdrive_service):
+            if use_gdrive and gdrive_account:
                 try:
                     mime_type, _ = mimetypes.guess_type(uploaded_file.name)
-                    if gdrive_account:
-                        # OAuth2 multi-account upload
-                        result = gdrive_oauth.upload_to_account(
-                            gdrive_account, uploaded_file, uploaded_file.name,
-                            mime_type=mime_type or 'video/mp4',
-                            media_type=file_media_type,
-                        )
-                    else:
-                        # Service Account legacy fallback
-                        from .gdrive_upload import upload_to_gdrive, get_folder_for_media_type
-                        type_folder_id = get_folder_for_media_type(file_media_type)
-                        result = upload_to_gdrive(
-                            uploaded_file, uploaded_file.name,
-                            mime_type=mime_type or 'video/mp4',
-                            folder_id=type_folder_id,
-                        )
+                    result = gdrive_oauth.upload_to_account(
+                        gdrive_account, uploaded_file, uploaded_file.name,
+                        mime_type=mime_type or 'video/mp4',
+                        media_type=file_media_type,
+                    )
                     if not result.get('success'):
                         raise Exception(result.get('error', 'GDrive upload returned failure'))
                     media.storage_type = 'gdrive'
