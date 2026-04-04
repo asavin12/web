@@ -691,13 +691,16 @@ def upload_media(request):
                         mime_type=mime_type or 'video/mp4',
                         folder_id=type_folder_id
                     )
+                    if not result.get('success'):
+                        raise Exception(result.get('error', 'GDrive upload returned failure'))
                     media.storage_type = 'gdrive'
                     media.gdrive_file_id = result['file_id']
                     media.gdrive_url = result.get('gdrive_url', '')
                     media.file_size = uploaded_file.size
                     media.mime_type = mime_type or 'video/mp4'
                 except Exception as e:
-                    errors.append(f'GDrive upload failed for {uploaded_file.name}: {str(e)[:100]}')
+                    logger.error('GDrive upload failed for %s: %s', uploaded_file.name, e, exc_info=True)
+                    errors.append(f'GDrive upload failed for {uploaded_file.name}: {str(e)[:200]}')
                     media.file = uploaded_file
                     media.storage_type = 'local'
             else:

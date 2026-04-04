@@ -543,19 +543,30 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadProgress.classList.remove('active');
             if (xhr.status === 200) {
                 let msg = '✓ Upload thành công!';
+                let hasWarnings = false;
                 try {
                     const result = JSON.parse(xhr.responseText);
                     if (result.errors && result.errors.length > 0) {
-                        msg += ' (⚠️ ' + result.errors.join('; ') + ')';
+                        hasWarnings = true;
+                        msg = '⚠️ Upload hoàn tất nhưng có lỗi:\n' + result.errors.join('\n');
                     }
                 } catch(e) {}
-                uploadResult.className = 'upload-result success';
-                uploadResult.textContent = msg;
-                uploadResult.style.display = 'block';
-                selectedFiles = [];
-                filePreview.innerHTML = '';
-                document.getElementById('mediaTitle').value = '';
-                setTimeout(() => window.location.reload(), 1500);
+                if (hasWarnings) {
+                    uploadResult.className = 'upload-result error';
+                    uploadResult.style.whiteSpace = 'pre-wrap';
+                    uploadResult.textContent = msg;
+                    uploadResult.style.display = 'block';
+                    uploadBtn.disabled = false;
+                    /* Don't auto-reload — let user see the error */
+                } else {
+                    uploadResult.className = 'upload-result success';
+                    uploadResult.textContent = msg;
+                    uploadResult.style.display = 'block';
+                    selectedFiles = [];
+                    filePreview.innerHTML = '';
+                    document.getElementById('mediaTitle').value = '';
+                    setTimeout(() => window.location.reload(), 1500);
+                }
             } else {
                 let errMsg = 'Upload failed';
                 try { errMsg = JSON.parse(xhr.responseText).error || errMsg; } catch(e) {}
@@ -570,7 +581,8 @@ document.addEventListener('DOMContentLoaded', function() {
             progressFill.classList.remove('processing');
             uploadProgress.classList.remove('active');
             uploadResult.className = 'upload-result error';
-            uploadResult.textContent = '✗ Lỗi mạng — kiểm tra kết nối và thử lại';
+            const target = directUploadUrl ? ' (Direct: ' + directUploadUrl + ')' : '';
+            uploadResult.textContent = '✗ Lỗi mạng' + target + ' — kiểm tra kết nối, CORS, hoặc SSL và thử lại. Xem Console (F12) để biết chi tiết.';
             uploadResult.style.display = 'block';
             uploadBtn.disabled = false;
         };
