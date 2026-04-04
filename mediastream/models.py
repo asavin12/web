@@ -443,3 +443,73 @@ class PlaylistItem(models.Model):
         ordering = ['order']
         unique_together = ['playlist', 'media']
 
+
+class GDriveAccount(models.Model):
+    """
+    Tài khoản Gmail cho upload lên Google Drive (OAuth2).
+    Mỗi Gmail miễn phí = 15GB storage. Quản lý nhiều tài khoản để mở rộng dung lượng.
+    """
+    email = models.EmailField('Email Gmail', unique=True)
+    refresh_token = models.TextField(
+        'Refresh Token',
+        help_text='🔒 OAuth2 refresh token — mã hoá khi lưu.',
+    )
+    is_active = models.BooleanField('Hoạt động', default=True)
+
+    # Storage tracking
+    storage_used = models.BigIntegerField('Đã dùng (bytes)', default=0)
+    storage_total = models.BigIntegerField('Tổng (bytes)', default=15 * 1024**3)  # 15GB default
+
+    # GDrive folder structure per account
+    root_folder_id = models.CharField('Thư mục gốc ID', max_length=255, blank=True, default='')
+    folder_mapping = models.JSONField(
+        'Thư mục theo loại media', default=dict, blank=True,
+        help_text='{"video": "FOLDER_ID", "audio": "FOLDER_ID", "podcast": "FOLDER_ID"}',
+    )
+
+    # Metadata
+    added_at = models.DateTimeField('Ngày thêm', auto_now_add=True)
+    last_used = models.DateTimeField('Sử dụng lần cuối', null=True, blank=True)
+    last_storage_check = models.DateTimeField('Kiểm tra storage lần cuối', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Tài khoản GDrive'
+        verbose_name_plural = 'Tài khoản GDrive'
+        ordering = ['-is_active', 'storage_used']
+
+    def __str__(self):
+        return f'{self.email} ({self.storage_free_display} trống)'
+
+    @property
+    def storage_free(self):
+        return max(0, self.storage_total - self.storage_used)
+
+    @property
+    def storage_percent(self):
+        if self.storage_total <= 0:
+            return 100
+        return round(self.storage_used / self.storage_total * 100, 1)
+
+    @property
+    def storage_free_display(self):
+        free = self.storage_free
+        if free < 1024**2:
+            return f'{free / 1024:.0f} KB'
+        if free < 1024**3:
+            return f'{free / 1024**2:.1f} MB'
+        return f'{free / 1024**3:.2f} GB'
+
+    @property
+    def storage_used_display(self):
+        used = self.storage_used
+        if used < 1024**2:
+            return f'{used / 1024:.0f} KB'
+        if used < 1024**3:
+            return f'{used / 1024**2:.1f} MB'
+        return f'{used / 1024**3:.2f} GB'
+
+    @property
+    def storage_total_display(self):
+        total = self.storage_total
+        return f'{total / 1024**3:.1f} GB'
+

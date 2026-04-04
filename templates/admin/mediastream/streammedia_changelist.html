@@ -207,6 +207,104 @@
     .status-item strong {
         color: #333;
     }
+
+    /* GDrive Accounts Panel */
+    .gdrive-accounts-panel {
+        margin-bottom: 15px;
+        padding: 10px;
+        background: #f0f6fa;
+        border: 1px solid #79aec8;
+        border-radius: 4px;
+    }
+    .gdrive-accounts-panel h4 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        color: #417690;
+    }
+    .gdrive-account-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 0;
+        border-bottom: 1px solid #e0e0e0;
+        font-size: 12px;
+    }
+    .gdrive-account-item:last-child {
+        border-bottom: none;
+    }
+    .gdrive-account-email {
+        font-weight: bold;
+        min-width: 160px;
+        color: #333;
+    }
+    .gdrive-storage-bar {
+        width: 120px;
+        height: 12px;
+        background: #e0e0e0;
+        border-radius: 6px;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    .gdrive-storage-bar-fill {
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.3s;
+    }
+    .gdrive-account-info {
+        color: #666;
+        flex: 1;
+    }
+    .gdrive-account-actions {
+        display: flex;
+        gap: 4px;
+    }
+    .gdrive-account-actions button {
+        background: none;
+        border: 1px solid #ccc;
+        padding: 2px 6px;
+        cursor: pointer;
+        border-radius: 3px;
+        font-size: 11px;
+    }
+    .gdrive-account-actions button:hover {
+        background: #f0f0f0;
+    }
+    .gdrive-account-actions button.delete-btn:hover {
+        background: #fdd;
+        border-color: #c44;
+        color: #a00;
+    }
+    .gdrive-add-btn {
+        display: inline-block;
+        background: #28a745;
+        color: #fff;
+        border: none;
+        padding: 5px 12px;
+        cursor: pointer;
+        border-radius: 3px;
+        font-size: 12px;
+        text-decoration: none;
+        margin-top: 6px;
+    }
+    .gdrive-add-btn:hover {
+        background: #218838;
+        color: #fff;
+    }
+    .gdrive-total-free {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #065f46;
+        font-weight: bold;
+    }
+    .gdrive-warning {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #856404;
+        margin-bottom: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -280,7 +378,44 @@
                 </div>
             </div>
             
-            <!-- GDrive Auto-Folder Status -->
+            <!-- GDrive OAuth2 Accounts Panel -->
+            <div id="gdriveAccountsPanel" style="display:none;">
+                <div class="gdrive-accounts-panel">
+                    <h4>📱 Tài khoản Google Drive (OAuth2)</h4>
+                    {% if not has_oauth_config %}
+                    <div class="gdrive-warning">
+                        ⚠️ Chưa cấu hình OAuth2. Vào <strong>Cấu hình hệ thống</strong> → phần
+                        <strong>Google Drive OAuth2</strong> để nhập Client ID và Client Secret.
+                    </div>
+                    {% else %}
+                    <div id="gdriveAccountsList">
+                        {% if gdrive_accounts %}
+                        {% for account in gdrive_accounts %}
+                        <div class="gdrive-account-item" data-account-id="{{ account.id }}">
+                            <span class="gdrive-account-email">📧 {{ account.email }}</span>
+                            <div class="gdrive-storage-bar">
+                                <div class="gdrive-storage-bar-fill" style="width:{{ account.storage_percent }}%;background:{% if account.storage_percent < 70 %}#28a745{% elif account.storage_percent < 90 %}#ffc107{% else %}#dc3545{% endif %};"></div>
+                            </div>
+                            <span class="gdrive-account-info">{{ account.storage_free_display }} trống / {{ account.storage_total_display }}</span>
+                            <span class="gdrive-account-actions">
+                                <button type="button" onclick="refreshAccountStorage({{ account.id }})" title="Cập nhật dung lượng">🔄</button>
+                                <button type="button" class="delete-btn" onclick="deleteAccount({{ account.id }}, '{{ account.email }}')" title="Xóa tài khoản">🗑️</button>
+                            </span>
+                        </div>
+                        {% endfor %}
+                        <div class="gdrive-total-free">
+                            💾 Tổng trống: {{ gdrive_total_free|filesizeformat }} trên {{ gdrive_accounts|length }} tài khoản
+                        </div>
+                        {% else %}
+                        <p style="color:#666;font-size:12px;margin:4px 0;">Chưa có tài khoản nào. Thêm tài khoản Gmail để bắt đầu upload lên Google Drive.</p>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'mediastream:gdrive_oauth_authorize' %}" class="gdrive-add-btn">➕ Thêm tài khoản Gmail</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- GDrive Auto-Folder Status (Legacy SA) -->
             <div id="gdriveFolderSection" style="margin-bottom:15px;padding:10px;background:#f0f6fa;border:1px solid #79aec8;border-radius:4px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
                     <label style="font-size:12px;color:#417690;font-weight:bold;">📁 Thư mục Google Drive — tự động theo loại</label>
@@ -327,13 +462,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const storageSelect = document.getElementById('storage');
     const gdriveFolderSection = document.getElementById('gdriveFolderSection');
     const gdriveAutoFolders = document.getElementById('gdriveAutoFolders');
+    const gdriveAccountsPanel = document.getElementById('gdriveAccountsPanel');
+    const hasOAuthAccounts = {{ gdrive_accounts|length|default:"0" }} > 0;
+    const hasOAuthConfig = {{ has_oauth_config|yesno:"true,false" }};
     
     let selectedFiles = [];
     let folderMapping = {};  // {video: "id", audio: "id", podcast: "id"}
     
     /* === Storage toggle === */
     function toggleGdriveSection() {
-        gdriveFolderSection.style.display = storageSelect.value === 'gdrive' ? 'block' : 'none';
+        const isGdrive = storageSelect.value === 'gdrive';
+        if (gdriveAccountsPanel) gdriveAccountsPanel.style.display = isGdrive ? 'block' : 'none';
+        // Show legacy SA folder section only if gdrive selected AND no OAuth accounts
+        gdriveFolderSection.style.display = (isGdrive && !hasOAuthAccounts) ? 'block' : 'none';
     }
     storageSelect.addEventListener('change', toggleGdriveSection);
     toggleGdriveSection();
@@ -428,6 +569,59 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('ensureFolders').addEventListener('click', ensureFolders);
     if (storageSelect.value === 'gdrive') loadFolderMapping();
+    
+    /* === GDrive OAuth2 Account Management === */
+    window.refreshAccountStorage = function(accountId) {
+        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        var row = document.querySelector('[data-account-id="' + accountId + '"]');
+        if (row) {
+            var infoSpan = row.querySelector('.gdrive-account-info');
+            if (infoSpan) infoSpan.textContent = '⏳ Đang cập nhật...';
+        }
+        fetch('/media-stream/admin/gdrive/accounts/' + accountId + '/storage/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'X-CSRFToken': csrfToken}
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.error) {
+                if (row) row.querySelector('.gdrive-account-info').textContent = '❌ ' + d.error;
+                return;
+            }
+            // Update the bar and info
+            if (row) {
+                var bar = row.querySelector('.gdrive-storage-bar-fill');
+                var pct = d.storage_percent || 0;
+                var color = pct < 70 ? '#28a745' : pct < 90 ? '#ffc107' : '#dc3545';
+                bar.style.width = pct + '%';
+                bar.style.background = color;
+                row.querySelector('.gdrive-account-info').textContent = d.storage_free_display + ' trống / ' + d.storage_total_display;
+            }
+        })
+        .catch(function(e) {
+            if (row) row.querySelector('.gdrive-account-info').textContent = '❌ ' + e.message;
+        });
+    };
+    
+    window.deleteAccount = function(accountId, email) {
+        if (!confirm('Xóa tài khoản ' + email + '?\n\nLưu ý: Files đã upload trên Drive vẫn giữ nguyên.')) return;
+        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        fetch('/media-stream/admin/gdrive/accounts/' + accountId + '/delete/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'X-CSRFToken': csrfToken}
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.success) {
+                window.location.reload();
+            } else {
+                alert('Lỗi: ' + (d.error || 'Unknown error'));
+            }
+        })
+        .catch(function(e) { alert('Lỗi: ' + e.message); });
+    };
     
     /* === File handling === */
     uploadArea.addEventListener('click', () => fileInput.click());

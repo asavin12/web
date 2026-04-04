@@ -53,4 +53,11 @@ urlpatterns = [
     path('admin/upload/api/', views.upload_media, name='admin_upload_api'),  # API cho admin changelist và n8n
     path('admin/manage/', views.manage_page, name='admin_manage'),
     path('admin/delete/<uuid:uid>/', views.delete_media, name='admin_delete'),
+
+    # ===== GDrive OAuth2 Multi-Account =====
+    path('admin/gdrive/authorize/', views.gdrive_oauth_authorize, name='gdrive_oauth_authorize'),
+    path('admin/gdrive/callback/', views.gdrive_oauth_callback, name='gdrive_oauth_callback'),
+    path('admin/gdrive/accounts/', views.gdrive_accounts_api, name='gdrive_accounts_api'),
+    path('admin/gdrive/accounts/<int:account_id>/storage/', views.gdrive_update_storage, name='gdrive_update_storage'),
+    path('admin/gdrive/accounts/<int:account_id>/delete/', views.gdrive_delete_account, name='gdrive_delete_account'),
 ]

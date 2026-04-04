@@ -6,7 +6,7 @@ Quản lý video/audio trong Django Admin
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
-from .models import StreamMedia, MediaCategory, MediaSubtitle, MediaPlaylist, PlaylistItem
+from .models import StreamMedia, MediaCategory, MediaSubtitle, MediaPlaylist, PlaylistItem, GDriveAccount
 
 
 class MediaSubtitleInline(admin.TabularInline):
@@ -189,6 +189,13 @@ class StreamMediaAdmin(admin.ModelAdmin):
             extra_context['direct_upload_url'] = f'https://{upload_domain}/media-stream/admin/upload/api/'
             from .views import _generate_upload_token
             extra_context['upload_token'] = _generate_upload_token(request.user)
+        # GDrive OAuth2 accounts
+        gdrive_accounts = GDriveAccount.objects.filter(is_active=True).order_by('storage_used')
+        extra_context['gdrive_accounts'] = gdrive_accounts
+        extra_context['gdrive_total_free'] = sum(a.storage_free for a in gdrive_accounts)
+        extra_context['has_oauth_config'] = bool(
+            config.gdrive_oauth_client_id and config.gdrive_oauth_client_secret
+        )
         return super().changelist_view(request, extra_context=extra_context)
 
 
@@ -213,4 +220,27 @@ class MediaPlaylistAdmin(admin.ModelAdmin):
         if not obj.created_by:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(GDriveAccount)
+class GDriveAccountAdmin(admin.ModelAdmin):
+    """Admin cho GDrive OAuth2 Accounts"""
+    list_display = ['email', 'is_active', 'storage_bar', 'storage_used_display', 'storage_total_display', 'last_used']
+    list_filter = ['is_active']
+    readonly_fields = ['email', 'storage_used', 'storage_total', 'root_folder_id', 'folder_mapping', 'added_at', 'last_used', 'last_storage_check']
+
+    def storage_bar(self, obj):
+        pct = obj.storage_percent
+        color = '#28a745' if pct < 70 else '#ffc107' if pct < 90 else '#dc3545'
+        return format_html(
+            '<div style="width:120px;background:#eee;border-radius:4px;overflow:hidden;">'
+            '<div style="width:{}%;background:{};height:14px;border-radius:4px;"></div>'
+            '</div>'
+            '<small>{}% — {} trống</small>',
+            min(pct, 100), color, pct, obj.storage_free_display,
+        )
+    storage_bar.short_description = 'Dung lượng'
+
+    def has_add_permission(self, request):
+        return False  # Must add via OAuth2 flow
 

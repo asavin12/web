@@ -662,13 +662,23 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
                 'Giá trị được mã hoá Fernet trước khi lưu vào database.'
             ),
         }),
-        ('☁️ Google Drive', {
+        ('☁️ Google Drive (Legacy: Service Account)', {
             'fields': ('gdrive_service_account_json', 'gdrive_folder_mapping'),
+            'classes': ('collapse',),
             'description': (
-                'Cấu hình upload media lên Google Drive qua Service Account. '
-                'Dán nội dung JSON credentials hoặc upload file .json.<br>'
-                '<strong>Folder Mapping:</strong> Tự động tạo thư mục Video/Audio/Podcast '
-                'bên trong thư mục gốc khi upload. Không cần chỉnh sửa thủ công.'
+                '<strong>⚠️ Service Account không còn hoạt động với Gmail miễn phí.</strong><br>'
+                'Nên dùng OAuth2 Multi-Account bên dưới thay thế.<br>'
+                'Giữ lại cho trường hợp dùng Google Workspace (Shared Drive).'
+            ),
+        }),
+        ('🔐 Google Drive OAuth2 (Multi-Account Gmail)', {
+            'fields': ('gdrive_oauth_client_id', 'gdrive_oauth_client_secret'),
+            'description': (
+                'Cấu hình OAuth2 để thêm nhiều tài khoản Gmail miễn phí.<br>'
+                'Mỗi Gmail = 15GB dung lượng. Tạo OAuth2 credentials tại '
+                '<a href="https://console.cloud.google.com/apis/credentials" target="_blank">'
+                'Google Cloud Console → Credentials → OAuth 2.0 Client ID</a> (loại Web application).<br>'
+                '<strong>Redirect URI:</strong> <code>https://unstressvn.com/media-stream/admin/gdrive/callback/</code>'
             ),
         }),
         ('📊 Thông tin hệ thống', {

@@ -619,6 +619,16 @@ class SiteConfiguration(models.Model):
         help_text='Tự động quản lý: {"video": "FOLDER_ID", "audio": "FOLDER_ID", "podcast": "FOLDER_ID"}',
     )
 
+    # === Google Drive OAuth2 (Multi-account Gmail) ===
+    gdrive_oauth_client_id = models.CharField(
+        'OAuth2 Client ID', max_length=255, blank=True, default='',
+        help_text='Google Cloud Console → Credentials → OAuth 2.0 Client ID (Web application)',
+    )
+    gdrive_oauth_client_secret = EncryptedTextField(
+        'OAuth2 Client Secret', blank=True, default='',
+        help_text='🔒 Client Secret từ Google Cloud Console. Mã hoá tự động.',
+    )
+
     # === Metadata ===
     updated_at = models.DateTimeField('Cập nhật lần cuối', auto_now=True)
 

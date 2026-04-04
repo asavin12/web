@@ -631,19 +631,26 @@ def upload_media(request):
     
     # Google Drive upload setup
     use_gdrive = storage_preference == 'gdrive'
-    gdrive_service = None
+    gdrive_account = None  # OAuth2 multi-account (preferred)
+    gdrive_service = None  # Service Account (legacy fallback)
     if use_gdrive:
-        try:
-            from .gdrive_upload import _get_gdrive_config, _build_drive_service, upload_to_gdrive, get_folder_for_media_type
-            sa_dict, cfg_folder_id = _get_gdrive_config()
-            if sa_dict:
-                gdrive_service = _build_drive_service(sa_dict)
-            else:
+        # Try OAuth2 multi-account first
+        from . import gdrive_oauth
+        from .models import GDriveAccount
+        gdrive_account = gdrive_oauth.select_best_account()
+        if not gdrive_account:
+            # Fallback to Service Account
+            try:
+                from .gdrive_upload import _get_gdrive_config, _build_drive_service
+                sa_dict, cfg_folder_id = _get_gdrive_config()
+                if sa_dict:
+                    gdrive_service = _build_drive_service(sa_dict)
+                else:
+                    use_gdrive = False
+                    errors.append('Google Drive chưa cấu hình — cần thêm tài khoản Gmail hoặc Service Account')
+            except Exception as e:
                 use_gdrive = False
-                errors.append('Google Drive chưa cấu hình — upload local thay thế')
-        except Exception as e:
-            use_gdrive = False
-            errors.append(f'GDrive init error: {str(e)[:100]}')
+                errors.append(f'GDrive init error: {str(e)[:100]}')
     
     # Upload each media file
     for i, uploaded_file in enumerate(media_files):
@@ -680,17 +687,25 @@ def upload_media(request):
             )
             
             # Upload to Google Drive or save locally
-            if use_gdrive and gdrive_service:
+            if use_gdrive and (gdrive_account or gdrive_service):
                 try:
-                    from .gdrive_upload import upload_to_gdrive, get_folder_for_media_type
                     mime_type, _ = mimetypes.guess_type(uploaded_file.name)
-                    # Auto-resolve folder by media type (auto-creates if needed)
-                    type_folder_id = get_folder_for_media_type(file_media_type)
-                    result = upload_to_gdrive(
-                        uploaded_file, uploaded_file.name,
-                        mime_type=mime_type or 'video/mp4',
-                        folder_id=type_folder_id
-                    )
+                    if gdrive_account:
+                        # OAuth2 multi-account upload
+                        result = gdrive_oauth.upload_to_account(
+                            gdrive_account, uploaded_file, uploaded_file.name,
+                            mime_type=mime_type or 'video/mp4',
+                            media_type=file_media_type,
+                        )
+                    else:
+                        # Service Account legacy fallback
+                        from .gdrive_upload import upload_to_gdrive, get_folder_for_media_type
+                        type_folder_id = get_folder_for_media_type(file_media_type)
+                        result = upload_to_gdrive(
+                            uploaded_file, uploaded_file.name,
+                            mime_type=mime_type or 'video/mp4',
+                            folder_id=type_folder_id,
+                        )
                     if not result.get('success'):
                         raise Exception(result.get('error', 'GDrive upload returned failure'))
                     media.storage_type = 'gdrive'
@@ -824,3 +839,149 @@ def delete_media(request, uid):
     except StreamMedia.DoesNotExist:
         return JsonResponse({'error': 'Media not found'}, status=404)
 
+
+# ============================================================================
+# GDRIVE OAUTH2 MULTI-ACCOUNT VIEWS
+# ============================================================================
+
+@staff_member_required
+def gdrive_oauth_authorize(request):
+    """Redirect admin to Google OAuth2 consent screen."""
+    from . import gdrive_oauth
+    redirect_uri = request.build_absolute_uri('/media-stream/admin/gdrive/callback/')
+    if not request.is_secure() and not settings.DEBUG:
+        redirect_uri = redirect_uri.replace('http://', 'https://')
+    url = gdrive_oauth.get_authorize_url(redirect_uri)
+    if not url:
+        return HttpResponse(
+            '<h3>⚠️ Chưa cấu hình OAuth2</h3>'
+            '<p>Vào Django Admin → Cấu hình hệ thống → Google Drive OAuth2 → nhập Client ID và Client Secret.</p>'
+            '<p><a href="/admin/core/siteconfiguration/">→ Cấu hình hệ thống</a></p>',
+            content_type='text/html; charset=utf-8',
+        )
+    from django.shortcuts import redirect as http_redirect
+    return http_redirect(url)
+
+
+@staff_member_required
+def gdrive_oauth_callback(request):
+    """Handle OAuth2 callback from Google."""
+    from . import gdrive_oauth
+    from .models import GDriveAccount
+
+    error = request.GET.get('error')
+    if error:
+        return HttpResponse(
+            f'<h3>❌ Google từ chối: {error}</h3>'
+            '<p><a href="/admin/mediastream/streammedia/">← Quay lại</a></p>',
+            content_type='text/html; charset=utf-8',
+        )
+
+    code = request.GET.get('code')
+    if not code:
+        return HttpResponse(
+            '<h3>❌ Không nhận được authorization code</h3>',
+            content_type='text/html; charset=utf-8', status=400,
+        )
+
+    redirect_uri = request.build_absolute_uri('/media-stream/admin/gdrive/callback/')
+    if not request.is_secure() and not settings.DEBUG:
+        redirect_uri = redirect_uri.replace('http://', 'https://')
+
+    tokens, err = gdrive_oauth.exchange_code_for_tokens(code, redirect_uri)
+    if err:
+        return HttpResponse(
+            f'<h3>❌ Lỗi lấy token: {err}</h3>'
+            '<p><a href="/admin/mediastream/streammedia/">← Quay lại</a></p>',
+            content_type='text/html; charset=utf-8',
+        )
+
+    email = gdrive_oauth.get_account_email(tokens['access_token'])
+    if not email:
+        return HttpResponse(
+            '<h3>❌ Không lấy được email từ Google</h3>',
+            content_type='text/html; charset=utf-8', status=500,
+        )
+
+    account, created = GDriveAccount.objects.update_or_create(
+        email=email,
+        defaults={
+            'refresh_token': tokens['refresh_token'],
+            'is_active': True,
+        },
+    )
+
+    gdrive_oauth.update_storage_info(account)
+    gdrive_oauth.ensure_account_folders(account)
+
+    action = 'Thêm mới' if created else 'Cập nhật'
+    return HttpResponse(
+        f'<h3>✅ {action} tài khoản: {email}</h3>'
+        f'<p>Dung lượng: {account.storage_used_display} / {account.storage_total_display}</p>'
+        '<p>Đang chuyển hướng...</p>'
+        '<script>setTimeout(function(){ window.location.href="/admin/mediastream/streammedia/"; }, 2000);</script>',
+        content_type='text/html; charset=utf-8',
+    )
+
+
+@staff_member_required
+@require_http_methods(['GET'])
+def gdrive_accounts_api(request):
+    """API: List all GDrive accounts with storage info."""
+    from .models import GDriveAccount
+    accounts = GDriveAccount.objects.all().order_by('-is_active', 'storage_used')
+    data = []
+    for acc in accounts:
+        data.append({
+            'id': acc.id,
+            'email': acc.email,
+            'is_active': acc.is_active,
+            'storage_used': acc.storage_used,
+            'storage_total': acc.storage_total,
+            'storage_free': acc.storage_free,
+            'storage_percent': acc.storage_percent,
+            'storage_used_display': acc.storage_used_display,
+            'storage_total_display': acc.storage_total_display,
+            'storage_free_display': acc.storage_free_display,
+            'last_used': acc.last_used.isoformat() if acc.last_used else None,
+            'folder_mapping': acc.folder_mapping,
+        })
+    return JsonResponse({'accounts': data})
+
+
+@staff_member_required
+@require_http_methods(['POST'])
+def gdrive_update_storage(request, account_id):
+    """API: Refresh storage info for an account."""
+    from .models import GDriveAccount
+    from . import gdrive_oauth
+    try:
+        account = GDriveAccount.objects.get(id=account_id)
+        success = gdrive_oauth.update_storage_info(account)
+        if success:
+            return JsonResponse({
+                'success': True,
+                'storage_used': account.storage_used,
+                'storage_total': account.storage_total,
+                'storage_percent': account.storage_percent,
+                'storage_used_display': account.storage_used_display,
+                'storage_free_display': account.storage_free_display,
+            })
+        return JsonResponse({'success': False, 'error': 'Không thể kết nối'}, status=500)
+    except GDriveAccount.DoesNotExist:
+        return JsonResponse({'error': 'Account not found'}, status=404)
+
+
+@staff_member_required
+@csrf_exempt
+@require_http_methods(['POST'])
+def gdrive_delete_account(request, account_id):
+    """API: Delete a GDrive account."""
+    from .models import GDriveAccount
+    try:
+        account = GDriveAccount.objects.get(id=account_id)
+        email = account.email
+        account.delete()
+        return JsonResponse({'success': True, 'email': email})
+    except GDriveAccount.DoesNotExist:
+        return JsonResponse({'error': 'Account not found'}, status=404)
