@@ -698,7 +698,7 @@ export default function StreamPlayerPage() {
           <div className="flex flex-col lg:flex-row gap-6">
 
             {/* === LEFT: Video Player + Controls === */}
-            <div className="lg:w-2/3">
+            <div className={media.storage_type === 'youtube' ? 'w-full' : 'lg:w-2/3'}>
 
               {/* Video Container */}
               <div
@@ -709,9 +709,11 @@ export default function StreamPlayerPage() {
                 {media.storage_type === 'youtube' && media.youtube_embed_url ? (
                   <iframe
                     className="w-full aspect-video"
-                    src={`${media.youtube_embed_url}?autoplay=0&rel=0&modestbranding=1`}
+                    src={media.youtube_embed_url.replace('youtube.com', 'youtube-nocookie.com') + '?rel=0&modestbranding=1&origin=' + encodeURIComponent(window.location.origin)}
                     title={media.title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
                     allowFullScreen
                   />
                 ) : (
@@ -732,8 +734,8 @@ export default function StreamPlayerPage() {
                 </video>
                 )}
 
-                {/* ===== Subtitle Overlay ===== */}
-                {(activeCue1 || activeCue2) && (
+                {/* ===== Subtitle Overlay (non-YouTube only) ===== */}
+                {media.storage_type !== 'youtube' && (activeCue1 || activeCue2) && (
                   <div className="absolute bottom-16 left-0 right-0 flex flex-col items-center px-4 pointer-events-none gap-1">
                     {/* Track 2 (secondary - top, blue) */}
                     {activeCue2 && (
@@ -750,7 +752,8 @@ export default function StreamPlayerPage() {
                   </div>
                 )}
 
-                {/* Custom Controls Overlay */}
+                {/* Custom Controls Overlay (non-YouTube only) */}
+                {media.storage_type !== 'youtube' && (
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   {/* Progress Bar */}
                   <input
@@ -783,9 +786,11 @@ export default function StreamPlayerPage() {
                     </button>
                   </div>
                 </div>
+                )}
               </div>
 
-              {/* ===== Subtitle Track Controls ===== */}
+              {/* ===== Subtitle Track Controls (non-YouTube only) ===== */}
+              {media.storage_type !== 'youtube' && (
               <div className="mt-4 bg-white rounded-xl border-2 border-vintage-tan/30 p-4">
                 <h3 className="text-sm font-bold text-vintage-dark mb-3 flex items-center gap-2">
                   <FileText className="h-4 w-4 text-vintage-olive" />
@@ -828,6 +833,7 @@ export default function StreamPlayerPage() {
                   />
                 </div>
               </div>
+              )}
 
               {/* ===== Video Info ===== */}
               <div className="mt-4 bg-white rounded-xl border-2 border-vintage-tan/30 p-6">
@@ -878,7 +884,8 @@ export default function StreamPlayerPage() {
               </div>
             </div>
 
-            {/* === RIGHT: Transcript Panel === */}
+            {/* === RIGHT: Transcript Panel (non-YouTube only) === */}
+            {media.storage_type !== 'youtube' && (
             <div className="lg:w-1/3">
               <div className="bg-white rounded-xl border-2 border-vintage-tan/30 overflow-hidden sticky top-4">
                 {/* Transcript Header */}
@@ -949,6 +956,7 @@ export default function StreamPlayerPage() {
                 )}
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>
