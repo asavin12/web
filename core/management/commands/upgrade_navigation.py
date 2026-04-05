@@ -213,6 +213,7 @@ class Command(BaseCommand):
         self._fix_urls(dry_run)
         self._fix_icons(dry_run)
         self._fill_multilingual(dry_run)
+        self._merge_video_into_stream(dry_run)
         self._ensure_dropdowns(dry_run)
 
         if dry_run:
@@ -237,6 +238,66 @@ class Command(BaseCommand):
         '/video?language=en': '/stream?language=en',
         '/video?language=de': '/stream?language=de',
     }
+
+    def _merge_video_into_stream(self, dry_run):
+        """Remove old Video/Audio nav links — Stream is now the single media section."""
+        self.stdout.write('🎬 Merge Video/Audio → Stream...')
+
+        # Deactivate "Audio & Podcast" nav if exists (Stream covers audio)
+        audio_links = NavigationLink.objects.filter(
+            name__icontains='audio', location__in=['navbar', 'both'],
+            parent__isnull=True, is_active=True
+        )
+        for link in audio_links:
+            self.stdout.write(f'  Deactivate: #{link.id} "{link.name}"')
+            if not dry_run:
+                link.is_active = False
+                link.save(update_fields=['is_active'])
+                link.children.update(is_active=False)
+
+        # Find all top-level navbar links pointing to /stream
+        stream_links = list(NavigationLink.objects.filter(
+            url='/stream', location__in=['navbar', 'both'], parent__isnull=True, is_active=True
+        ).order_by('id'))
+
+        if len(stream_links) <= 1:
+            if stream_links:
+                link = stream_links[0]
+                # Rename to "Video" if still called "Stream" or "Xem phim"
+                if link.name in ('Stream', 'Xem phim'):
+                    self.stdout.write(f'  Rename: {link.name} → Video')
+                    if not dry_run:
+                        link.name = 'Video'
+                        link.name_vi = 'Video'
+                        link.name_en = 'Video'
+                        link.name_de = 'Video'
+                        link.save(update_fields=['name', 'name_vi', 'name_en', 'name_de'])
+            self.stdout.write('  → OK\n')
+            return
+
+        # Multiple links to /stream — keep the one with most children, deactivate others
+        best = max(stream_links, key=lambda l: l.children.filter(is_active=True).count())
+        deactivated = 0
+        for link in stream_links:
+            if link.id != best.id:
+                self.stdout.write(f'  Deactivate duplicate: #{link.id} "{link.name}" ({link.children.count()} children)')
+                if not dry_run:
+                    link.is_active = False
+                    link.save(update_fields=['is_active'])
+                    link.children.update(is_active=False)
+                deactivated += 1
+
+        # Rename the kept link to "Video"
+        if best.name in ('Stream', 'Xem phim'):
+            self.stdout.write(f'  Rename: {best.name} → Video')
+            if not dry_run:
+                best.name = 'Video'
+                best.name_vi = 'Video'
+                best.name_en = 'Video'
+                best.name_de = 'Video'
+                best.save(update_fields=['name', 'name_vi', 'name_en', 'name_de'])
+
+        self.stdout.write(f'  → Deactivated {deactivated} duplicates\n')
 
     def _fix_urls(self, dry_run):
         """Fix navigation URLs to match frontend routes"""

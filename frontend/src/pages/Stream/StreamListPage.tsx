@@ -204,7 +204,7 @@ export default function StreamListPage() {
   return (
     <>
       <SEO
-        title="Stream Media - UnstressVN"
+        title="Video - UnstressVN"
         description="Thư viện video và audio học ngoại ngữ với phụ đề và dịch realtime."
         keywords={['stream video', 'học tiếng Đức', 'học tiếng Anh', 'phụ đề', 'UnstressVN']}
         type="website"
@@ -220,7 +220,7 @@ export default function StreamListPage() {
                 <div className="flex items-center gap-2 md:gap-3 mb-2">
                   <Film className="h-6 w-6 md:h-8 md:w-8 text-vintage-olive" />
                   <h1 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-vintage-dark">
-                    Stream Media
+                    Video
                   </h1>
                 </div>
                 <p className="text-sm md:text-base text-vintage-dark/70 font-serif italic">
