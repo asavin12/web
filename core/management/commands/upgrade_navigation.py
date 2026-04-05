@@ -158,7 +158,7 @@ DROPDOWN_CHILDREN = {
     'stream': {
         'parent_url': '/stream',
         'children': [
-            {'name': 'Tất cả media', 'name_vi': 'Tất cả media', 'name_en': 'All Media', 'name_de': 'Alle Medien',
+            {'name': 'Tất cả video', 'name_vi': 'Tất cả video', 'name_en': 'All Videos', 'name_de': 'Alle Videos',
              'url': '/stream', 'icon': 'LayoutGrid', 'order': 0},
             {'name': 'Luyện nghe', 'name_vi': 'Luyện nghe', 'name_en': 'Listening', 'name_de': 'Hörverständnis',
              'url': '/stream?category=luyen-nghe', 'icon': 'Headphones', 'order': 1},
@@ -369,24 +369,21 @@ class Command(BaseCommand):
         self.stdout.write(f'  → Filled {filled} links\n')
 
     def _ensure_dropdowns(self, dry_run):
-        """Create dropdown children for navbar menus that should be dropdowns"""
-        self.stdout.write('📂 Ensure dropdown children...')
+        """Sync dropdown children — update existing by URL, add missing, remove stale"""
+        self.stdout.write('📂 Sync dropdown children...')
 
         for key, config in DROPDOWN_CHILDREN.items():
             parent_url = config['parent_url']
-            # Find parent by URL
             parent = NavigationLink.objects.filter(
                 url=parent_url,
                 location__in=['navbar', 'both'],
                 parent__isnull=True,
+                is_active=True,
             ).first()
 
             if not parent:
-                # Check if parent exists but URL is slightly different
-                # e.g. user might have /cong-dong or not
                 self.stdout.write(self.style.WARNING(
-                    f'  ⚠️  Không tìm thấy parent "{parent_url}" trong navbar. '
-                    f'Tạo mới...'
+                    f'  ⚠️  Parent "{parent_url}" not found. Creating...'
                 ))
                 if not dry_run:
                     name_data = KNOWN_NAMES.get(parent_url, {})
@@ -402,35 +399,70 @@ class Command(BaseCommand):
                             location__in=['navbar', 'both'], parent__isnull=True
                         ).count() + 1,
                     )
-                    self.stdout.write(f'  ✅ Tạo parent: {parent.name} ({parent_url})')
                 else:
-                    self.stdout.write(f'  [DRY] Sẽ tạo parent: {parent_url}')
                     continue
 
-            # Check if already has children
-            existing_children = parent.children.count()
-            if existing_children > 0:
-                self.stdout.write(f'  ✅ {parent.name} đã có {existing_children} mục con — skip')
-                continue
+            # Build desired URLs set
+            desired_urls = {c['url'] for c in config['children']}
+            existing_by_url = {c.url: c for c in parent.children.all()}
 
-            # Create children
-            self.stdout.write(f'  📂 Tạo children cho: {parent.name}')
+            updated = 0
+            created = 0
+
             for child_data in config['children']:
-                self.stdout.write(f'     └─ {child_data["name"]} → {child_data["url"]}')
-                if not dry_run:
-                    NavigationLink.objects.create(
-                        parent=parent,
-                        location='navbar',
-                        name=child_data['name'],
-                        name_vi=child_data.get('name_vi', child_data['name']),
-                        name_en=child_data.get('name_en', child_data['name']),
-                        name_de=child_data.get('name_de', child_data['name']),
-                        url=child_data['url'],
-                        icon=child_data.get('icon', ''),
-                        order=child_data.get('order', 0),
-                        open_in_new_tab=child_data.get('open_in_new_tab', False),
-                        is_coming_soon=child_data.get('is_coming_soon', False),
-                        badge_text=child_data.get('badge_text', ''),
-                    )
+                url = child_data['url']
+                if url in existing_by_url:
+                    # Update existing child
+                    child = existing_by_url[url]
+                    changed = False
+                    for field in ['name', 'name_vi', 'name_en', 'name_de', 'icon', 'order']:
+                        new_val = child_data.get(field, '')
+                        if field == 'order':
+                            new_val = child_data.get('order', 0)
+                        if getattr(child, field) != new_val:
+                            setattr(child, field, new_val)
+                            changed = True
+                    # Ensure active
+                    if not child.is_active:
+                        child.is_active = True
+                        changed = True
+                    if changed:
+                        self.stdout.write(f'     ✏️  Update: {child_data["name"]}')
+                        if not dry_run:
+                            child.save()
+                        updated += 1
+                else:
+                    # Create new child
+                    self.stdout.write(f'     ➕ Create: {child_data["name"]} → {url}')
+                    if not dry_run:
+                        NavigationLink.objects.create(
+                            parent=parent,
+                            location='navbar',
+                            name=child_data['name'],
+                            name_vi=child_data.get('name_vi', child_data['name']),
+                            name_en=child_data.get('name_en', child_data['name']),
+                            name_de=child_data.get('name_de', child_data['name']),
+                            url=url,
+                            icon=child_data.get('icon', ''),
+                            order=child_data.get('order', 0),
+                            open_in_new_tab=child_data.get('open_in_new_tab', False),
+                            is_coming_soon=child_data.get('is_coming_soon', False),
+                            badge_text=child_data.get('badge_text', ''),
+                        )
+                    created += 1
+
+            # Deactivate children not in desired set
+            stale = 0
+            for url, child in existing_by_url.items():
+                if url not in desired_urls and child.is_active:
+                    self.stdout.write(f'     ❌ Deactivate stale: {child.name} ({url})')
+                    if not dry_run:
+                        child.is_active = False
+                        child.save(update_fields=['is_active'])
+                    stale += 1
+
+            self.stdout.write(
+                f'  📂 {parent.name}: {updated} updated, {created} created, {stale} removed'
+            )
 
         self.stdout.write('')
