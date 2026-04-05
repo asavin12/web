@@ -154,9 +154,17 @@ export default function StreamListPage() {
     media_type: searchParams.get('type') || '',
     language: searchParams.get('language') || '',
     level: searchParams.get('level') || '',
+    category: searchParams.get('category') || '',
   });
 
   const page = parseInt(searchParams.get('page') || '1');
+
+  // Fetch categories
+  const { data: categories } = useQuery({
+    queryKey: ['stream-categories'],
+    queryFn: mediaStreamApi.getCategories,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Fetch media list
   const { data, isLoading } = useQuery({
@@ -188,11 +196,11 @@ export default function StreamListPage() {
   };
 
   const clearFilters = () => {
-    setFilters({ search: '', media_type: '', language: '', level: '' });
+    setFilters({ search: '', media_type: '', language: '', level: '', category: '' });
     setSearchParams({});
   };
 
-  const hasActiveFilters = filters.language || filters.level || filters.media_type || filters.search;
+  const hasActiveFilters = filters.language || filters.level || filters.media_type || filters.search || filters.category;
 
   return (
     <>
@@ -251,7 +259,7 @@ export default function StreamListPage() {
           {/* Filters */}
           {showFilters && (
             <div className="bg-white rounded-xl border-2 border-vintage-tan/30 p-4 md:p-6 mb-6 shadow-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {/* Search */}
                 <div>
                   <label className="text-xs font-bold text-vintage-dark/60 uppercase tracking-wide mb-1 block">
@@ -267,6 +275,21 @@ export default function StreamListPage() {
                       className="pl-9"
                     />
                   </div>
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="text-xs font-bold text-vintage-dark/60 uppercase tracking-wide mb-1 block">
+                    Danh mục
+                  </label>
+                  <Select
+                    value={filters.category || ''}
+                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                    options={[
+                      { value: '', label: 'Tất cả danh mục' },
+                      ...(categories || []).map(c => ({ value: c.slug, label: c.name })),
+                    ]}
+                  />
                 </div>
 
                 {/* Media Type */}

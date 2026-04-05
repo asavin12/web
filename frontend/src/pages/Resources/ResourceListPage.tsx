@@ -28,6 +28,7 @@ export default function ResourceListPage() {
     language: searchParams.get('language') || '',
     level: searchParams.get('level') || '',
     resource_type: searchParams.get('type') || '',
+    category: searchParams.get('category') || '',
   });
   
   const page = parseInt(searchParams.get('page') || '1');
@@ -41,11 +42,18 @@ export default function ResourceListPage() {
   // Fetch resources with page_size for 3 rows
   const { data: resources, isLoading } = useQuery({
     queryKey: ['resources', filters, page, ITEMS_PER_PAGE],
-    queryFn: () => resourcesApi.getAll({
-      ...filters,
-      page,
-      page_size: ITEMS_PER_PAGE,
-    }),
+    queryFn: () => {
+      const apiFilters: Record<string, string | number> = {
+        page,
+        page_size: ITEMS_PER_PAGE,
+      };
+      if (filters.search) apiFilters.search = filters.search;
+      if (filters.language) apiFilters.language = filters.language;
+      if (filters.level) apiFilters.level = filters.level;
+      if (filters.resource_type) apiFilters.resource_type = filters.resource_type;
+      if (filters.category) apiFilters.category__slug = filters.category;
+      return resourcesApi.getAll(apiFilters as any);
+    },
   });
 
   const handleFilterChange = (name: string, value: string) => {
@@ -72,11 +80,12 @@ export default function ResourceListPage() {
       language: '',
       level: '',
       resource_type: '',
+      category: '',
     });
     setSearchParams({});
   };
 
-  const hasActiveFilters = filters.search || filters.language || filters.level || filters.resource_type;
+  const hasActiveFilters = filters.search || filters.language || filters.level || filters.resource_type || filters.category;
 
   const languageOptions = choices?.languages || [];
 

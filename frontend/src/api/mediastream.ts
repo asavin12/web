@@ -108,7 +108,7 @@ export const mediaStreamApi = {
     if (filters.media_type) params.append('media_type', filters.media_type);
     if (filters.language) params.append('language', filters.language);
     if (filters.level) params.append('level', filters.level);
-    if (filters.category) params.append('category', filters.category);
+    if (filters.category) params.append('category__slug', filters.category);
     if (filters.search) params.append('search', filters.search);
     if (filters.page) params.append('page', String(filters.page));
     if (filters.page_size) params.append('page_size', String(filters.page_size));

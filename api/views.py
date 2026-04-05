@@ -231,7 +231,7 @@ class ResourceViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
     pagination_class = FlexiblePageNumberPagination
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['category', 'resource_type', 'is_featured']
+    filterset_fields = ['category', 'category__slug', 'resource_type', 'is_featured']
     search_fields = ['title', 'description', 'author']
     ordering_fields = ['created_at', 'download_count', 'view_count', 'title']
     lookup_field = 'slug'  # Use slug instead of pk for detail views
