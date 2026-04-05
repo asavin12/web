@@ -204,6 +204,9 @@ class StreamMediaAdmin(admin.ModelAdmin):
         extra_context['has_oauth_config'] = bool(
             config.gdrive_oauth_client_id and config.gdrive_oauth_client_secret
         )
+        # News categories for auto-publish
+        from news.models import Category as NewsCategory
+        extra_context['news_categories'] = NewsCategory.objects.filter(is_active=True).order_by('order', 'name')
         return super().changelist_view(request, extra_context=extra_context)
 
 

@@ -560,6 +560,84 @@ def list_categories(request):
 
 
 # ============================================================================
+# AUTO-PUBLISH: Create Article from uploaded media
+# ============================================================================
+
+def _auto_publish_article(media, upload_user, publish_category_id=None):
+    """
+    Create a news Article linked to the uploaded StreamMedia.
+    Returns the article or None on failure.
+    """
+    from news.models import Article, Category as NewsCategory
+    from django.utils import timezone
+    
+    try:
+        # Resolve category
+        category = None
+        if publish_category_id:
+            try:
+                category = NewsCategory.objects.get(id=int(publish_category_id), is_active=True)
+            except (NewsCategory.DoesNotExist, ValueError):
+                pass
+        
+        # If no category specified, find or create "Video" category
+        if not category:
+            category, _created = NewsCategory.objects.get_or_create(
+                slug='video',
+                defaults={'name': 'Video', 'icon': 'FaVideo', 'order': 20}
+            )
+        
+        # Build content HTML with embedded player + subtitles
+        stream_url = media.get_stream_url()
+        if media.media_type == 'video':
+            player_html = (
+                f'<div class="video-player-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;border-radius:8px;">\n'
+                f'  <video controls style="position:absolute;top:0;left:0;width:100%;height:100%;" preload="metadata"'
+            )
+            # Add subtitle tracks
+            subtitles = list(media.subtitles.all())
+            if subtitles:
+                player_html += '>\n'
+                for sub in subtitles:
+                    default_attr = ' default' if sub.is_default else ''
+                    player_html += f'    <track kind="subtitles" src="{sub.file.url}" srclang="{sub.language}" label="{sub.label}"{default_attr}>\n'
+                player_html += f'    <source src="{stream_url}" type="{media.mime_type or "video/mp4"}">\n'
+                player_html += '  </video>\n</div>'
+            else:
+                player_html += f' src="{stream_url}">\n  </video>\n</div>'
+        else:
+            player_html = f'<audio controls src="{stream_url}" style="width:100%;" preload="metadata"></audio>'
+        
+        description = media.description or ''
+        content_parts = [player_html]
+        if description:
+            content_parts.append(f'<p>{description}</p>')
+        content = '\n\n'.join(content_parts)
+        
+        # Create article
+        article = Article(
+            title=media.title,
+            excerpt=description[:500] if description else f'{media.get_media_type_display()} — {media.title}',
+            content=content,
+            category=category,
+            author=upload_user,
+            is_published=True,
+            published_at=timezone.now(),
+            tags=media.tags or '',
+        )
+        # Copy thumbnail if available
+        if media.thumbnail:
+            article.cover_image = media.thumbnail
+        article.save()
+        
+        logger.info('Auto-published article "%s" (id=%s) for media uid=%s', article.title, article.pk, media.uid)
+        return article
+    except Exception as e:
+        logger.error('Auto-publish failed for media uid=%s: %s', media.uid, e, exc_info=True)
+        return None
+
+
+# ============================================================================
 # ADMIN UPLOAD VIEWS
 # ============================================================================
 
@@ -601,6 +679,8 @@ def upload_media(request):
     category_id = request.POST.get('category')
     is_public = request.POST.get('is_public', 'true') == 'true'
     storage_preference = request.POST.get('storage', 'gdrive')
+    auto_publish = request.POST.get('auto_publish', 'false') == 'true'
+    publish_category_id = request.POST.get('publish_category', '').strip()
     
     # Validate extensions
     allowed_video = ['.mp4', '.webm', '.ogg', '.mov', '.flv', '.avi', '.m4v']
@@ -753,7 +833,17 @@ def upload_media(request):
                     {'language': s.language, 'label': s.label, 'url': s.file.url if s.file else ''}
                     for s in media.subtitles.all()
                 ],
+                'article_url': None,
             })
+            
+            # Auto-publish article if requested
+            if auto_publish:
+                article = _auto_publish_article(media, upload_user, publish_category_id)
+                if article:
+                    uploaded_media[-1]['article_url'] = article.get_absolute_url()
+                    uploaded_media[-1]['article_id'] = article.pk
+                else:
+                    errors.append(f'Auto-publish failed for {media.title}')
             
         except Exception as e:
             errors.append(f'{uploaded_file.name}: {str(e)}')

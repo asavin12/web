@@ -398,6 +398,24 @@
                 </div>
             </div>
             
+            <!-- Auto-publish Article -->
+            <div style="margin-bottom:15px;padding:10px;background:#f0f6fa;border:1px solid #79aec8;border-radius:4px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:bold;color:#417690;">
+                    <input type="checkbox" id="autoPublish" name="auto_publish" value="true">
+                    📰 Tự động đăng bài viết sau khi upload
+                </label>
+                <div id="publishOptions" style="display:none;margin-top:8px;">
+                    <label style="font-size:11px;color:#666;">Danh mục bài viết:</label>
+                    <select name="publish_category" id="publishCategory" style="width:100%;padding:6px 8px;border:1px solid #ccc;font-size:13px;margin-top:3px;">
+                        <option value="">📁 Video (mặc định)</option>
+                        {% for cat in news_categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p style="font-size:11px;color:#888;margin:4px 0 0;">Bài viết sẽ tự động tạo với video player nhúng và được xuất bản ngay.</p>
+                </div>
+            </div>
+            
             <!-- GDrive OAuth2 Accounts Panel -->
             <div id="gdriveAccountsPanel" style="display:none;">
                 <div class="gdrive-accounts-panel">
@@ -477,8 +495,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const mediaTypeSelect = document.getElementById('mediaType');
     const gdriveAccountSelect = document.getElementById('gdriveAccountSelect');
     const gdriveAccountsPanel = document.getElementById('gdriveAccountsPanel');
+    const autoPublishCheckbox = document.getElementById('autoPublish');
+    const publishOptions = document.getElementById('publishOptions');
     
     let selectedFiles = [];
+    
+    /* === Auto-publish toggle === */
+    autoPublishCheckbox.addEventListener('change', function() {
+        publishOptions.style.display = this.checked ? 'block' : 'none';
+    });
     
     /* === Storage toggle === */
     function toggleGdriveSection() {
@@ -645,6 +670,11 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('gdrive_account_id', accountVal);
         }
         
+        if (autoPublishCheckbox.checked) {
+            formData.append('auto_publish', 'true');
+            formData.append('publish_category', document.getElementById('publishCategory').value);
+        }
+        
         selectedFiles.forEach(file => formData.append('files', file));
         
         const xhr = new XMLHttpRequest();
@@ -706,6 +736,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                     if (idx > 0) html += ', ';
                                     html += '<a href="' + s.url + '" target="_blank">' + s.label + ' (' + s.language + ')</a>';
                                 });
+                            }
+                            if (m.article_url) {
+                                html += '<br>📰 Bài viết: <a href="' + m.article_url + '" target="_blank">Xem bài viết</a>';
+                                if (m.article_id) {
+                                    html += ' | <a href="/admin/news/article/' + m.article_id + '/change/" target="_blank">Chỉnh sửa</a>';
+                                }
                             }
                             html += '</div>';
                         });
