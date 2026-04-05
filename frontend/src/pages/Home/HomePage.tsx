@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { resourcesApi, knowledgeApi, newsApi, utilsApi } from '@/api';
-import type { Resource, Video } from '@/types';
+import { resourcesApi, knowledgeApi, newsApi } from '@/api';
+import { mediaStreamApi, type StreamMedia } from '@/api/mediastream';
+import type { Resource } from '@/types';
 import type { KnowledgeArticle } from '@/api/knowledge';
 import type { NewsArticle } from '@/api/news';
-import { ArrowRight, BookOpen, Video as VideoIcon, Play, Eye, FileText, Users, GraduationCap, Clock, Flame, Star, History, Newspaper } from 'lucide-react';
-import { VideoCard, BookCard, SEO } from '@/components/common';
+import { ArrowRight, BookOpen, Video as VideoIcon, Play, Eye, FileText, Users, GraduationCap, Clock, Flame, Star, History, Newspaper, Music } from 'lucide-react';
+import { BookCard, SEO, StreamMediaCard } from '@/components/common';
 
 // Unified article type for homepage
 interface UnifiedHomeArticle {
@@ -113,14 +114,21 @@ export default function HomePage() {
     queryFn: () => resourcesApi.getAll({ page: 1 }),
   });
 
-  // Fetch videos
+  // Fetch latest videos from Stream
   const { data: videosData, isLoading: loadingVideos } = useQuery({
-    queryKey: ['videos'],
-    queryFn: () => utilsApi.getVideos({ is_featured: true, page_size: 4 }),
+    queryKey: ['stream-videos-home'],
+    queryFn: () => mediaStreamApi.getAll({ media_type: 'video', page_size: 8 }),
+  });
+
+  // Fetch latest audio/podcast from Stream
+  const { data: audioData, isLoading: loadingAudio } = useQuery({
+    queryKey: ['stream-audio-home'],
+    queryFn: () => mediaStreamApi.getAll({ media_type: 'audio', page_size: 4 }),
   });
 
   const resources = resourcesData?.results || resourcesData || [];
   const videos = videosData?.results || [];
+  const audios = audioData?.results || [];
 
   return (
     <>
@@ -374,27 +382,63 @@ export default function HomePage() {
                 <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-6 md:mb-10">
                   <div className="mb-4 sm:mb-0">
                     <span className="text-[10px] md:text-xs font-bold text-vintage-blue uppercase tracking-widest mb-1 block">
-                      {t('home.videos.badge', 'Media Archive')}
+                      {t('home.videos.badge', 'Video mới nhất')}
                     </span>
                     <h2 id="videos-heading" className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-vintage-dark flex items-center gap-2 md:gap-3">
                       <VideoIcon className="h-6 w-6 md:h-8 md:w-8 text-vintage-blue" />
-                      {t('home.videos.title', 'Curated Video Lessons')}
+                      {t('home.videos.title', 'Video mới nhất')}
                     </h2>
                   </div>
                   <Link to="/stream" className="hidden sm:flex text-sm font-bold text-vintage-blue hover:text-vintage-brown items-center gap-2 transition-colors uppercase tracking-wide">
-                    {t('home.videos.viewAll', 'Watch All')} <ArrowRight className="h-4 w-4" />
+                    {t('home.videos.viewAll', 'Xem tất cả')} <ArrowRight className="h-4 w-4" />
                   </Link>
                 </header>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
-                  {videos.slice(0, 8).map((video: Video) => (
-                    <VideoCard key={video.id} video={video} />
+                  {videos.slice(0, 8).map((media: StreamMedia) => (
+                    <StreamMediaCard key={media.uid} media={media} />
                   ))}
                 </div>
                 
                 <div className="mt-6 text-center sm:hidden">
                   <Link to="/stream" className="touch-target inline-flex items-center gap-2 text-sm font-bold text-vintage-blue uppercase">
-                    {t('home.videos.viewAll', 'Watch All Videos')} <ArrowRight className="h-4 w-4" />
+                    {t('home.videos.viewAll', 'Xem tất cả video')} <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* AUDIO & PODCAST SECTION */}
+          {Array.isArray(audios) && audios.length > 0 && (
+            <section aria-labelledby="audio-heading" className="relative">
+              <div className="hidden md:block absolute inset-0 bg-vintage-olive/5 -mx-4 lg:-mx-8 rounded-2xl lg:rounded-[3rem] -z-10 transform skew-y-1 border border-vintage-olive/10" />
+              
+              <div className="py-6 md:py-12">
+                <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-6 md:mb-10">
+                  <div className="mb-4 sm:mb-0">
+                    <span className="text-[10px] md:text-xs font-bold text-vintage-olive uppercase tracking-widest mb-1 block">
+                      {t('home.audio.badge', 'Audio & Podcast')}
+                    </span>
+                    <h2 id="audio-heading" className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-vintage-dark flex items-center gap-2 md:gap-3">
+                      <Music className="h-6 w-6 md:h-8 md:w-8 text-vintage-olive" />
+                      {t('home.audio.title', 'Audio & Podcast mới nhất')}
+                    </h2>
+                  </div>
+                  <Link to="/stream" className="hidden sm:flex text-sm font-bold text-vintage-olive hover:text-vintage-brown items-center gap-2 transition-colors uppercase tracking-wide">
+                    {t('home.audio.viewAll', 'Xem tất cả')} <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </header>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+                  {audios.slice(0, 4).map((media: StreamMedia) => (
+                    <StreamMediaCard key={media.uid} media={media} />
+                  ))}
+                </div>
+                
+                <div className="mt-6 text-center sm:hidden">
+                  <Link to="/stream" className="touch-target inline-flex items-center gap-2 text-sm font-bold text-vintage-olive uppercase">
+                    {t('home.audio.viewAll', 'Xem tất cả audio')} <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>
