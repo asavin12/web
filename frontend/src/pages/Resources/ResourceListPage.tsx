@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { resourcesApi, utilsApi } from '@/api';
 import type { Resource } from '@/types';
+import type { ResourceCategory } from '@/api/resources';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -20,6 +21,7 @@ const ITEMS_PER_PAGE = 18;
 export default function ResourceListPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   
@@ -38,6 +40,18 @@ export default function ResourceListPage() {
     queryKey: ['choices'],
     queryFn: utilsApi.getChoices,
   });
+
+  // Fetch categories
+  const { data: resourceCategories = [] } = useQuery({
+    queryKey: ['resource-categories'],
+    queryFn: resourcesApi.getCategories,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Current category info
+  const currentCategory = filters.category
+    ? resourceCategories.find((c: ResourceCategory) => c.slug === filters.category)
+    : null;
 
   // Fetch resources with page_size for 3 rows
   const { data: resources, isLoading } = useQuery({
@@ -106,12 +120,16 @@ export default function ResourceListPage() {
     { value: 'other', label: t('resources.types.other', 'Other') },
   ];
 
+  const pageTitle = currentCategory ? currentCategory.name : t('resources.title', 'Thư viện tài liệu');
+
   return (
     <>
       {/* SEO */}
       <SEO 
-        title={t('resources.seo.title', 'Thư viện tài liệu - UnstressVN')}
-        description={t('resources.seo.description', 'Duyệt qua thư viện tài liệu học ngôn ngữ phong phú bao gồm sách, audio, video và bài viết cho mọi trình độ.')}
+        title={`${pageTitle} - UnstressVN`}
+        description={currentCategory
+          ? `${currentCategory.name} - Tài liệu học ngoại ngữ`
+          : t('resources.seo.description', 'Duyệt qua thư viện tài liệu học ngôn ngữ phong phú bao gồm sách, audio, video và bài viết cho mọi trình độ.')}
         keywords={['tài liệu học ngoại ngữ', 'sách học tiếng Đức', 'video học tiếng Anh', 'tài liệu miễn phí', 'UnstressVN']}
         type="website"
       />
@@ -125,11 +143,18 @@ export default function ResourceListPage() {
               <div className="flex items-center gap-2 md:gap-3 mb-2">
                 <BookOpen className="h-6 w-6 md:h-8 md:w-8 text-vintage-olive" />
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-vintage-dark">
-                  {t('resources.title', 'Thư viện tài liệu')}
+                  {pageTitle}
                 </h1>
+                {currentCategory && (
+                  <Link to="/tai-lieu" className="text-sm text-vintage-tan hover:text-vintage-olive ml-2">
+                    ← Tất cả tài liệu
+                  </Link>
+                )}
               </div>
               <p className="text-sm md:text-base text-vintage-dark/70 font-serif italic">
-                {t('resources.subtitle', 'Tài liệu học tập cho mọi trình độ')}
+                {currentCategory
+                  ? `${currentCategory.name} - Tài liệu học tập`
+                  : t('resources.subtitle', 'Tài liệu học tập cho mọi trình độ')}
               </p>
             </div>
             
@@ -172,7 +197,7 @@ export default function ResourceListPage() {
         <div className={`${showFilters ? 'block' : 'hidden'} md:block mb-6 md:mb-8`}>
           <Card>
             <CardContent className="p-4 md:pt-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4">
                 {/* Search */}
                 <div className="sm:col-span-2 lg:col-span-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-vintage-tan" />
@@ -184,6 +209,14 @@ export default function ResourceListPage() {
                   />
                 </div>
                 
+                <Select
+                  value={filters.category}
+                  onChange={(e) => handleFilterChange('category', e.target.value)}
+                  options={[
+                    { value: '', label: 'Tất cả danh mục' },
+                    ...resourceCategories.map((c: ResourceCategory) => ({ value: c.slug, label: c.name })),
+                  ]}
+                />
                 <Select
                   value={filters.language}
                   onChange={(e) => handleFilterChange('language', e.target.value)}

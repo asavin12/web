@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, useParams } from 'react-router-dom';
 import { MainLayout } from '@/layouts';
 import { LoadingPage } from '@/components/ui/Spinner';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -63,6 +63,16 @@ function ToolsDetailWrapper() {
   return <LazyPage><ArticleDetailPage contentType="tools" /></LazyPage>;
 }
 
+// Discriminator: UUID → player, else → category filter list
+function StreamParamWrapper() {
+  const { param } = useParams<{ param: string }>();
+  const isUuid = param ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param) : false;
+  if (isUuid) {
+    return <LazyPage><StreamPlayerPage /></LazyPage>;
+  }
+  return <LazyPage><StreamListPage /></LazyPage>;
+}
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -108,8 +118,8 @@ const router = createBrowserRouter([
         element: <LazyPage><StreamListPage /></LazyPage>,
       },
       {
-        path: 'stream/:uid',
-        element: <LazyPage><StreamPlayerPage /></LazyPage>,
+        path: 'stream/:param',
+        element: <StreamParamWrapper />,
       },
       
       // News (using unified ArticlesPage)

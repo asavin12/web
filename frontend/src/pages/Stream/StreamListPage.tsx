@@ -7,8 +7,8 @@
  * - Tìm kiếm
  * - Phân trang
  */
-import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mediaStreamApi, type StreamMedia, type StreamMediaFilters } from '@/api/mediastream';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -146,15 +146,26 @@ function StreamMediaCard({ media }: { media: StreamMedia }) {
 
 export default function StreamListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { param: categorySlug } = useParams<{ param?: string }>();
+  const navigate = useNavigate();
   const [showFilters, setShowFilters] = useState(false);
+
+  // Category from URL path takes priority over query param
+  const categoryFromUrl = categorySlug || searchParams.get('category') || '';
 
   const [filters, setFilters] = useState<StreamMediaFilters>({
     search: searchParams.get('q') || '',
     media_type: searchParams.get('type') || '',
     language: searchParams.get('language') || '',
     level: searchParams.get('level') || '',
-    category: searchParams.get('category') || '',
+    category: categoryFromUrl,
   });
+
+  // Sync category when URL path changes
+  useEffect(() => {
+    const cat = categorySlug || searchParams.get('category') || '';
+    setFilters(prev => ({ ...prev, category: cat }));
+  }, [categorySlug, searchParams]);
 
   const page = parseInt(searchParams.get('page') || '1');
 
@@ -176,6 +187,15 @@ export default function StreamListPage() {
   const totalPages = Math.ceil(totalCount / 12);
 
   const handleFilterChange = (name: string, value: string) => {
+    if (name === 'category') {
+      // Navigate to path-based category URL
+      if (value) {
+        navigate(`/stream/${value}`);
+      } else {
+        navigate('/stream');
+      }
+      return;
+    }
     setFilters(prev => ({ ...prev, [name]: value }));
     const newParams = new URLSearchParams(searchParams);
     const paramName = name === 'search' ? 'q' : name === 'media_type' ? 'type' : name;
@@ -196,16 +216,24 @@ export default function StreamListPage() {
 
   const clearFilters = () => {
     setFilters({ search: '', media_type: '', language: '', level: '', category: '' });
-    setSearchParams({});
+    navigate('/stream');
   };
 
   const hasActiveFilters = filters.language || filters.level || filters.media_type || filters.search || filters.category;
 
+  // Current category info
+  const currentCategory = filters.category
+    ? (categories || []).find(c => c.slug === filters.category)
+    : null;
+  const pageTitle = currentCategory ? currentCategory.name : 'Video';
+
   return (
     <>
       <SEO
-        title="Video - UnstressVN"
-        description="Thư viện video và audio học ngoại ngữ với phụ đề và dịch realtime."
+        title={`${pageTitle} - UnstressVN`}
+        description={currentCategory
+          ? `${currentCategory.name} - Thư viện video và audio học ngoại ngữ`
+          : 'Thư viện video và audio học ngoại ngữ với phụ đề và dịch realtime.'}
         keywords={['stream video', 'học tiếng Đức', 'học tiếng Anh', 'phụ đề', 'UnstressVN']}
         type="website"
       />
@@ -220,11 +248,18 @@ export default function StreamListPage() {
                 <div className="flex items-center gap-2 md:gap-3 mb-2">
                   <Film className="h-6 w-6 md:h-8 md:w-8 text-vintage-olive" />
                   <h1 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-vintage-dark">
-                    Video
+                    {pageTitle}
                   </h1>
+                  {currentCategory && (
+                    <Link to="/stream" className="text-sm text-vintage-tan hover:text-vintage-olive ml-2">
+                      ← Tất cả video
+                    </Link>
+                  )}
                 </div>
                 <p className="text-sm md:text-base text-vintage-dark/70 font-serif italic">
-                  Video và audio học ngoại ngữ với phụ đề song ngữ
+                  {currentCategory
+                    ? (currentCategory.description || `${currentCategory.name} - Video và audio học ngoại ngữ`)
+                    : 'Video và audio học ngoại ngữ với phụ đề song ngữ'}
                 </p>
               </div>
 

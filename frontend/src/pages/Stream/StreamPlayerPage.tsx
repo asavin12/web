@@ -362,7 +362,7 @@ function SubtitleTrackControl({
 // ============================================================================
 
 export default function StreamPlayerPage() {
-  const { uid } = useParams<{ uid: string }>();
+  const { param: uid } = useParams<{ param: string }>();
   const navigate = useNavigate();
 
   // Video ref

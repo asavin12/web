@@ -11,6 +11,8 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.db import models
+from django.db.models import Count
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 
@@ -262,6 +264,18 @@ class ResourceViewSet(viewsets.ReadOnlyModelViewSet):
             'file_url': serializer.data.get('file_url'),
             'download_count': resource.download_count
         })
+
+    @action(detail=False, methods=['get'])
+    def categories(self, request):
+        """GET /api/resources/categories/ - Danh sách danh mục tài liệu"""
+        cats = Category.objects.annotate(
+            resource_count=Count('resources', filter=models.Q(resources__is_active=True))
+        ).order_by('name')
+        data = [
+            {'id': c.id, 'name': c.name, 'slug': c.slug, 'resource_count': c.resource_count}
+            for c in cats
+        ]
+        return Response(data)
 
 
 # ============ UserProfile - CHỈ CHO CHÍNH MÌNH ============

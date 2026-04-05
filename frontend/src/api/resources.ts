@@ -1,6 +1,13 @@
 import api from './client';
 import type { Resource, PaginatedResponse } from '@/types';
 
+export interface ResourceCategory {
+  id: number;
+  name: string;
+  slug: string;
+  resource_count: number;
+}
+
 export interface ResourceFilters {
   category?: string;
   language?: string;
@@ -29,6 +36,11 @@ export const resourcesApi = {
 
   download: async (slug: string): Promise<void> => {
     const response = await api.post(`/resources/${slug}/download/`);
+    return response.data;
+  },
+
+  getCategories: async (): Promise<ResourceCategory[]> => {
+    const response = await api.get<ResourceCategory[]>('/resources/categories/');
     return response.data;
   },
 };
