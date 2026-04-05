@@ -36,15 +36,16 @@ class StreamMediaSerializer(serializers.ModelSerializer):
     subtitles = MediaSubtitleSerializer(many=True, read_only=True)
     thumbnail_url = serializers.SerializerMethodField()
     duration_formatted = serializers.SerializerMethodField()
+    youtube_embed_url = serializers.SerializerMethodField()
     
     class Meta:
         model = StreamMedia
         fields = [
             'id', 'uid', 'title', 'slug', 'description',
-            'media_type', 'language', 'level',
+            'media_type', 'storage_type', 'language', 'level',
             'category', 'category_name',
             'thumbnail_url', 'duration', 'duration_formatted',
-            'stream_url', 'subtitles',
+            'stream_url', 'youtube_embed_url', 'subtitles',
             'view_count', 'created_at'
         ]
     
@@ -54,6 +55,14 @@ class StreamMediaSerializer(serializers.ModelSerializer):
     def get_thumbnail_url(self, obj):
         if obj.thumbnail:
             return obj.thumbnail.url
+        # Auto YouTube thumbnail
+        if obj.youtube_id:
+            return f"https://img.youtube.com/vi/{obj.youtube_id}/hqdefault.jpg"
+        return None
+    
+    def get_youtube_embed_url(self, obj):
+        if obj.youtube_id:
+            return f"https://www.youtube.com/embed/{obj.youtube_id}"
         return None
     
     def get_duration_formatted(self, obj):
@@ -73,7 +82,7 @@ class StreamMediaDetailSerializer(StreamMediaSerializer):
     class Meta(StreamMediaSerializer.Meta):
         fields = StreamMediaSerializer.Meta.fields + [
             'embed_code', 'tags', 'transcript', 'mime_type',
-            'file_size', 'width', 'height'
+            'file_size', 'width', 'height', 'youtube_id'
         ]
     
     def get_embed_code(self, obj):

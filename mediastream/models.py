@@ -76,6 +76,7 @@ class StreamMedia(models.Model):
     STORAGE_TYPE_CHOICES = [
         ('local', 'Local Storage'),
         ('gdrive', 'Google Drive'),
+        ('youtube', 'YouTube'),
     ]
     
     LANGUAGE_CHOICES = [
@@ -132,6 +133,13 @@ class StreamMedia(models.Model):
         max_length=500, blank=True, default='',
         verbose_name='Google Drive URL',
         help_text='URL chia sẻ Google Drive (tự động trích xuất File ID)'
+    )
+    
+    # YouTube
+    youtube_id = models.CharField(
+        max_length=100, blank=True, default='',
+        verbose_name='YouTube Video ID',
+        help_text='YouTube video ID hoặc URL (tự động trích xuất ID và thumbnail)'
     )
     
     # File metadata
@@ -226,11 +234,20 @@ class StreamMedia(models.Model):
         if self.gdrive_url and not self.gdrive_file_id:
             self.gdrive_file_id = self._extract_gdrive_id(self.gdrive_url)
         
+        # Auto-extract YouTube ID from URL
+        if self.youtube_id:
+            self.youtube_id = self._extract_youtube_id(self.youtube_id)
+            self.storage_type = 'youtube'
+            self.media_type = 'video'
+            if not self.mime_type:
+                self.mime_type = 'video/youtube'
+        
         # Auto-set storage_type
-        if self.gdrive_file_id and not self.file:
-            self.storage_type = 'gdrive'
-        elif self.file and not self.gdrive_file_id:
-            self.storage_type = 'local'
+        if self.storage_type != 'youtube':
+            if self.gdrive_file_id and not self.file:
+                self.storage_type = 'gdrive'
+            elif self.file and not self.gdrive_file_id:
+                self.storage_type = 'local'
         
         # Auto-detect mime type
         if self.file and not self.mime_type:
@@ -269,6 +286,44 @@ class StreamMedia(models.Model):
             if match:
                 return match.group(1)
         return ''
+    
+    @staticmethod
+    def _extract_youtube_id(url_or_id):
+        """Extract YouTube video ID from URL or return as-is if already an ID"""
+        import re
+        if not url_or_id:
+            return ''
+        url_or_id = url_or_id.strip()
+        patterns = [
+            r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/|youtube\.com/v/)([a-zA-Z0-9_-]{11})',
+            r'^([a-zA-Z0-9_-]{11})$',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, url_or_id)
+            if match:
+                return match.group(1)
+        return url_or_id
+    
+    @property
+    def youtube_url(self):
+        """Full YouTube watch URL"""
+        if self.youtube_id:
+            return f"https://www.youtube.com/watch?v={self.youtube_id}"
+        return None
+    
+    @property
+    def youtube_embed_url(self):
+        """YouTube embed URL"""
+        if self.youtube_id:
+            return f"https://www.youtube.com/embed/{self.youtube_id}"
+        return None
+    
+    @property
+    def youtube_thumbnail_url(self):
+        """YouTube auto-thumbnail URL"""
+        if self.youtube_id:
+            return f"https://img.youtube.com/vi/{self.youtube_id}/hqdefault.jpg"
+        return None
     
     def get_stream_url(self):
         """Get secure stream URL"""

@@ -97,11 +97,13 @@ function StreamMediaCard({ media }: { media: StreamMedia }) {
           {/* Media type badge */}
           <div className="absolute top-2 left-2">
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-              isVideo
-                ? 'bg-vintage-olive/90 text-white'
-                : 'bg-vintage-blue/90 text-white'
+              media.storage_type === 'youtube'
+                ? 'bg-red-600/90 text-white'
+                : isVideo
+                  ? 'bg-vintage-olive/90 text-white'
+                  : 'bg-vintage-blue/90 text-white'
             }`}>
-              {isVideo ? 'VIDEO' : 'AUDIO'}
+              {media.storage_type === 'youtube' ? 'YOUTUBE' : isVideo ? 'VIDEO' : 'AUDIO'}
             </span>
           </div>
         </div>

@@ -154,11 +154,16 @@ for name, slug, desc, icon, order in [
     ('Podcast', 'podcast', 'Podcast học ngoại ngữ đa dạng chủ đề', 'mic', 4),
     ('Bài giảng', 'bai-giang', 'Bài giảng, hướng dẫn ngữ pháp và từ vựng', 'book-open', 5),
     ('Thư giãn', 'thu-gian', 'Nội dung thư giãn, giải trí', 'coffee', 6),
+    ('YouTube', 'youtube', 'Video YouTube nhúng', 'youtube', 10),
 ]:
     obj, c = MediaCategory.objects.get_or_create(slug=slug, defaults={'name': name, 'description': desc, 'icon': icon, 'order': order})
     if c: print(f'  Created: {name}')
 print('Media categories OK')
 " 2>&1 || echo "Media categories setup skipped"
+
+# Migrate YouTube videos from core.Video to StreamMedia
+echo "Migrating YouTube videos to Stream..."
+python manage.py migrate_videos_to_stream 2>&1 || echo "Video migration skipped"
 
 # Cleanup duplicate resources (from sample data scripts run multiple times)
 echo "Cleaning up duplicate records..."

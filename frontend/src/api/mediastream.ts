@@ -32,6 +32,7 @@ export interface StreamMedia {
   slug: string;
   description: string;
   media_type: 'video' | 'audio';
+  storage_type: 'local' | 'gdrive' | 'youtube';
   language: string;
   level: string;
   category: number | null;
@@ -40,6 +41,7 @@ export interface StreamMedia {
   duration: number | null;
   duration_formatted: string | null;
   stream_url: string;
+  youtube_embed_url: string | null;
   subtitles: MediaSubtitle[];
   view_count: number;
   created_at: string;
@@ -51,6 +53,7 @@ export interface StreamMedia {
   file_size?: number;
   width?: number;
   height?: number;
+  youtube_id?: string;
 }
 
 export interface MediaCategory {

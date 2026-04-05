@@ -47,7 +47,7 @@ class StreamMediaViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'uid'
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['media_type', 'language', 'level', 'category__slug']
+    filterset_fields = ['media_type', 'storage_type', 'language', 'level', 'category__slug']
     search_fields = ['title', 'description', 'tags']
     ordering_fields = ['created_at', 'view_count', 'title', 'duration']
     ordering = ['-created_at']

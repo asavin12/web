@@ -82,7 +82,7 @@ KNOWN_NAMES = {
     '/kien-thuc': {'vi': 'Kiến thức', 'en': 'Knowledge', 'de': 'Wissen'},
     '/cong-cu': {'vi': 'Công cụ', 'en': 'Tools', 'de': 'Werkzeuge'},
     '/cong-dong': {'vi': 'Cộng đồng', 'en': 'Community', 'de': 'Gemeinschaft'},
-    '/stream': {'vi': 'Stream', 'en': 'Stream', 'de': 'Stream'},
+    '/stream': {'vi': 'Video', 'en': 'Video', 'de': 'Video'},
     '/about': {'vi': 'Giới thiệu', 'en': 'About', 'de': 'Über uns'},
     '/gioi-thieu': {'vi': 'Giới thiệu', 'en': 'About', 'de': 'Über uns'},
     '/contact': {'vi': 'Liên hệ', 'en': 'Contact', 'de': 'Kontakt'},
@@ -172,6 +172,8 @@ DROPDOWN_CHILDREN = {
              'url': '/stream?category=bai-giang', 'icon': 'BookOpen', 'order': 5},
             {'name': 'Thư giãn', 'name_vi': 'Thư giãn', 'name_en': 'Relaxation', 'name_de': 'Entspannung',
              'url': '/stream?category=thu-gian', 'icon': 'Coffee', 'order': 6},
+            {'name': 'YouTube', 'name_vi': 'YouTube', 'name_en': 'YouTube', 'name_de': 'YouTube',
+             'url': '/stream?category=youtube', 'icon': 'Youtube', 'order': 7},
         ]
     },
     'tai-lieu': {

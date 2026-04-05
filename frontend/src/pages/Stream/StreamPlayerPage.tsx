@@ -705,7 +705,16 @@ export default function StreamPlayerPage() {
                 ref={containerRef}
                 className="relative bg-black rounded-xl overflow-hidden shadow-2xl group"
               >
-                {/* Video Element */}
+                {/* Video Element — YouTube iframe or HTML5 player */}
+                {media.storage_type === 'youtube' && media.youtube_embed_url ? (
+                  <iframe
+                    className="w-full aspect-video"
+                    src={`${media.youtube_embed_url}?autoplay=0&rel=0&modestbranding=1`}
+                    title={media.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
                 <video
                   ref={videoRef}
                   className="w-full aspect-video bg-black cursor-pointer"
@@ -721,6 +730,7 @@ export default function StreamPlayerPage() {
                   <source src={media.stream_url} type={media.mime_type || 'video/mp4'} />
                   Trình duyệt không hỗ trợ video.
                 </video>
+                )}
 
                 {/* ===== Subtitle Overlay ===== */}
                 {(activeCue1 || activeCue2) && (
