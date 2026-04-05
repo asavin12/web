@@ -105,13 +105,13 @@ DROPDOWN_CHILDREN = {
             {'name': 'Tất cả tin tức', 'name_vi': 'Tất cả tin tức', 'name_en': 'All News', 'name_de': 'Alle Nachrichten',
              'url': '/tin-tuc', 'icon': 'Newspaper', 'order': 1},
             {'name': 'Du học Đức', 'name_vi': 'Du học Đức', 'name_en': 'Study in Germany', 'name_de': 'Studium in Deutschland',
-             'url': '/tin-tuc?category=du-hoc-duc', 'icon': 'GraduationCap', 'order': 2},
+             'url': '/tin-tuc/du-hoc-duc', 'icon': 'GraduationCap', 'order': 2},
             {'name': 'Học bổng', 'name_vi': 'Học bổng', 'name_en': 'Scholarships', 'name_de': 'Stipendien',
-             'url': '/tin-tuc?category=hoc-bong', 'icon': 'Star', 'order': 3},
+             'url': '/tin-tuc/hoc-bong', 'icon': 'Star', 'order': 3},
             {'name': 'Đời sống Đức', 'name_vi': 'Đời sống Đức', 'name_en': 'Life in Germany', 'name_de': 'Leben in Deutschland',
-             'url': '/tin-tuc?category=doi-song-duc', 'icon': 'Globe', 'order': 4},
+             'url': '/tin-tuc/doi-song-duc', 'icon': 'Globe', 'order': 4},
             {'name': 'Kinh nghiệm', 'name_vi': 'Kinh nghiệm', 'name_en': 'Experience', 'name_de': 'Erfahrungen',
-             'url': '/tin-tuc?category=kinh-nghiem', 'icon': 'Heart', 'order': 5},
+             'url': '/tin-tuc/kinh-nghiem', 'icon': 'Heart', 'order': 5},
         ]
     },
     'kien-thuc': {
@@ -120,15 +120,15 @@ DROPDOWN_CHILDREN = {
             {'name': 'Tất cả kiến thức', 'name_vi': 'Tất cả kiến thức', 'name_en': 'All Knowledge', 'name_de': 'Alle Wissen',
              'url': '/kien-thuc', 'icon': 'BookOpen', 'order': 1},
             {'name': 'Ngữ pháp', 'name_vi': 'Ngữ pháp', 'name_en': 'Grammar', 'name_de': 'Grammatik',
-             'url': '/kien-thuc?category=ngu-phap', 'icon': 'FileText', 'order': 2},
+             'url': '/kien-thuc/ngu-phap', 'icon': 'FileText', 'order': 2},
             {'name': 'Từ vựng', 'name_vi': 'Từ vựng', 'name_en': 'Vocabulary', 'name_de': 'Vokabeln',
-             'url': '/kien-thuc?category=tu-vung', 'icon': 'Languages', 'order': 3},
+             'url': '/kien-thuc/tu-vung', 'icon': 'Languages', 'order': 3},
             {'name': 'Luyện thi', 'name_vi': 'Luyện thi', 'name_en': 'Exam Prep', 'name_de': 'Prüfungsvorbereitung',
-             'url': '/kien-thuc?category=luyen-thi', 'icon': 'GraduationCap', 'order': 4},
+             'url': '/kien-thuc/luyen-thi', 'icon': 'GraduationCap', 'order': 4},
             {'name': 'Kỹ năng', 'name_vi': 'Kỹ năng', 'name_en': 'Skills', 'name_de': 'Fähigkeiten',
-             'url': '/kien-thuc?category=ky-nang', 'icon': 'Compass', 'order': 5},
+             'url': '/kien-thuc/ky-nang', 'icon': 'Compass', 'order': 5},
             {'name': 'Văn hóa Đức', 'name_vi': 'Văn hóa Đức', 'name_en': 'German Culture', 'name_de': 'Deutsche Kultur',
-             'url': '/kien-thuc?category=van-hoa-duc', 'icon': 'Globe', 'order': 6},
+             'url': '/kien-thuc/van-hoa-duc', 'icon': 'Globe', 'order': 6},
         ]
     },
     'cong-cu': {
@@ -139,9 +139,9 @@ DROPDOWN_CHILDREN = {
             {'name': 'Flashcard', 'name_vi': 'Flashcard', 'name_en': 'Flashcards', 'name_de': 'Lernkarten',
              'url': '/cong-cu/flashcards', 'icon': 'Bookmark', 'order': 2},
             {'name': 'Từ điển', 'name_vi': 'Từ điển', 'name_en': 'Dictionary', 'name_de': 'Wörterbuch',
-             'url': '/cong-cu?category=tu-dien', 'icon': 'BookOpen', 'order': 3},
+             'url': '/cong-cu/tu-dien', 'icon': 'BookOpen', 'order': 3},
             {'name': 'Luyện tập', 'name_vi': 'Luyện tập', 'name_en': 'Practice', 'name_de': 'Übungen',
-             'url': '/cong-cu?category=luyen-tap', 'icon': 'GraduationCap', 'order': 4},
+             'url': '/cong-cu/luyen-tap', 'icon': 'GraduationCap', 'order': 4},
         ]
     },
     'cong-dong': {
@@ -210,10 +210,10 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING('🔍 DRY RUN — không thay đổi dữ liệu\n'))
 
+        self._merge_video_into_stream(dry_run)
         self._fix_urls(dry_run)
         self._fix_icons(dry_run)
         self._fill_multilingual(dry_run)
-        self._merge_video_into_stream(dry_run)
         self._ensure_dropdowns(dry_run)
 
         if dry_run:
@@ -240,56 +240,56 @@ class Command(BaseCommand):
     }
 
     def _merge_video_into_stream(self, dry_run):
-        """Remove old Video/Audio nav links — Stream is now the single media section."""
-        self.stdout.write('🎬 Merge Video/Audio → Stream...')
+        """Consolidate all /stream nav links into one named 'Stream'."""
+        self.stdout.write('🎬 Consolidate Stream navigation...')
 
-        # Deactivate "Audio & Podcast" nav if exists (Stream covers audio)
-        audio_links = NavigationLink.objects.filter(
+        # Deactivate "Audio & Podcast" nav if exists
+        for link in NavigationLink.objects.filter(
             name__icontains='audio', location__in=['navbar', 'both'],
             parent__isnull=True, is_active=True
-        )
-        for link in audio_links:
-            self.stdout.write(f'  Deactivate: #{link.id} "{link.name}"')
+        ):
+            self.stdout.write(f'  Deactivate audio: #{link.id} "{link.name}"')
             if not dry_run:
                 link.is_active = False
                 link.save(update_fields=['is_active'])
                 link.children.update(is_active=False)
 
-        # Find all top-level navbar links pointing to /stream
+        # Also deactivate any link still pointing to /video (before URL fix)
+        for link in NavigationLink.objects.filter(
+            url__startswith='/video', location__in=['navbar', 'both'],
+            parent__isnull=True, is_active=True
+        ):
+            self.stdout.write(f'  Deactivate old video: #{link.id} "{link.name}" url={link.url}')
+            if not dry_run:
+                link.is_active = False
+                link.save(update_fields=['is_active'])
+                link.children.update(is_active=False)
+
+        # Find all active top-level /stream links
         stream_links = list(NavigationLink.objects.filter(
-            url='/stream', location__in=['navbar', 'both'], parent__isnull=True, is_active=True
+            url='/stream', location__in=['navbar', 'both'],
+            parent__isnull=True, is_active=True
         ).order_by('id'))
 
-        if len(stream_links) <= 1:
-            if stream_links:
-                link = stream_links[0]
-                # Rename to "Video" if still called "Stream" or "Xem phim"
-                if link.name in ('Video', 'Xem phim'):
-                    self.stdout.write(f'  Rename: {link.name} → Stream')
-                    if not dry_run:
-                        link.name = 'Stream'
-                        link.name_vi = 'Stream'
-                        link.name_en = 'Stream'
-                        link.name_de = 'Stream'
-                        link.save(update_fields=['name', 'name_vi', 'name_en', 'name_de'])
-            self.stdout.write('  → OK\n')
+        if not stream_links:
+            self.stdout.write('  No /stream link found — will be created by _ensure_dropdowns\n')
             return
 
-        # Multiple links to /stream — keep the one with most children, deactivate others
+        # Keep the one with most children
         best = max(stream_links, key=lambda l: l.children.filter(is_active=True).count())
-        deactivated = 0
+
+        # Deactivate duplicates
         for link in stream_links:
             if link.id != best.id:
-                self.stdout.write(f'  Deactivate duplicate: #{link.id} "{link.name}" ({link.children.count()} children)')
+                self.stdout.write(f'  Deactivate dup: #{link.id} "{link.name}" ({link.children.count()} children)')
                 if not dry_run:
                     link.is_active = False
                     link.save(update_fields=['is_active'])
                     link.children.update(is_active=False)
-                deactivated += 1
 
-        # Rename the kept link to "Video"
-        if best.name in ('Video', 'Xem phim'):
-            self.stdout.write(f'  Rename: {best.name} → Stream')
+        # Force rename to "Stream"
+        if best.name != 'Stream' or best.name_vi != 'Stream':
+            self.stdout.write(f'  Rename: "{best.name}" → "Stream"')
             if not dry_run:
                 best.name = 'Stream'
                 best.name_vi = 'Stream'
@@ -297,7 +297,7 @@ class Command(BaseCommand):
                 best.name_de = 'Stream'
                 best.save(update_fields=['name', 'name_vi', 'name_en', 'name_de'])
 
-        self.stdout.write(f'  → Deactivated {deactivated} duplicates\n')
+        self.stdout.write(f'  → Kept #{best.id}, name=Stream\n')
 
     def _fix_urls(self, dry_run):
         """Fix navigation URLs to match frontend routes"""
