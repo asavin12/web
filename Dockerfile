@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     curl \
     media-types \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user
