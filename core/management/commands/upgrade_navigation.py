@@ -155,6 +155,42 @@ DROPDOWN_CHILDREN = {
              'url': '/study-rooms', 'icon': 'Users', 'is_coming_soon': True, 'badge_text': 'Soon', 'order': 3},
         ]
     },
+    'stream': {
+        'parent_url': '/stream',
+        'children': [
+            {'name': 'Tất cả media', 'name_vi': 'Tất cả media', 'name_en': 'All Media', 'name_de': 'Alle Medien',
+             'url': '/stream', 'icon': 'LayoutGrid', 'order': 0},
+            {'name': 'Luyện nghe', 'name_vi': 'Luyện nghe', 'name_en': 'Listening', 'name_de': 'Hörverständnis',
+             'url': '/stream?category=luyen-nghe', 'icon': 'Headphones', 'order': 1},
+            {'name': 'Phim & Series', 'name_vi': 'Phim & Series', 'name_en': 'Movies & Series', 'name_de': 'Filme & Serien',
+             'url': '/stream?category=phim', 'icon': 'Film', 'order': 2},
+            {'name': 'Âm nhạc', 'name_vi': 'Âm nhạc', 'name_en': 'Music', 'name_de': 'Musik',
+             'url': '/stream?category=am-nhac', 'icon': 'Music', 'order': 3},
+            {'name': 'Podcast', 'name_vi': 'Podcast', 'name_en': 'Podcast', 'name_de': 'Podcast',
+             'url': '/stream?category=podcast', 'icon': 'Mic', 'order': 4},
+            {'name': 'Bài giảng', 'name_vi': 'Bài giảng', 'name_en': 'Lessons', 'name_de': 'Unterricht',
+             'url': '/stream?category=bai-giang', 'icon': 'BookOpen', 'order': 5},
+            {'name': 'Thư giãn', 'name_vi': 'Thư giãn', 'name_en': 'Relaxation', 'name_de': 'Entspannung',
+             'url': '/stream?category=thu-gian', 'icon': 'Coffee', 'order': 6},
+        ]
+    },
+    'tai-lieu': {
+        'parent_url': '/tai-lieu',
+        'children': [
+            {'name': 'Tất cả tài liệu', 'name_vi': 'Tất cả tài liệu', 'name_en': 'All Resources', 'name_de': 'Alle Materialien',
+             'url': '/tai-lieu', 'icon': 'LayoutGrid', 'order': 0},
+            {'name': 'Tiếng Đức', 'name_vi': 'Tiếng Đức', 'name_en': 'German', 'name_de': 'Deutsch',
+             'url': '/tai-lieu?category=tieng-duc', 'icon': 'GraduationCap', 'order': 1},
+            {'name': 'Tiếng Anh', 'name_vi': 'Tiếng Anh', 'name_en': 'English', 'name_de': 'Englisch',
+             'url': '/tai-lieu?category=tieng-anh', 'icon': 'Globe', 'order': 2},
+            {'name': 'Goethe', 'name_vi': 'Goethe', 'name_en': 'Goethe', 'name_de': 'Goethe',
+             'url': '/tai-lieu?category=goethe', 'icon': 'Award', 'order': 3},
+            {'name': 'IELTS', 'name_vi': 'IELTS', 'name_en': 'IELTS', 'name_de': 'IELTS',
+             'url': '/tai-lieu?category=ielts', 'icon': 'Target', 'order': 4},
+            {'name': 'Tổng hợp', 'name_vi': 'Tổng hợp', 'name_en': 'General', 'name_de': 'Allgemein',
+             'url': '/tai-lieu?category=tong-hop', 'icon': 'FolderOpen', 'order': 5},
+        ]
+    },
 }
 
 

@@ -140,6 +140,26 @@ python manage.py seed_navigation 2>&1 || echo "Navigation seed skipped (may alre
 echo "Upgrading navigation data..."
 python manage.py upgrade_navigation 2>&1 || echo "Navigation upgrade skipped"
 
+# Ensure media stream categories exist
+echo "Ensuring media categories..."
+python -c "
+import django, os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unstressvn_settings.settings')
+django.setup()
+from mediastream.models import MediaCategory
+for name, slug, desc, icon, order in [
+    ('Luyện nghe', 'luyen-nghe', 'Luyện nghe tiếng Đức, tiếng Anh qua video & audio', 'headphones', 1),
+    ('Phim & Series', 'phim', 'Xem phim, series để cải thiện khả năng nghe hiểu', 'film', 2),
+    ('Âm nhạc', 'am-nhac', 'Học ngoại ngữ qua bài hát và MV', 'music', 3),
+    ('Podcast', 'podcast', 'Podcast học ngoại ngữ đa dạng chủ đề', 'mic', 4),
+    ('Bài giảng', 'bai-giang', 'Bài giảng, hướng dẫn ngữ pháp và từ vựng', 'book-open', 5),
+    ('Thư giãn', 'thu-gian', 'Nội dung thư giãn, giải trí', 'coffee', 6),
+]:
+    obj, c = MediaCategory.objects.get_or_create(slug=slug, defaults={'name': name, 'description': desc, 'icon': icon, 'order': order})
+    if c: print(f'  Created: {name}')
+print('Media categories OK')
+" 2>&1 || echo "Media categories setup skipped"
+
 # Cleanup duplicate resources (from sample data scripts run multiple times)
 echo "Cleaning up duplicate records..."
 python -c "
