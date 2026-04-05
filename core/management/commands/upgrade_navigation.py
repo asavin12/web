@@ -82,7 +82,7 @@ KNOWN_NAMES = {
     '/kien-thuc': {'vi': 'Kiến thức', 'en': 'Knowledge', 'de': 'Wissen'},
     '/cong-cu': {'vi': 'Công cụ', 'en': 'Tools', 'de': 'Werkzeuge'},
     '/cong-dong': {'vi': 'Cộng đồng', 'en': 'Community', 'de': 'Gemeinschaft'},
-    '/stream': {'vi': 'Video', 'en': 'Video', 'de': 'Video'},
+    '/stream': {'vi': 'Stream', 'en': 'Stream', 'de': 'Stream'},
     '/about': {'vi': 'Giới thiệu', 'en': 'About', 'de': 'Über uns'},
     '/gioi-thieu': {'vi': 'Giới thiệu', 'en': 'About', 'de': 'Über uns'},
     '/contact': {'vi': 'Liên hệ', 'en': 'Contact', 'de': 'Kontakt'},
@@ -264,13 +264,13 @@ class Command(BaseCommand):
             if stream_links:
                 link = stream_links[0]
                 # Rename to "Video" if still called "Stream" or "Xem phim"
-                if link.name in ('Stream', 'Xem phim'):
-                    self.stdout.write(f'  Rename: {link.name} → Video')
+                if link.name in ('Video', 'Xem phim'):
+                    self.stdout.write(f'  Rename: {link.name} → Stream')
                     if not dry_run:
-                        link.name = 'Video'
-                        link.name_vi = 'Video'
-                        link.name_en = 'Video'
-                        link.name_de = 'Video'
+                        link.name = 'Stream'
+                        link.name_vi = 'Stream'
+                        link.name_en = 'Stream'
+                        link.name_de = 'Stream'
                         link.save(update_fields=['name', 'name_vi', 'name_en', 'name_de'])
             self.stdout.write('  → OK\n')
             return
@@ -288,13 +288,13 @@ class Command(BaseCommand):
                 deactivated += 1
 
         # Rename the kept link to "Video"
-        if best.name in ('Stream', 'Xem phim'):
-            self.stdout.write(f'  Rename: {best.name} → Video')
+        if best.name in ('Video', 'Xem phim'):
+            self.stdout.write(f'  Rename: {best.name} → Stream')
             if not dry_run:
-                best.name = 'Video'
-                best.name_vi = 'Video'
-                best.name_en = 'Video'
-                best.name_de = 'Video'
+                best.name = 'Stream'
+                best.name_vi = 'Stream'
+                best.name_en = 'Stream'
+                best.name_de = 'Stream'
                 best.save(update_fields=['name', 'name_vi', 'name_en', 'name_de'])
 
         self.stdout.write(f'  → Deactivated {deactivated} duplicates\n')
