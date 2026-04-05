@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { resourcesApi, utilsApi } from '@/api';
 import type { Resource } from '@/types';
@@ -21,17 +21,27 @@ const ITEMS_PER_PAGE = 18;
 export default function ResourceListPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { slug: categorySlug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   
+  // Category from URL path takes priority over query param
+  const categoryFromUrl = categorySlug || searchParams.get('category') || '';
+
   const [filters, setFilters] = useState({
     search: searchParams.get('q') || '',
     language: searchParams.get('language') || '',
     level: searchParams.get('level') || '',
     resource_type: searchParams.get('type') || '',
-    category: searchParams.get('category') || '',
+    category: categoryFromUrl,
   });
+  
+  // Sync category when URL path changes
+  useEffect(() => {
+    const cat = categorySlug || searchParams.get('category') || '';
+    setFilters(prev => ({ ...prev, category: cat }));
+  }, [categorySlug, searchParams]);
   
   const page = parseInt(searchParams.get('page') || '1');
 
@@ -71,6 +81,15 @@ export default function ResourceListPage() {
   });
 
   const handleFilterChange = (name: string, value: string) => {
+    if (name === 'category') {
+      // Navigate to path-based category URL
+      if (value) {
+        navigate(`/tai-lieu/${value}`);
+      } else {
+        navigate('/tai-lieu');
+      }
+      return;
+    }
     setFilters((prev) => ({ ...prev, [name]: value }));
     const newParams = new URLSearchParams(searchParams);
     if (value) {
@@ -96,7 +115,7 @@ export default function ResourceListPage() {
       resource_type: '',
       category: '',
     });
-    setSearchParams({});
+    navigate('/tai-lieu');
   };
 
   const hasActiveFilters = filters.search || filters.language || filters.level || filters.resource_type || filters.category;

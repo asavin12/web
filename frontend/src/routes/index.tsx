@@ -15,6 +15,7 @@ const PasswordChangePage = lazy(() => import('@/pages/Auth/PasswordChangePage'))
 const SettingsPage = lazy(() => import('@/pages/Auth/SettingsPage'));
 const ResourceListPage = lazy(() => import('@/pages/Resources/ResourceListPage'));
 const ResourceDetailPage = lazy(() => import('@/pages/Resources/ResourceDetailPage'));
+const ResourceParamWrapper = lazy(() => import('@/pages/Resources/ResourceParamWrapper'));
 const StreamListPage = lazy(() => import('@/pages/Stream/StreamListPage'));
 const StreamPlayerPage = lazy(() => import('@/pages/Stream/StreamPlayerPage'));
 const SearchPage = lazy(() => import('@/pages/Search/SearchPage'));
@@ -99,7 +100,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'tai-lieu/:slug',
-        element: <LazyPage><ResourceDetailPage /></LazyPage>,
+        element: <LazyPage><ResourceParamWrapper /></LazyPage>,
       },
       
       // Video → Stream redirect (SEO/bookmarks)
