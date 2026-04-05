@@ -220,7 +220,8 @@ class Command(BaseCommand):
 
     # URL corrections: old URLs → correct frontend route URLs
     URL_FIXES = {
-        '/videos': '/video',
+        '/videos': '/stream',
+        '/video': '/stream',
         '/resources': '/tai-lieu',
         '/about': '/gioi-thieu',
         '/contact': '/lien-he',
@@ -229,8 +230,10 @@ class Command(BaseCommand):
         '/careers': '/tuyen-dung',
         '/study-rooms': '/phong-hoc-nhom',
         # Footer resource links with query params
-        '/videos?language=en': '/video?language=en',
-        '/videos?language=de': '/video?language=de',
+        '/videos?language=en': '/stream?language=en',
+        '/videos?language=de': '/stream?language=de',
+        '/video?language=en': '/stream?language=en',
+        '/video?language=de': '/stream?language=de',
     }
 
     def _fix_urls(self, dry_run):

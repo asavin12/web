@@ -381,7 +381,7 @@ export default function HomePage() {
                       {t('home.videos.title', 'Curated Video Lessons')}
                     </h2>
                   </div>
-                  <Link to="/video" className="hidden sm:flex text-sm font-bold text-vintage-blue hover:text-vintage-brown items-center gap-2 transition-colors uppercase tracking-wide">
+                  <Link to="/stream" className="hidden sm:flex text-sm font-bold text-vintage-blue hover:text-vintage-brown items-center gap-2 transition-colors uppercase tracking-wide">
                     {t('home.videos.viewAll', 'Watch All')} <ArrowRight className="h-4 w-4" />
                   </Link>
                 </header>
@@ -393,7 +393,7 @@ export default function HomePage() {
                 </div>
                 
                 <div className="mt-6 text-center sm:hidden">
-                  <Link to="/video" className="touch-target inline-flex items-center gap-2 text-sm font-bold text-vintage-blue uppercase">
+                  <Link to="/stream" className="touch-target inline-flex items-center gap-2 text-sm font-bold text-vintage-blue uppercase">
                     {t('home.videos.viewAll', 'Watch All Videos')} <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
@@ -451,7 +451,7 @@ export default function HomePage() {
                 <p className="text-vintage-dark/70 mb-4 md:mb-6 font-serif italic text-sm md:text-base line-clamp-3">
                   {t('home.features.videos.description', 'Video bài giảng, phim ngắn và nội dung học tập đa dạng.')}
                 </p>
-                <Link to="/video" className="touch-target inline-flex items-center gap-2 text-vintage-brown font-bold uppercase tracking-wide hover:text-vintage-olive transition-colors text-sm">
+                <Link to="/stream" className="touch-target inline-flex items-center gap-2 text-vintage-brown font-bold uppercase tracking-wide hover:text-vintage-olive transition-colors text-sm">
                   {t('home.features.videos.cta', 'Xem video')} <ArrowRight className="h-4 w-4" />
                 </Link>
               </article>

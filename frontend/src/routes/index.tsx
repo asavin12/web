@@ -15,11 +15,8 @@ const PasswordChangePage = lazy(() => import('@/pages/Auth/PasswordChangePage'))
 const SettingsPage = lazy(() => import('@/pages/Auth/SettingsPage'));
 const ResourceListPage = lazy(() => import('@/pages/Resources/ResourceListPage'));
 const ResourceDetailPage = lazy(() => import('@/pages/Resources/ResourceDetailPage'));
-const VideoListPage = lazy(() => import('@/pages/Videos/VideoListPage'));
-const VideoDetailPage = lazy(() => import('@/pages/Videos/VideoDetailPage'));
 const StreamListPage = lazy(() => import('@/pages/Stream/StreamListPage'));
 const StreamPlayerPage = lazy(() => import('@/pages/Stream/StreamPlayerPage'));
-const StreamUploadPage = lazy(() => import('@/pages/Stream/StreamUploadPage'));
 const SearchPage = lazy(() => import('@/pages/Search/SearchPage'));
 const NotificationsPage = lazy(() => import('@/pages/Notifications/NotificationsPage'));
 const AboutPage = lazy(() => import('@/pages/Static/AboutPage'));
@@ -95,28 +92,20 @@ const router = createBrowserRouter([
         element: <LazyPage><ResourceDetailPage /></LazyPage>,
       },
       
-      // Videos (public)
+      // Video → Stream redirect (SEO/bookmarks)
       {
         path: 'video',
-        element: <LazyPage><VideoListPage /></LazyPage>,
+        element: <LazyPage><StreamListPage /></LazyPage>,
       },
       {
         path: 'video/:slug',
-        element: <LazyPage><VideoDetailPage /></LazyPage>,
+        element: <LazyPage><StreamListPage /></LazyPage>,
       },
       
       // Stream Media (public)
       {
         path: 'stream',
         element: <LazyPage><StreamListPage /></LazyPage>,
-      },
-      {
-        path: 'stream/upload',
-        element: (
-          <ProtectedRoute>
-            <LazyPage><StreamUploadPage /></LazyPage>
-          </ProtectedRoute>
-        ),
       },
       {
         path: 'stream/:uid',

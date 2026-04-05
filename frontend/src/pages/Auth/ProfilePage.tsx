@@ -364,7 +364,7 @@ export default function ProfilePage() {
                     <span className="text-sm font-medium text-vintage-dark">{t('nav.resources')}</span>
                   </Link>
                   <Link 
-                    to="/video"
+                    to="/stream"
                     className="flex flex-col items-center gap-2 p-4 rounded-lg bg-vintage-cream/50 hover:bg-vintage-cream transition border border-vintage-tan/20"
                   >
                     <Users className="h-6 w-6 text-vintage-brown" />

@@ -29,9 +29,7 @@ import {
   BarChart2,
   X,
   Film,
-  Upload,
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 
 // Filter options
 const MEDIA_TYPES = [
@@ -145,7 +143,6 @@ function StreamMediaCard({ media }: { media: StreamMedia }) {
 }
 
 export default function StreamListPage() {
-  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
 
@@ -230,14 +227,6 @@ export default function StreamListPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                {(user?.is_staff || user?.is_superuser) && (
-                  <Link to="/stream/upload">
-                    <Button variant="primary" size="sm">
-                      <Upload className="h-4 w-4 mr-1.5" />
-                      Smart Upload
-                    </Button>
-                  </Link>
-                )}
                 <Button
                   onClick={() => setShowFilters(!showFilters)}
                   variant="outline"
