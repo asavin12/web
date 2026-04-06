@@ -1517,143 +1517,6 @@ def n8n_get_rules(request):
     })
 
 
-@api_view(['POST'])
-@authentication_classes([APIKeyAuthentication])
-def n8n_create_video(request):
-    """
-    Tạo Video từ n8n
-    
-    Headers:
-        X-API-Key: <N8N_API_KEY>
-    
-    Body (JSON):
-        {
-            "youtube_id": "Video ID hoặc URL YouTube",
-            "title": "Tiêu đề (tùy chọn - auto fetch từ YouTube)",
-            "description": "Mô tả (tùy chọn)",
-            "language": "en/de/all",
-            "level": "A1/A2/B1/B2/C1/C2/all",
-            "is_featured": false,
-            "source_url": "URL nguồn gốc",
-            "source_id": "ID từ nguồn (để tránh duplicate)",
-            "workflow_id": "N8N workflow ID",
-            "execution_id": "N8N execution ID",
-            "is_ai_generated": false,
-            "ai_model": "Tên model AI (nếu có)"
-        }
-    
-    Returns:
-        {
-            "success": true,
-            "video": {...},
-            "message": "Đã tạo video thành công"
-        }
-    """
-    from core.models import Video
-    from core.youtube import extract_youtube_id
-    
-    # Validate required fields
-    youtube_input = request.data.get('youtube_id')
-    
-    if not youtube_input:
-        return Response(
-            {'success': False, 'error': 'Thiếu trường "youtube_id"'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    # Extract YouTube ID
-    youtube_id = extract_youtube_id(youtube_input)
-    
-    if not youtube_id:
-        return Response(
-            {'success': False, 'error': 'Không thể trích xuất YouTube ID'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    # Check duplicate by youtube_id
-    if Video.objects.filter(youtube_id=youtube_id).exists():
-        existing = Video.objects.get(youtube_id=youtube_id)
-        return Response({
-            'success': True,
-            'video': {
-                'id': existing.id,
-                'title': existing.title,
-                'slug': existing.slug,
-                'youtube_id': existing.youtube_id,
-            },
-            'message': 'Video đã tồn tại',
-            'action': 'skipped'
-        })
-    
-    # Check duplicate by source_id
-    source_id = request.data.get('source_id')
-    if source_id:
-        existing = Video.objects.filter(source='n8n', source_id=source_id).first()
-        if existing:
-            return Response({
-                'success': True,
-                'video': {
-                    'id': existing.id,
-                    'title': existing.title,
-                    'slug': existing.slug,
-                },
-                'message': 'Video đã tồn tại với source_id này',
-                'action': 'skipped'
-            })
-    
-    # Validate language and level
-    language = request.data.get('language', 'en')
-    if language not in ['de', 'en', 'all']:
-        language = 'en'
-    
-    level = request.data.get('level', 'all')
-    if level not in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'all']:
-        level = 'all'
-    
-    # Create video — field truncation to prevent DataError
-    try:
-        video = Video.objects.create(
-            youtube_id=youtube_id,
-            title=safe_truncate(request.data.get('title', ''), 255),
-            description=request.data.get('description', ''),
-            language=language,
-            level=level,
-            is_featured=request.data.get('is_featured', False),
-            is_active=True,
-            # N8N tracking fields
-            source='n8n',
-            source_url=safe_truncate(request.data.get('source_url', ''), 200),
-            source_id=safe_truncate(source_id or '', 100),
-            n8n_workflow_id=safe_truncate(request.data.get('workflow_id', ''), 50),
-            n8n_execution_id=safe_truncate(request.data.get('execution_id', ''), 100),
-            n8n_created_at=timezone.now(),
-            is_ai_generated=request.data.get('is_ai_generated', False),
-            ai_model=safe_truncate(request.data.get('ai_model', ''), 50),
-        )
-    except Exception as e:
-        n8n_logger.error(f'Failed to create video: {type(e).__name__}: {e}', exc_info=True)
-        return Response({
-            'success': False,
-            'error': f'Lỗi tạo video: {type(e).__name__}: {str(e)[:500]}',
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    return Response({
-        'success': True,
-        'video': {
-            'id': video.id,
-            'title': video.title,
-            'slug': video.slug,
-            'youtube_id': video.youtube_id,
-            'youtube_url': video.youtube_url,
-            'thumbnail': video.thumbnail,
-            'url': f'/videos/{video.slug}',
-            'created_at': video.created_at.isoformat(),
-        },
-        'message': 'Đã tạo video thành công',
-        'action': 'created'
-    }, status=status.HTTP_201_CREATED)
-
-
 # ============================================================================
 # LIST Endpoints — Cho n8n kiểm tra nội dung đã có
 # ============================================================================
@@ -1868,57 +1731,6 @@ def n8n_list_tools(request):
             'url': f'/cong-cu/{t.slug}',
             'created_at': t.created_at.isoformat(),
         } for t in tools],
-    })
-
-
-@api_view(['GET'])
-@authentication_classes([APIKeyAuthentication])
-def n8n_list_videos(request):
-    """
-    Danh sách Videos (core.Video)
-
-    GET /api/v1/n8n/videos/list/
-    Headers: X-API-Key: <key>
-    Query params:
-        - page, page_size, search, source
-        - language (en/de/all)
-        - level (A1-C2/all)
-    """
-    from core.models import Video
-    qs = Video.objects.order_by('-created_at')
-
-    if request.query_params.get('search'):
-        qs = qs.filter(Q(title__icontains=request.query_params['search']))
-    if request.query_params.get('source'):
-        qs = qs.filter(source=request.query_params['source'])
-    if request.query_params.get('language'):
-        qs = qs.filter(language=request.query_params['language'])
-    if request.query_params.get('level'):
-        qs = qs.filter(level=request.query_params['level'])
-
-    page = max(1, int(request.query_params.get('page', 1)))
-    page_size = min(100, max(1, int(request.query_params.get('page_size', 20))))
-    total = qs.count()
-    videos = qs[(page - 1) * page_size:page * page_size]
-
-    return Response({
-        'success': True,
-        'total': total,
-        'page': page,
-        'page_size': page_size,
-        'results': [{
-            'id': v.id,
-            'title': v.title,
-            'slug': v.slug,
-            'youtube_id': v.youtube_id,
-            'language': v.language,
-            'level': v.level,
-            'is_active': v.is_active,
-            'url': f'/videos/{v.slug}',
-            'created_at': v.created_at.isoformat(),
-            'source': getattr(v, 'source', ''),
-            'source_id': getattr(v, 'source_id', ''),
-        } for v in videos],
     })
 
 
@@ -2778,7 +2590,7 @@ def n8n_delete_content(request, content_type, identifier):
     DELETE /api/v1/n8n/<content_type>/<identifier>/delete/
     Headers: X-API-Key: <key>
 
-    content_type: news | knowledge | resources | tools | videos | stream-media | flashcards
+    content_type: news | knowledge | resources | tools | stream-media | flashcards
     identifier: slug, id, hoặc source_id
 
     Query params:
@@ -2799,7 +2611,6 @@ def n8n_delete_content(request, content_type, identifier):
         'knowledge': ('knowledge.models', 'KnowledgeArticle', 'is_published'),
         'resources': ('resources.models', 'Resource', 'is_active'),
         'tools': ('tools.models', 'Tool', 'is_active'),
-        'videos': ('core.models', 'Video', 'is_active'),
         'stream-media': ('mediastream.models', 'StreamMedia', 'is_active'),
         'flashcards': ('tools.models', 'FlashcardDeck', 'is_public'),
     }
@@ -2922,7 +2733,7 @@ def n8n_bulk_create(request):
 
     Body (JSON):
         {
-            "content_type": "news|knowledge|resources|tools|videos|flashcards|stream-media",
+            "content_type": "news|knowledge|resources|tools|flashcards|stream-media",
             "items": [
                 { ... item 1 ... },
                 { ... item 2 ... },
@@ -2974,7 +2785,6 @@ def n8n_bulk_create(request):
         'knowledge': _bulk_create_knowledge,
         'resources': _bulk_create_resource,
         'tools': _bulk_create_tool,
-        'videos': _bulk_create_video,
         'flashcards': _bulk_create_flashcard,
         'stream-media': _bulk_create_stream_media,
     }
@@ -3199,42 +3009,6 @@ def _bulk_create_tool(item, user, skip_validation):
         meta_title=item.get('meta_title', ''), meta_description=item.get('meta_description', ''),
     )
     return {'status': 'created', 'id': tool.id, 'title': tool.name, 'slug': tool.slug}
-
-
-def _bulk_create_video(item, user, skip_validation):
-    from core.models import Video
-    from core.youtube import extract_youtube_id
-    youtube_input = item.get('youtube_id', '')
-    if not youtube_input:
-        return {'status': 'failed', 'error': 'Thiếu youtube_id'}
-
-    youtube_id = extract_youtube_id(youtube_input)
-    if not youtube_id:
-        return {'status': 'failed', 'error': 'YouTube ID không hợp lệ'}
-
-    if Video.objects.filter(youtube_id=youtube_id).exists():
-        existing = Video.objects.get(youtube_id=youtube_id)
-        return {'status': 'skipped', 'reason': 'duplicate', 'id': existing.id, 'title': existing.title}
-
-    language = item.get('language', 'en')
-    if language not in ['de', 'en', 'all']:
-        language = 'en'
-    level = item.get('level', 'all')
-    if level not in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'all']:
-        level = 'all'
-
-    video = Video.objects.create(
-        youtube_id=youtube_id, title=item.get('title', ''),
-        description=item.get('description', ''), language=language, level=level,
-        is_featured=item.get('is_featured', False), is_active=True,
-        source='n8n', source_id=item.get('source_id', ''),
-        n8n_workflow_id=item.get('workflow_id', ''),
-        n8n_execution_id=item.get('execution_id', ''),
-        n8n_created_at=timezone.now(),
-        is_ai_generated=item.get('is_ai_generated', False),
-        ai_model=item.get('ai_model', ''),
-    )
-    return {'status': 'created', 'id': video.id, 'title': video.title, 'slug': video.slug}
 
 
 def _bulk_create_flashcard(item, user, skip_validation):

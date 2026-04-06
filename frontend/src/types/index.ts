@@ -123,35 +123,3 @@ export interface Choices {
   skills: Array<{ value: string; label: string }>;
   resource_types: Array<{ value: string; label: string }>;
 }
-
-// Video type (core.Video model)
-export interface Video {
-  id: number;
-  slug: string;
-  title: string;
-  description: string;
-  youtube_id: string;
-  youtube_url: string;
-  embed_url: string;
-  thumbnail: string;
-  duration: string;
-  language: string;
-  language_display: string;
-  level: string;
-  level_display: string;
-  view_count: number;
-  is_featured: boolean;
-  bookmark_count?: number;
-  is_bookmarked?: boolean;
-  created_at: string;
-}
-
-export interface VideoListResponse {
-  results: Video[];
-  count: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-  language_choices: [string, string][];
-  level_choices: [string, string][];
-}

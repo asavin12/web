@@ -51,10 +51,6 @@ urlpatterns = [
     # Contact form
     path('contact/', views.contact_submit, name='contact'),
     
-    # Video API (core.Video model)
-    path('videos/', views.video_list, name='video-list'),
-    path('videos/<slug:slug>/', views.video_detail, name='video-detail'),
-    
     # News
     path('news/', include('news.urls', namespace='news')),
     
@@ -102,10 +98,6 @@ urlpatterns = [
     path('n8n/tools/', n8n_views.n8n_create_tool, name='n8n-create-tool'),
     path('n8n/tools/list/', n8n_views.n8n_list_tools, name='n8n-list-tools'),
     path('n8n/tools/<str:identifier>/', n8n_views.n8n_update_tool, name='n8n-update-tool'),
-
-    # --- Videos ---
-    path('n8n/videos/', n8n_views.n8n_create_video, name='n8n-create-video'),
-    path('n8n/videos/list/', n8n_views.n8n_list_videos, name='n8n-list-videos'),
 
     # --- Flashcards ---
     path('n8n/flashcards/', n8n_views.n8n_create_flashcard_deck, name='n8n-create-flashcard'),

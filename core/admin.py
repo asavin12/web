@@ -5,8 +5,7 @@ from django.urls import reverse
 from django.shortcuts import redirect
 from django.utils.safestring import mark_safe
 from django.db import models
-from .models import Video, NavigationLink, APIKey, SiteConfiguration
-from .youtube import fetch_youtube_info
+from .models import NavigationLink, APIKey, SiteConfiguration
 import secrets
 
 
@@ -152,126 +151,6 @@ class APIKeyAdmin(admin.ModelAdmin):
         """Reset usage count về 0"""
         queryset.update(usage_count=0)
         messages.success(request, f'✅ Đã reset số lần sử dụng')
-
-
-@admin.register(Video)
-class VideoAdmin(admin.ModelAdmin):
-    """Admin cho Video - Tự động lấy thông tin từ YouTube"""
-    list_display = ('thumbnail_preview', 'title', 'language', 'level', 'duration', 
-                    'view_count', 'is_featured', 'is_active')
-    list_display_links = ('thumbnail_preview', 'title')
-    list_filter = ('language', 'level', 'is_featured', 'is_active')
-    search_fields = ('title', 'description')
-    list_editable = ('is_featured', 'is_active')
-    readonly_fields = ('thumbnail_preview_large', 'view_count', 'created_at', 'updated_at', 'fetch_info_button')
-    ordering = ['-is_featured', '-created_at']
-    actions = ['fetch_youtube_metadata']
-    
-    fieldsets = (
-        ('Thông tin video', {
-            'fields': ('youtube_id', 'fetch_info_button', 'title', 'description'),
-            'description': '''
-                <strong>🎬 Tự động lấy thông tin từ YouTube:</strong><br>
-                1. Nhập YouTube URL hoặc Video ID<br>
-                2. Để trống tiêu đề và mô tả<br>
-                3. Nhấn "Lưu" - hệ thống sẽ tự động điền thông tin<br><br>
-                <strong>Định dạng hỗ trợ:</strong><br>
-                • ID thuần: <code>dQw4w9WgXcQ</code><br>
-                • URL đầy đủ: <code>https://www.youtube.com/watch?v=dQw4w9WgXcQ</code><br>
-                • URL rút gọn: <code>https://youtu.be/dQw4w9WgXcQ</code>
-            '''
-        }),
-        ('Phân loại', {
-            'fields': ('language', 'level', 'duration')
-        }),
-        ('Hiển thị', {
-            'fields': ('is_featured', 'is_active')
-        }),
-        ('Xem trước', {
-            'fields': ('thumbnail_preview_large',),
-            'classes': ('collapse',)
-        }),
-        ('Thống kê', {
-            'fields': ('view_count', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    
-    class Media:
-        js = ('js/admin_youtube_autofetch.js',)
-    
-    def thumbnail_preview(self, obj):
-        """Ảnh nhỏ trong danh sách"""
-        if obj.thumbnail:
-            return format_html(
-                '<img src="{}" style="width: 80px; height: 45px; object-fit: cover; border-radius: 4px;" />',
-                obj.thumbnail
-            )
-        return '-'
-    thumbnail_preview.short_description = 'Ảnh'
-    
-    def thumbnail_preview_large(self, obj):
-        """Xem trước video trong form edit"""
-        if obj.youtube_id:
-            return format_html(
-                '<div style="max-width: 560px;">'
-                '<img src="https://img.youtube.com/vi/{}/hqdefault.jpg" style="width: 100%; border-radius: 8px; margin-bottom: 10px;" />'
-                '<br><a href="https://www.youtube.com/watch?v={}" target="_blank" '
-                'style="color: #c4302b; font-weight: bold;">▶ Xem trên YouTube</a>'
-                '</div>',
-                obj.youtube_id, obj.youtube_id
-            )
-        return 'Chưa có YouTube ID'
-    thumbnail_preview_large.short_description = 'Xem trước'
-    
-    def fetch_info_button(self, obj):
-        """Nút để fetch thông tin từ YouTube"""
-        if obj.pk and obj.youtube_id:
-            return format_html(
-                '<a class="button" href="{}?action=fetch_youtube" '
-                'style="background: #417690; color: white; padding: 5px 15px; border-radius: 4px; text-decoration: none;">'
-                '🔄 Cập nhật từ YouTube</a>',
-                f'/admin/core/video/{obj.pk}/change/'
-            )
-        return format_html(
-            '<span style="color: #666;">💡 Nhập YouTube URL/ID rồi lưu để tự động lấy thông tin</span>'
-        )
-    fetch_info_button.short_description = 'Tự động điền'
-    
-    def change_view(self, request, object_id, form_url='', extra_context=None):
-        """Handle fetch_youtube action from button"""
-        if request.GET.get('action') == 'fetch_youtube':
-            obj = self.get_object(request, object_id)
-            if obj and obj.youtube_id:
-                info = fetch_youtube_info(obj.youtube_id)
-                if info:
-                    obj.title = info.get('title', obj.title)[:255]
-                    obj.description = info.get('description', obj.description)
-                    obj.duration = info.get('duration', obj.duration)
-                    if info.get('thumbnail'):
-                        obj.thumbnail = info.get('thumbnail')
-                    obj.save(auto_fetch_youtube=False)
-                    messages.success(request, f'✅ Đã cập nhật thông tin từ YouTube: {obj.title}')
-                else:
-                    messages.warning(request, '⚠️ Không thể lấy thông tin từ YouTube. Kiểm tra API key hoặc video ID.')
-        return super().change_view(request, object_id, form_url, extra_context)
-    
-    @admin.action(description='🔄 Cập nhật thông tin từ YouTube')
-    def fetch_youtube_metadata(self, request, queryset):
-        """Batch action để fetch metadata cho nhiều video"""
-        updated = 0
-        failed = 0
-        for video in queryset:
-            if video.youtube_id:
-                if video.fetch_youtube_metadata():
-                    updated += 1
-                else:
-                    failed += 1
-        
-        if updated:
-            messages.success(request, f'✅ Đã cập nhật {updated} video từ YouTube')
-        if failed:
-            messages.warning(request, f'⚠️ {failed} video không thể cập nhật')
 
 
 class NavigationChildInline(admin.TabularInline):

@@ -322,7 +322,6 @@ def api_choices(request):
 @permission_classes([AllowAny])
 def api_stats(request):
     """API trả về thống kê bài viết - tập trung vào nội dung bài viết"""
-    from core.models import Video
     from knowledge.models import KnowledgeArticle
     from news.models import Article as NewsArticle
     from django.db.models import Sum
@@ -357,121 +356,9 @@ def api_stats(request):
         'total_downloads': total_downloads,
         # Legacy fields
         'resources': Resource.objects.filter(is_active=True).count(),
-        'videos': Video.objects.filter(is_active=True).count(),
         'knowledge': total_knowledge,
         'news': total_news,
     })
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def video_list(request):
-    """API lấy danh sách video từ core.Video model"""
-    from core.models import Video
-    from django.db.models import Q
-    
-    queryset = Video.objects.filter(is_active=True)
-    
-    # Filter theo ngôn ngữ
-    language = request.GET.get('language')
-    if language and language != 'all':
-        queryset = queryset.filter(language=language)
-    
-    # Filter theo trình độ
-    level = request.GET.get('level')
-    if level and level != 'all':
-        queryset = queryset.filter(level=level)
-    
-    # Tìm kiếm theo từ khóa
-    search = request.GET.get('q')
-    if search:
-        queryset = queryset.filter(
-            Q(title__icontains=search) | 
-            Q(description__icontains=search)
-        )
-    
-    queryset = queryset.order_by('-is_featured', 'order', '-created_at')
-    
-    # Pagination
-    page = int(request.GET.get('page', 1))
-    page_size = int(request.GET.get('page_size', 12))
-    total = queryset.count()
-    
-    start = (page - 1) * page_size
-    end = start + page_size
-    videos = queryset[start:end]
-    
-    # Serialize
-    data = []
-    for video in videos:
-        data.append({
-            'id': video.pk,
-            'slug': video.slug,
-            'title': video.title,
-            'description': video.description[:200] if video.description else '',
-            'youtube_id': video.youtube_id,
-            'youtube_url': video.youtube_url,
-            'embed_url': video.embed_url,
-            'thumbnail': video.thumbnail or f"https://img.youtube.com/vi/{video.youtube_id}/hqdefault.jpg",
-            'duration': video.duration,
-            'language': video.language,
-            'language_display': video.get_language_display(),
-            'level': video.level,
-            'level_display': video.get_level_display(),
-            'view_count': video.view_count,
-            'is_featured': video.is_featured,
-            'created_at': video.created_at.strftime('%Y-%m-%d') if video.created_at else '',
-        })
-    
-    return Response({
-        'results': data,
-        'count': total,
-        'page': page,
-        'page_size': page_size,
-        'total_pages': (total + page_size - 1) // page_size,
-        'language_choices': Video.LANGUAGE_CHOICES,
-        'level_choices': Video.LEVEL_CHOICES,
-    })
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def video_detail(request, slug):
-    """API lấy chi tiết video"""
-    from core.models import Video
-    from django.shortcuts import get_object_or_404
-    
-    video = get_object_or_404(Video, slug=slug, is_active=True)
-    
-    # Tăng view count
-    video.view_count += 1
-    video.save(update_fields=['view_count'], auto_fetch_youtube=False)
-    
-    data = {
-        'id': video.pk,
-        'slug': video.slug,
-        'title': video.title,
-        'description': video.description,
-        'youtube_id': video.youtube_id,
-        'youtube_url': video.youtube_url,
-        'embed_url': video.embed_url,
-        'thumbnail': video.thumbnail or f"https://img.youtube.com/vi/{video.youtube_id}/hqdefault.jpg",
-        'duration': video.duration,
-        'language': video.language,
-        'language_display': video.get_language_display(),
-        'level': video.level,
-        'level_display': video.get_level_display(),
-        'view_count': video.view_count,
-        'is_featured': video.is_featured,
-        'bookmark_count': video.bookmark_count,
-        'created_at': video.created_at.strftime('%Y-%m-%d') if video.created_at else '',
-    }
-    
-    # Check bookmark status nếu user đã login
-    if request.user.is_authenticated:
-        data['is_bookmarked'] = video.is_bookmarked_by(request.user)
-    
-    return Response(data)
 
 
 # ============================================
