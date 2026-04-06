@@ -15,12 +15,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from core.youtube import fetch_youtube_info
+        from django.db.models import Q
 
         qs = StreamMedia.objects.filter(storage_type='youtube').exclude(youtube_id='')
+        self.stdout.write(f'Tổng YouTube videos: {qs.count()}')
         
         if not options['all']:
             # Chỉ fetch cho videos thiếu duration
-            qs = qs.filter(duration__isnull=True) | qs.filter(duration=0)
+            qs = qs.filter(Q(duration__isnull=True) | Q(duration=0) | Q(duration__lt=1))
 
         total = qs.count()
         if not total:

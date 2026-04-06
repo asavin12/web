@@ -87,8 +87,13 @@ def fetch_youtube_info(video_id: str) -> Optional[Dict[str, Any]]:
     api_key = getattr(settings, 'YOUTUBE_API_KEY', None)
     
     if not api_key:
-        logger.info("YOUTUBE_API_KEY chưa cấu hình, dùng yt-dlp fallback")
-        return _fetch_youtube_info_ytdlp(video_id)
+        logger.info("YOUTUBE_API_KEY chưa cấu hình, dùng page scraper")
+        # Try page scraper first (fast, no deps), then yt-dlp as backup
+        result = _fetch_youtube_info_noembed(video_id)
+        if result and result.get('duration_seconds'):
+            return result
+        logger.info("Page scraper thiếu data, thử yt-dlp...")
+        return _fetch_youtube_info_ytdlp(video_id) or result
     
     try:
         from googleapiclient.discovery import build
@@ -200,29 +205,98 @@ def _fetch_youtube_info_ytdlp(video_id: str) -> Optional[Dict[str, Any]]:
 
 def _fetch_youtube_info_noembed(video_id: str) -> Optional[Dict[str, Any]]:
     """
-    Phương án dự phòng: Lấy thông tin cơ bản từ noembed.com (không cần API key)
-    Chỉ lấy được title, không có description đầy đủ
+    Phương án dự phòng cuối: lấy thông tin từ YouTube page trực tiếp.
+    Parse JSON-LD và ytInitialPlayerResponse từ HTML page.
+    Không cần API key, không cần yt-dlp.
     """
+    import requests
+    import json
+    
+    result = {
+        'title': '',
+        'description': '',
+        'duration': '',
+        'duration_seconds': None,
+        'thumbnail': f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg",
+        'view_count': 0,
+        'channel_title': '',
+        'published_at': '',
+        'tags': [],
+    }
+    
+    # Strategy 1: noembed for basic title/thumbnail
     try:
-        import requests
-        
         url = f"https://noembed.com/embed?url=https://www.youtube.com/watch?v={video_id}"
-        response = requests.get(url, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if 'title' in data:
-                return {
-                    'title': data.get('title', ''),
-                    'description': '',  # noembed không cung cấp description
-                    'duration': '',
-                    'thumbnail': data.get('thumbnail_url', f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"),
-                    'view_count': 0,
-                    'channel_title': data.get('author_name', ''),
-                    'published_at': '',
-                    'tags': [],
-                }
-        return None
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            result['title'] = data.get('title', '')
+            result['channel_title'] = data.get('author_name', '')
+            if data.get('thumbnail_url'):
+                result['thumbnail'] = data['thumbnail_url']
     except Exception as e:
-        logger.error(f"Lỗi khi lấy thông tin từ noembed: {e}")
-        return None
+        logger.debug(f"noembed failed: {e}")
+    
+    # Strategy 2: Parse YouTube page for duration + detailed info
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                          '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
+        page_url = f"https://www.youtube.com/watch?v={video_id}"
+        resp = requests.get(page_url, headers=headers, timeout=15)
+        
+        if resp.status_code == 200:
+            html = resp.text
+            
+            # Extract from ytInitialPlayerResponse
+            match = re.search(r'var ytInitialPlayerResponse\s*=\s*(\{.+?\});\s*(?:var|</script>)', html)
+            if match:
+                try:
+                    player_data = json.loads(match.group(1))
+                    video_details = player_data.get('videoDetails', {})
+                    
+                    if video_details.get('lengthSeconds'):
+                        secs = int(video_details['lengthSeconds'])
+                        result['duration_seconds'] = secs
+                        hours, remainder = divmod(secs, 3600)
+                        minutes, seconds = divmod(remainder, 60)
+                        result['duration'] = f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes}:{seconds:02d}"
+                    
+                    if not result['title'] and video_details.get('title'):
+                        result['title'] = video_details['title']
+                    
+                    if video_details.get('shortDescription'):
+                        result['description'] = video_details['shortDescription']
+                    
+                    if video_details.get('viewCount'):
+                        result['view_count'] = int(video_details['viewCount'])
+                    
+                    if video_details.get('author'):
+                        result['channel_title'] = video_details['author']
+                    
+                    if video_details.get('keywords'):
+                        result['tags'] = video_details['keywords'][:10]
+                    
+                    logger.info(f"YouTube page parse OK for {video_id}: duration={result['duration']}")
+                except (json.JSONDecodeError, KeyError, ValueError) as e:
+                    logger.debug(f"ytInitialPlayerResponse parse error: {e}")
+            
+            # Fallback: extract from meta tags if player response failed
+            if not result['duration_seconds']:
+                dur_match = re.search(r'"lengthSeconds"\s*:\s*"(\d+)"', html)
+                if dur_match:
+                    secs = int(dur_match.group(1))
+                    result['duration_seconds'] = secs
+                    hours, remainder = divmod(secs, 3600)
+                    minutes, seconds = divmod(remainder, 60)
+                    result['duration'] = f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes}:{seconds:02d}"
+                    logger.info(f"YouTube meta parse OK for {video_id}: duration={result['duration']}")
+    except Exception as e:
+        logger.error(f"YouTube page scrape error cho {video_id}: {e}")
+    
+    # Return result if we got at least a title
+    if result['title']:
+        return result
+    return None
