@@ -645,156 +645,96 @@ def _format_duration(seconds):
     return f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
 
 
-def _generate_video_thumbnail(media):
+def _extract_from_uploaded_video(uploaded_file):
     """
-    Auto-generate thumbnail from video file using ffmpeg.
-    Extracts a frame at ~1 second (or first frame for very short videos).
-    Only works for local storage videos that have no thumbnail yet.
-    """
-    import subprocess
-    import tempfile
-    from django.core.files import File
-
-    if media.thumbnail:
-        return  # already has thumbnail
-    if media.media_type != 'video':
-        return  # only for videos
-    if media.storage_type != 'local' or not media.file:
-        return  # only local files (GDrive files not accessible directly)
-
-    try:
-        video_path = media.file.path
-    except (ValueError, NotImplementedError):
-        return  # file not on local filesystem
-
-    if not os.path.isfile(video_path):
-        return
-
-    try:
-        # Extract frame at 1 second (or 0 if video shorter)
-        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
-            tmp_path = tmp.name
-
-        cmd = [
-            'ffmpeg', '-y',
-            '-i', video_path,
-            '-ss', '1',           # seek to 1 second
-            '-frames:v', '1',     # extract 1 frame
-            '-q:v', '2',          # high quality JPEG
-            '-vf', 'scale=640:-2',  # 640px wide, keep aspect ratio
-            tmp_path,
-        ]
-        result = subprocess.run(
-            cmd, capture_output=True, timeout=30,
-            text=True,
-        )
-
-        if result.returncode != 0:
-            # Try from start if seeking fails (very short video)
-            cmd[cmd.index('-ss') + 1] = '0'
-            result = subprocess.run(
-                cmd, capture_output=True, timeout=30,
-                text=True,
-            )
-
-        if result.returncode == 0 and os.path.isfile(tmp_path) and os.path.getsize(tmp_path) > 0:
-            thumb_name = f'{media.uid}_auto.jpg'
-            with open(tmp_path, 'rb') as f:
-                media.thumbnail.save(thumb_name, File(f), save=True)
-            logger.info('Auto-generated thumbnail for media uid=%s', media.uid)
-        else:
-            logger.warning('ffmpeg failed for media uid=%s: %s', media.uid, result.stderr[:300] if result.stderr else 'unknown')
-
-        # Cleanup temp file
-        if os.path.isfile(tmp_path):
-            os.unlink(tmp_path)
-
-    except FileNotFoundError:
-        logger.warning('ffmpeg not found — cannot auto-generate thumbnail for media uid=%s', media.uid)
-    except subprocess.TimeoutExpired:
-        logger.warning('ffmpeg timed out for media uid=%s', media.uid)
-    except Exception as e:
-        logger.error('Auto-thumbnail generation failed for media uid=%s: %s', media.uid, e, exc_info=True)
-
-
-def _extract_media_metadata(media):
-    """
-    Auto-extract duration (and width/height for video) using ffprobe.
-    Only works for local storage files.
+    Extract thumbnail + metadata from an uploaded video file BEFORE saving.
+    Works with any Django UploadedFile (InMemoryUploadedFile or TemporaryUploadedFile).
+    
+    Returns dict: {
+        'thumbnail_path': str or None,  # path to temp jpg (caller must clean up)
+        'duration': int or None,
+        'width': int or None,
+        'height': int or None,
+    }
     """
     import subprocess
     import json as _json
-
-    if media.storage_type != 'local' or not media.file:
-        return
-    try:
-        file_path = media.file.path
-    except (ValueError, NotImplementedError):
-        return
-    if not os.path.isfile(file_path):
-        return
+    import tempfile
+    
+    result_data = {'thumbnail_path': None, 'duration': None, 'width': None, 'height': None}
+    tmp_video_path = None
 
     try:
-        cmd = [
-            'ffprobe', '-v', 'quiet',
-            '-print_format', 'json',
-            '-show_format', '-show_streams',
-            file_path,
-        ]
-        result = subprocess.run(cmd, capture_output=True, timeout=15, text=True)
-        if result.returncode != 0:
-            return
+        # Write uploaded file to a temp file so ffmpeg/ffprobe can read it
+        ext = os.path.splitext(uploaded_file.name)[1].lower() or '.mp4'
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp_video:
+            tmp_video_path = tmp_video.name
+            uploaded_file.seek(0)
+            for chunk in uploaded_file.chunks():
+                tmp_video.write(chunk)
+            uploaded_file.seek(0)  # reset for subsequent reads
 
-        probe = _json.loads(result.stdout)
-        updated = False
+        # --- ffprobe: extract metadata ---
+        try:
+            probe_cmd = [
+                'ffprobe', '-v', 'quiet',
+                '-print_format', 'json',
+                '-show_format', '-show_streams',
+                tmp_video_path,
+            ]
+            probe_result = subprocess.run(probe_cmd, capture_output=True, timeout=15, text=True)
+            if probe_result.returncode == 0:
+                probe = _json.loads(probe_result.stdout)
+                duration_str = probe.get('format', {}).get('duration')
+                if duration_str:
+                    result_data['duration'] = int(float(duration_str))
+                for stream in probe.get('streams', []):
+                    if stream.get('codec_type') == 'video':
+                        result_data['width'] = stream.get('width')
+                        result_data['height'] = stream.get('height')
+                        break
+        except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+            logger.warning('ffprobe failed for %s: %s', uploaded_file.name, e)
 
-        # Duration
-        if not media.duration:
-            duration_str = probe.get('format', {}).get('duration')
-            if duration_str:
-                media.duration = int(float(duration_str))
-                updated = True
+        # --- ffmpeg: extract thumbnail ---
+        try:
+            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_thumb:
+                thumb_path = tmp_thumb.name
 
-        # Video dimensions
-        if media.media_type == 'video' and (not media.width or not media.height):
-            for stream in probe.get('streams', []):
-                if stream.get('codec_type') == 'video':
-                    w = stream.get('width')
-                    h = stream.get('height')
-                    if w and h:
-                        media.width = w
-                        media.height = h
-                        updated = True
-                    break
+            cmd = [
+                'ffmpeg', '-y',
+                '-i', tmp_video_path,
+                '-ss', '1',           # seek to 1 second
+                '-frames:v', '1',     # extract 1 frame
+                '-q:v', '2',          # high quality JPEG
+                '-vf', 'scale=640:-2',  # 640px wide, keep aspect ratio
+                thumb_path,
+            ]
+            ffmpeg_result = subprocess.run(cmd, capture_output=True, timeout=30, text=True)
 
-        # File size (in case not set)
-        if not media.file_size:
-            size_str = probe.get('format', {}).get('size')
-            if size_str:
-                media.file_size = int(size_str)
-                updated = True
+            if ffmpeg_result.returncode != 0:
+                # Try from start if seeking fails (very short video)
+                cmd[cmd.index('-ss') + 1] = '0'
+                ffmpeg_result = subprocess.run(cmd, capture_output=True, timeout=30, text=True)
 
-        if updated:
-            update_fields = []
-            if media.duration:
-                update_fields.append('duration')
-            if media.width:
-                update_fields.append('width')
-            if media.height:
-                update_fields.append('height')
-            if media.file_size:
-                update_fields.append('file_size')
-            if update_fields:
-                media.save(update_fields=update_fields)
-            logger.info('Extracted metadata for media uid=%s: duration=%s, %sx%s',
-                        media.uid, media.duration, media.width, media.height)
+            if ffmpeg_result.returncode == 0 and os.path.isfile(thumb_path) and os.path.getsize(thumb_path) > 0:
+                result_data['thumbnail_path'] = thumb_path
+            else:
+                logger.warning('ffmpeg thumbnail failed for %s: %s', uploaded_file.name,
+                               ffmpeg_result.stderr[:300] if ffmpeg_result.stderr else 'unknown')
+                if os.path.isfile(thumb_path):
+                    os.unlink(thumb_path)
+        except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+            logger.warning('ffmpeg failed for %s: %s', uploaded_file.name, e)
 
-    except FileNotFoundError:
-        logger.warning('ffprobe not found — cannot extract metadata for media uid=%s', media.uid)
-    except subprocess.TimeoutExpired:
-        logger.warning('ffprobe timed out for media uid=%s', media.uid)
     except Exception as e:
-        logger.error('Metadata extraction failed for media uid=%s: %s', media.uid, e, exc_info=True)
+        logger.error('Video extraction failed for %s: %s', uploaded_file.name, e, exc_info=True)
+    finally:
+        # Clean up temp video (but NOT the thumbnail — caller handles that)
+        if tmp_video_path and os.path.isfile(tmp_video_path):
+            os.unlink(tmp_video_path)
+
+    return result_data
 
 
 # ============================================================================
@@ -922,6 +862,18 @@ def upload_media(request):
                 uploaded_by=upload_user,
             )
             
+            # Auto-extract thumbnail + metadata from video BEFORE upload/save
+            auto_thumb_path = None
+            if file_media_type == 'video' and not thumbnail_file:
+                extracted = _extract_from_uploaded_video(uploaded_file)
+                auto_thumb_path = extracted.get('thumbnail_path')
+                if extracted.get('duration'):
+                    media.duration = extracted['duration']
+                if extracted.get('width'):
+                    media.width = extracted['width']
+                if extracted.get('height'):
+                    media.height = extracted['height']
+            
             # Upload to Google Drive or save locally
             if use_gdrive and gdrive_account:
                 try:
@@ -947,9 +899,13 @@ def upload_media(request):
                 media.file = uploaded_file
                 media.storage_type = 'local'
             
-            # Add thumbnail to first media
+            # Add thumbnail: user-uploaded takes priority, then auto-extracted
             if thumbnail_file and i == 0:
                 media.thumbnail = thumbnail_file
+            elif auto_thumb_path:
+                from django.core.files import File
+                with open(auto_thumb_path, 'rb') as f:
+                    media.thumbnail.save(f'{media.uid}_auto.jpg', File(f), save=False)
             
             if category_id:
                 try:
@@ -959,13 +915,9 @@ def upload_media(request):
             
             media.save()
             
-            # Auto-generate thumbnail from video if none provided
-            if not media.thumbnail and file_media_type == 'video':
-                _generate_video_thumbnail(media)
-            
-            # Auto-extract duration, dimensions from local files
-            if media.storage_type == 'local' and not media.duration:
-                _extract_media_metadata(media)
+            # Cleanup auto-thumbnail temp file
+            if auto_thumb_path and os.path.isfile(auto_thumb_path):
+                os.unlink(auto_thumb_path)
             
             # Attach subtitle files to the first media
             if subtitle_files and i == 0:
