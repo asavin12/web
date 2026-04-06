@@ -35,6 +35,12 @@ import {
   ChevronDown,
   Upload,
   X,
+  Subtitles,
+  Settings2,
+  RotateCcw,
+  Palette,
+  Type,
+  GripHorizontal,
 } from 'lucide-react';
 import GeminiApiKeyManager, { getStoredGeminiApiKey } from '@/components/stream/GeminiApiKeyManager';
 
@@ -160,6 +166,40 @@ const TRANSLATE_LANGUAGES = [
   { value: 'ja', label: '🇯🇵 日本語' },
   { value: 'ko', label: '🇰🇷 한국어' },
   { value: 'zh', label: '🇨🇳 中文' },
+];
+
+// ============================================================================
+// Subtitle Style Types & Defaults
+// ============================================================================
+
+interface SubtitleStyle {
+  visible: boolean;
+  fontSize: number;
+  fontFamily: string;
+  track1Color: string;
+  track2Color: string;
+  bgOpacity: number;
+  bottomPercent: number;
+}
+
+const SUBTITLE_STYLE_KEY = 'unstress_subtitle_style';
+
+const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
+  visible: true,
+  fontSize: 18,
+  fontFamily: 'sans-serif',
+  track1Color: '#ffffff',
+  track2Color: '#93c5fd',
+  bgOpacity: 80,
+  bottomPercent: 10,
+};
+
+const FONT_FAMILIES = [
+  { value: 'sans-serif', label: 'Sans-serif' },
+  { value: 'serif', label: 'Serif' },
+  { value: '"Courier New", monospace', label: 'Monospace' },
+  { value: 'system-ui', label: 'System UI' },
+  { value: '"Georgia", serif', label: 'Georgia' },
 ];
 
 // ============================================================================
@@ -358,6 +398,123 @@ function SubtitleTrackControl({
 }
 
 // ============================================================================
+// SubtitleStylePanel Component
+// ============================================================================
+
+interface SubtitleStylePanelProps {
+  style: SubtitleStyle;
+  onChange: (style: SubtitleStyle) => void;
+}
+
+function SubtitleStylePanel({ style, onChange }: SubtitleStylePanelProps) {
+  const update = (partial: Partial<SubtitleStyle>) => onChange({ ...style, ...partial });
+
+  return (
+    <div className="space-y-3 pt-3 border-t border-vintage-tan/20">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-bold text-vintage-dark/70 uppercase tracking-wide flex items-center gap-1">
+          <Settings2 className="h-3 w-3" /> Tùy chỉnh phụ đề
+        </h4>
+        <button
+          onClick={() => onChange(DEFAULT_SUBTITLE_STYLE)}
+          className="flex items-center gap-1 text-xs text-vintage-olive hover:text-vintage-dark transition"
+          title="Đặt lại mặc định"
+        >
+          <RotateCcw className="h-3 w-3" /> Mặc định
+        </button>
+      </div>
+
+      {/* Font Size */}
+      <div>
+        <label className="flex items-center justify-between text-xs font-medium text-vintage-dark/70 mb-1">
+          <span className="flex items-center gap-1"><Type className="h-3 w-3" /> Cỡ chữ</span>
+          <span className="font-mono text-vintage-olive">{style.fontSize}px</span>
+        </label>
+        <input
+          type="range" min={12} max={40} value={style.fontSize}
+          onChange={e => update({ fontSize: parseInt(e.target.value) })}
+          className="w-full h-1.5 bg-vintage-tan/20 rounded-full appearance-none cursor-pointer accent-vintage-olive"
+        />
+      </div>
+
+      {/* Font Family */}
+      <div>
+        <label className="text-xs font-medium text-vintage-dark/70 mb-1 block">Font chữ</label>
+        <select
+          value={style.fontFamily}
+          onChange={e => update({ fontFamily: e.target.value })}
+          className="w-full text-sm border rounded-md px-2 py-1.5 bg-white border-vintage-tan/30 focus:border-vintage-olive focus:ring-1 focus:ring-vintage-olive/30 outline-none"
+        >
+          {FONT_FAMILIES.map(f => (
+            <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Colors */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-vintage-dark/70 mb-1 flex items-center gap-1">
+            <Palette className="h-3 w-3" /> Màu Track 1
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color" value={style.track1Color}
+              onChange={e => update({ track1Color: e.target.value })}
+              className="w-8 h-8 rounded border border-vintage-tan/30 cursor-pointer"
+            />
+            <span className="text-xs font-mono text-vintage-dark/50">{style.track1Color}</span>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-vintage-dark/70 mb-1 flex items-center gap-1">
+            <Palette className="h-3 w-3" /> Màu Track 2
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color" value={style.track2Color}
+              onChange={e => update({ track2Color: e.target.value })}
+              className="w-8 h-8 rounded border border-vintage-tan/30 cursor-pointer"
+            />
+            <span className="text-xs font-mono text-vintage-dark/50">{style.track2Color}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Background Opacity */}
+      <div>
+        <label className="flex items-center justify-between text-xs font-medium text-vintage-dark/70 mb-1">
+          <span>Độ mờ nền</span>
+          <span className="font-mono text-vintage-olive">{style.bgOpacity}%</span>
+        </label>
+        <input
+          type="range" min={0} max={100} value={style.bgOpacity}
+          onChange={e => update({ bgOpacity: parseInt(e.target.value) })}
+          className="w-full h-1.5 bg-vintage-tan/20 rounded-full appearance-none cursor-pointer accent-vintage-olive"
+        />
+      </div>
+
+      {/* Position */}
+      <div>
+        <label className="flex items-center justify-between text-xs font-medium text-vintage-dark/70 mb-1">
+          <span>Vị trí (từ dưới lên)</span>
+          <span className="font-mono text-vintage-olive">{style.bottomPercent}%</span>
+        </label>
+        <input
+          type="range" min={5} max={80} value={style.bottomPercent}
+          onChange={e => update({ bottomPercent: parseInt(e.target.value) })}
+          className="w-full h-1.5 bg-vintage-tan/20 rounded-full appearance-none cursor-pointer accent-vintage-olive"
+        />
+      </div>
+
+      <p className="text-[10px] text-vintage-tan italic">
+        💡 Kéo thả phụ đề trên video để thay đổi vị trí nhanh
+      </p>
+    </div>
+  );
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -386,6 +543,50 @@ export default function StreamPlayerPage() {
   const [translateError1, setTranslateError1] = useState('');
   const [translateError2, setTranslateError2] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState(() => getStoredGeminiApiKey());
+
+  // Subtitle style (persisted to localStorage)
+  const [subStyle, setSubStyle] = useState<SubtitleStyle>(() => {
+    try {
+      const saved = localStorage.getItem(SUBTITLE_STYLE_KEY);
+      return saved ? { ...DEFAULT_SUBTITLE_STYLE, ...JSON.parse(saved) } : DEFAULT_SUBTITLE_STYLE;
+    } catch { return DEFAULT_SUBTITLE_STYLE; }
+  });
+  const [showSubSettings, setShowSubSettings] = useState(false);
+
+  // Save subtitle style to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(SUBTITLE_STYLE_KEY, JSON.stringify(subStyle));
+    } catch { /* localStorage not available */ }
+  }, [subStyle]);
+
+  // Drag handler for subtitle position
+  const handleSubDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+      moveEvent.preventDefault();
+      const clientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : (moveEvent as MouseEvent).clientY;
+      const relativeY = containerRect.bottom - clientY;
+      const percent = Math.max(5, Math.min(80, (relativeY / containerRect.height) * 100));
+      setSubStyle(prev => ({ ...prev, bottomPercent: Math.round(percent) }));
+    };
+
+    const handleEnd = () => {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleEnd);
+      document.removeEventListener('touchmove', handleMove);
+      document.removeEventListener('touchend', handleEnd);
+    };
+
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+    document.addEventListener('touchmove', handleMove, { passive: false });
+    document.addEventListener('touchend', handleEnd);
+  }, []);
 
   // Fetch media data
   const { data: media, isLoading, error } = useQuery({
@@ -635,6 +836,12 @@ export default function StreamPlayerPage() {
         case 'KeyM':
           if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleMute(); }
           break;
+        case 'KeyC':
+          if (!e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            setSubStyle(prev => ({ ...prev, visible: !prev.visible }));
+          }
+          break;
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -735,17 +942,42 @@ export default function StreamPlayerPage() {
                 )}
 
                 {/* ===== Subtitle Overlay (non-YouTube only) ===== */}
-                {media.storage_type !== 'youtube' && (activeCue1 || activeCue2) && (
-                  <div className="absolute bottom-16 left-0 right-0 flex flex-col items-center px-4 pointer-events-none gap-1">
-                    {/* Track 2 (secondary - top, blue) */}
+                {media.storage_type !== 'youtube' && subStyle.visible && (activeCue1 || activeCue2) && (
+                  <div
+                    className="absolute left-0 right-0 flex flex-col items-center px-4 gap-1 group/sub cursor-grab active:cursor-grabbing select-none"
+                    style={{ bottom: `${subStyle.bottomPercent}%` }}
+                    onMouseDown={handleSubDragStart}
+                    onTouchStart={handleSubDragStart}
+                  >
+                    {/* Drag handle - visible on hover */}
+                    <div className="opacity-0 group-hover/sub:opacity-100 transition-opacity mb-0.5">
+                      <GripHorizontal className="h-4 w-4 text-white/60" />
+                    </div>
+                    {/* Track 2 (secondary - top) */}
                     {activeCue2 && (
-                      <div className="bg-black/70 text-blue-300 text-sm md:text-base px-4 py-1 rounded-lg text-center max-w-[90%] backdrop-blur-sm">
+                      <div
+                        className="px-4 py-1 rounded-lg text-center max-w-[90%] backdrop-blur-sm pointer-events-none"
+                        style={{
+                          backgroundColor: `rgba(0,0,0,${subStyle.bgOpacity / 100 * 0.9})`,
+                          color: subStyle.track2Color,
+                          fontSize: `${Math.max(12, subStyle.fontSize - 2)}px`,
+                          fontFamily: subStyle.fontFamily,
+                        }}
+                      >
                         {activeCue2.text}
                       </div>
                     )}
-                    {/* Track 1 (primary - bottom, white) */}
+                    {/* Track 1 (primary - bottom) */}
                     {activeCue1 && (
-                      <div className="bg-black/80 text-white text-base md:text-lg px-4 py-1.5 rounded-lg text-center max-w-[90%] backdrop-blur-sm font-medium">
+                      <div
+                        className="px-4 py-1.5 rounded-lg text-center max-w-[90%] backdrop-blur-sm font-medium pointer-events-none"
+                        style={{
+                          backgroundColor: `rgba(0,0,0,${subStyle.bgOpacity / 100})`,
+                          color: subStyle.track1Color,
+                          fontSize: `${subStyle.fontSize}px`,
+                          fontFamily: subStyle.fontFamily,
+                        }}
+                      >
                         {activeCue1.text}
                       </div>
                     )}
@@ -781,9 +1013,25 @@ export default function StreamPlayerPage() {
                         {formatTime(currentTime)} / {formatTime(duration)}
                       </span>
                     </div>
+                    <div className="flex items-center gap-3">
                     <button onClick={toggleFullscreen} className="text-white hover:text-vintage-olive transition">
                       <Maximize className="h-5 w-5" />
                     </button>
+                    <button
+                      onClick={() => setSubStyle(prev => ({ ...prev, visible: !prev.visible }))}
+                      className={`transition ${subStyle.visible ? 'text-vintage-olive' : 'text-white/50 hover:text-white'}`}
+                      title={subStyle.visible ? 'Tắt phụ đề (C)' : 'Bật phụ đề (C)'}
+                    >
+                      <Subtitles className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => setShowSubSettings(prev => !prev)}
+                      className={`transition ${showSubSettings ? 'text-vintage-olive' : 'text-white hover:text-vintage-olive'}`}
+                      title="Tùy chỉnh phụ đề"
+                    >
+                      <Settings2 className="h-5 w-5" />
+                    </button>
+                    </div>
                   </div>
                 </div>
                 )}
@@ -832,6 +1080,13 @@ export default function StreamPlayerPage() {
                     onKeyChange={(key: string) => setGeminiApiKey(key)}
                   />
                 </div>
+
+                {/* Subtitle Style Settings */}
+                {showSubSettings && (
+                  <div className="mt-3">
+                    <SubtitleStylePanel style={subStyle} onChange={setSubStyle} />
+                  </div>
+                )}
               </div>
               )}
 
