@@ -40,7 +40,6 @@ import {
   RotateCcw,
   Palette,
   Type,
-  GripHorizontal,
 } from 'lucide-react';
 import GeminiApiKeyManager, { getStoredGeminiApiKey } from '@/components/stream/GeminiApiKeyManager';
 
@@ -398,118 +397,142 @@ function SubtitleTrackControl({
 }
 
 // ============================================================================
-// SubtitleStylePanel Component
+// SubtitleStylePanel Component (YouTube-style overlay on video)
 // ============================================================================
 
 interface SubtitleStylePanelProps {
   style: SubtitleStyle;
   onChange: (style: SubtitleStyle) => void;
+  onClose: () => void;
 }
 
-function SubtitleStylePanel({ style, onChange }: SubtitleStylePanelProps) {
+function SubtitleStylePanel({ style, onChange, onClose }: SubtitleStylePanelProps) {
   const update = (partial: Partial<SubtitleStyle>) => onChange({ ...style, ...partial });
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Close on Escape
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  // Close on click outside panel
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    // Delay to avoid closing on the same click that opened it
+    const timer = setTimeout(() => document.addEventListener('mousedown', handleClick), 50);
+    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handleClick); };
+  }, [onClose]);
 
   return (
-    <div className="space-y-3 pt-3 border-t border-vintage-tan/20">
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-bold text-vintage-dark/70 uppercase tracking-wide flex items-center gap-1">
-          <Settings2 className="h-3 w-3" /> Tùy chỉnh phụ đề
-        </h4>
-        <button
-          onClick={() => onChange(DEFAULT_SUBTITLE_STYLE)}
-          className="flex items-center gap-1 text-xs text-vintage-olive hover:text-vintage-dark transition"
-          title="Đặt lại mặc định"
-        >
-          <RotateCcw className="h-3 w-3" /> Mặc định
-        </button>
-      </div>
-
-      {/* Font Size */}
-      <div>
-        <label className="flex items-center justify-between text-xs font-medium text-vintage-dark/70 mb-1">
-          <span className="flex items-center gap-1"><Type className="h-3 w-3" /> Cỡ chữ</span>
-          <span className="font-mono text-vintage-olive">{style.fontSize}px</span>
-        </label>
-        <input
-          type="range" min={12} max={40} value={style.fontSize}
-          onChange={e => update({ fontSize: parseInt(e.target.value) })}
-          className="w-full h-1.5 bg-vintage-tan/20 rounded-full appearance-none cursor-pointer accent-vintage-olive"
-        />
-      </div>
-
-      {/* Font Family */}
-      <div>
-        <label className="text-xs font-medium text-vintage-dark/70 mb-1 block">Font chữ</label>
-        <select
-          value={style.fontFamily}
-          onChange={e => update({ fontFamily: e.target.value })}
-          className="w-full text-sm border rounded-md px-2 py-1.5 bg-white border-vintage-tan/30 focus:border-vintage-olive focus:ring-1 focus:ring-vintage-olive/30 outline-none"
-        >
-          {FONT_FAMILIES.map(f => (
-            <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Colors */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs font-medium text-vintage-dark/70 mb-1 flex items-center gap-1">
-            <Palette className="h-3 w-3" /> Màu Track 1
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="color" value={style.track1Color}
-              onChange={e => update({ track1Color: e.target.value })}
-              className="w-8 h-8 rounded border border-vintage-tan/30 cursor-pointer"
-            />
-            <span className="text-xs font-mono text-vintage-dark/50">{style.track1Color}</span>
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-medium text-vintage-dark/70 mb-1 flex items-center gap-1">
-            <Palette className="h-3 w-3" /> Màu Track 2
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="color" value={style.track2Color}
-              onChange={e => update({ track2Color: e.target.value })}
-              className="w-8 h-8 rounded border border-vintage-tan/30 cursor-pointer"
-            />
-            <span className="text-xs font-mono text-vintage-dark/50">{style.track2Color}</span>
-          </div>
+    <div
+      ref={panelRef}
+      className="absolute right-2 bottom-14 z-30 w-72 bg-black/90 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl text-white overflow-hidden"
+      onClick={e => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
+        <span className="text-sm font-semibold flex items-center gap-1.5">
+          <Settings2 className="h-4 w-4 text-white/70" /> Phụ đề
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onChange(DEFAULT_SUBTITLE_STYLE)}
+            className="text-xs text-white/50 hover:text-white transition flex items-center gap-1"
+            title="Đặt lại mặc định"
+          >
+            <RotateCcw className="h-3 w-3" />
+          </button>
+          <button onClick={onClose} className="text-white/50 hover:text-white transition">
+            <X className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
-      {/* Background Opacity */}
-      <div>
-        <label className="flex items-center justify-between text-xs font-medium text-vintage-dark/70 mb-1">
-          <span>Độ mờ nền</span>
-          <span className="font-mono text-vintage-olive">{style.bgOpacity}%</span>
-        </label>
-        <input
-          type="range" min={0} max={100} value={style.bgOpacity}
-          onChange={e => update({ bgOpacity: parseInt(e.target.value) })}
-          className="w-full h-1.5 bg-vintage-tan/20 rounded-full appearance-none cursor-pointer accent-vintage-olive"
-        />
+      <div className="px-4 py-3 space-y-3 max-h-[50vh] overflow-y-auto scrollbar-thin">
+        {/* Font Size */}
+        <div>
+          <label className="flex items-center justify-between text-xs text-white/60 mb-1.5">
+            <span className="flex items-center gap-1"><Type className="h-3 w-3" /> Cỡ chữ</span>
+            <span className="font-mono text-white/90">{style.fontSize}px</span>
+          </label>
+          <input
+            type="range" min={12} max={40} value={style.fontSize}
+            onChange={e => update({ fontSize: parseInt(e.target.value) })}
+            className="w-full h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-white
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-pointer
+              [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0"
+          />
+        </div>
+
+        {/* Font Family */}
+        <div>
+          <label className="text-xs text-white/60 mb-1.5 block">Font chữ</label>
+          <select
+            value={style.fontFamily}
+            onChange={e => update({ fontFamily: e.target.value })}
+            className="w-full text-sm bg-white/10 border border-white/10 rounded-lg px-2.5 py-1.5 text-white outline-none focus:border-white/30 cursor-pointer"
+          >
+            {FONT_FAMILIES.map(f => (
+              <option key={f.value} value={f.value} className="bg-neutral-800 text-white">{f.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Colors - side by side */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-white/60 mb-1.5 flex items-center gap-1">
+              <Palette className="h-3 w-3" /> Track 1
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color" value={style.track1Color}
+                onChange={e => update({ track1Color: e.target.value })}
+                className="w-7 h-7 rounded border border-white/20 cursor-pointer bg-transparent"
+              />
+              <span className="text-[10px] font-mono text-white/40">{style.track1Color}</span>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-white/60 mb-1.5 flex items-center gap-1">
+              <Palette className="h-3 w-3" /> Track 2
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color" value={style.track2Color}
+                onChange={e => update({ track2Color: e.target.value })}
+                className="w-7 h-7 rounded border border-white/20 cursor-pointer bg-transparent"
+              />
+              <span className="text-[10px] font-mono text-white/40">{style.track2Color}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Background Opacity */}
+        <div>
+          <label className="flex items-center justify-between text-xs text-white/60 mb-1.5">
+            <span>Nền phụ đề</span>
+            <span className="font-mono text-white/90">{style.bgOpacity}%</span>
+          </label>
+          <input
+            type="range" min={0} max={100} value={style.bgOpacity}
+            onChange={e => update({ bgOpacity: parseInt(e.target.value) })}
+            className="w-full h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-white
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-pointer
+              [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0"
+          />
+        </div>
       </div>
 
-      {/* Position */}
-      <div>
-        <label className="flex items-center justify-between text-xs font-medium text-vintage-dark/70 mb-1">
-          <span>Vị trí (từ dưới lên)</span>
-          <span className="font-mono text-vintage-olive">{style.bottomPercent}%</span>
-        </label>
-        <input
-          type="range" min={5} max={80} value={style.bottomPercent}
-          onChange={e => update({ bottomPercent: parseInt(e.target.value) })}
-          className="w-full h-1.5 bg-vintage-tan/20 rounded-full appearance-none cursor-pointer accent-vintage-olive"
-        />
+      <div className="px-4 py-2 border-t border-white/10 text-[10px] text-white/30 text-center">
+        Nhấn giữ chuột trên phụ đề để kéo thả vị trí
       </div>
-
-      <p className="text-[10px] text-vintage-tan italic">
-        💡 Kéo thả phụ đề trên video để thay đổi vị trí nhanh
-      </p>
     </div>
   );
 }
@@ -944,25 +967,21 @@ export default function StreamPlayerPage() {
                 {/* ===== Subtitle Overlay (non-YouTube only) ===== */}
                 {media.storage_type !== 'youtube' && subStyle.visible && (activeCue1 || activeCue2) && (
                   <div
-                    className="absolute left-0 right-0 flex flex-col items-center px-4 gap-1 group/sub cursor-grab active:cursor-grabbing select-none"
+                    className="absolute left-0 right-0 flex flex-col items-center px-4 gap-1 z-10"
                     style={{ bottom: `${subStyle.bottomPercent}%` }}
-                    onMouseDown={handleSubDragStart}
-                    onTouchStart={handleSubDragStart}
                   >
-                    {/* Drag handle - visible on hover */}
-                    <div className="opacity-0 group-hover/sub:opacity-100 transition-opacity mb-0.5">
-                      <GripHorizontal className="h-4 w-4 text-white/60" />
-                    </div>
                     {/* Track 2 (secondary - top) */}
                     {activeCue2 && (
                       <div
-                        className="px-4 py-1 rounded-lg text-center max-w-[90%] backdrop-blur-sm pointer-events-none"
+                        className="px-4 py-1 rounded-lg text-center max-w-[90%] backdrop-blur-sm cursor-grab active:cursor-grabbing select-none"
                         style={{
                           backgroundColor: `rgba(0,0,0,${subStyle.bgOpacity / 100 * 0.9})`,
                           color: subStyle.track2Color,
                           fontSize: `${Math.max(12, subStyle.fontSize - 2)}px`,
                           fontFamily: subStyle.fontFamily,
                         }}
+                        onMouseDown={handleSubDragStart}
+                        onTouchStart={handleSubDragStart}
                       >
                         {activeCue2.text}
                       </div>
@@ -970,18 +989,29 @@ export default function StreamPlayerPage() {
                     {/* Track 1 (primary - bottom) */}
                     {activeCue1 && (
                       <div
-                        className="px-4 py-1.5 rounded-lg text-center max-w-[90%] backdrop-blur-sm font-medium pointer-events-none"
+                        className="px-4 py-1.5 rounded-lg text-center max-w-[90%] backdrop-blur-sm font-medium cursor-grab active:cursor-grabbing select-none"
                         style={{
                           backgroundColor: `rgba(0,0,0,${subStyle.bgOpacity / 100})`,
                           color: subStyle.track1Color,
                           fontSize: `${subStyle.fontSize}px`,
                           fontFamily: subStyle.fontFamily,
                         }}
+                        onMouseDown={handleSubDragStart}
+                        onTouchStart={handleSubDragStart}
                       >
                         {activeCue1.text}
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* ===== Settings Panel Overlay (YouTube-style, inside video) ===== */}
+                {media.storage_type !== 'youtube' && showSubSettings && (
+                  <SubtitleStylePanel
+                    style={subStyle}
+                    onChange={setSubStyle}
+                    onClose={() => setShowSubSettings(false)}
+                  />
                 )}
 
                 {/* Custom Controls Overlay (non-YouTube only) */}
@@ -1080,13 +1110,6 @@ export default function StreamPlayerPage() {
                     onKeyChange={(key: string) => setGeminiApiKey(key)}
                   />
                 </div>
-
-                {/* Subtitle Style Settings */}
-                {showSubSettings && (
-                  <div className="mt-3">
-                    <SubtitleStylePanel style={subStyle} onChange={setSubStyle} />
-                  </div>
-                )}
               </div>
               )}
 
