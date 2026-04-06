@@ -98,6 +98,9 @@ export interface GeminiModel {
 export interface GeminiModelsResponse {
   models: GeminiModel[];
   default: string;
+  cached?: boolean;
+  refreshed?: boolean;
+  count?: number;
 }
 
 export interface WordLookupRequest {
@@ -185,10 +188,20 @@ export const mediaStreamApi = {
   },
 
   /**
-   * Get available Gemini models
+   * Get available Gemini models (cached on server)
    */
   getGeminiModels: async (): Promise<GeminiModelsResponse> => {
     const response = await streamApi.get<GeminiModelsResponse>('/gemini-models/');
+    return response.data;
+  },
+
+  /**
+   * Refresh Gemini models from Google API (POST with api key, caches on server for all users)
+   */
+  refreshGeminiModels: async (geminiApiKey: string): Promise<GeminiModelsResponse> => {
+    const response = await streamApi.post<GeminiModelsResponse>('/gemini-models/', {
+      gemini_api_key: geminiApiKey,
+    });
     return response.data;
   },
 

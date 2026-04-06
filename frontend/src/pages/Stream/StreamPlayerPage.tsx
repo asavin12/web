@@ -570,8 +570,12 @@ function WordTooltip({ word, context, sourceLang, targetLang, position, onClose,
       ...(geminiModel ? { gemini_model: geminiModel } : {}),
     }).then(res => {
       if (!cancelled) { setData(res); setLoading(false); }
-    }).catch(() => {
-      if (!cancelled) { setData({ word, meaning: 'Không tra được' }); setLoading(false); }
+    }).catch((err) => {
+      if (!cancelled) {
+        const errMsg = err?.response?.data?.error || 'Không tra được';
+        setData({ word, meaning: errMsg });
+        setLoading(false);
+      }
     });
     return () => { cancelled = true; };
   }, [word, context, sourceLang, targetLang, geminiApiKey, geminiModel]);

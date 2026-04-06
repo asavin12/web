@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   Sparkles,
   Cpu,
+  RefreshCw,
 } from 'lucide-react';
 import { mediaStreamApi, type GeminiModel } from '@/api/mediastream';
 
@@ -99,6 +100,9 @@ export default function GeminiApiKeyManager({ onKeyChange, onModelChange, compac
   const [models, setModels] = useState<GeminiModel[]>([]);
   const [defaultModel, setDefaultModel] = useState('');
   const [selectedModel, setSelectedModel] = useState(() => getStoredGeminiModel());
+  const [refreshingModels, setRefreshingModels] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
+  const [refreshSuccess, setRefreshSuccess] = useState('');
 
   // Fetch models list from server
   useEffect(() => {
@@ -111,6 +115,31 @@ export default function GeminiApiKeyManager({ onKeyChange, onModelChange, compac
       }
     }).catch(() => { /* silently fail */ });
   }, []);
+
+  const handleRefreshModels = useCallback(async () => {
+    const key = apiKey || getStoredGeminiApiKey();
+    if (!key) {
+      setRefreshError('Cần nhập API Key trước');
+      setTimeout(() => setRefreshError(''), 3000);
+      return;
+    }
+    setRefreshingModels(true);
+    setRefreshError('');
+    setRefreshSuccess('');
+    try {
+      const data = await mediaStreamApi.refreshGeminiModels(key);
+      setModels(data.models);
+      setDefaultModel(data.default);
+      setRefreshSuccess(`Đã tải ${data.count || data.models.length} models từ Google`);
+      setTimeout(() => setRefreshSuccess(''), 4000);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Lỗi tải models';
+      setRefreshError(msg);
+      setTimeout(() => setRefreshError(''), 5000);
+    } finally {
+      setRefreshingModels(false);
+    }
+  }, [apiKey]);
 
   const handleModelChange = useCallback((model: string) => {
     setSelectedModel(model);
@@ -245,7 +274,24 @@ export default function GeminiApiKeyManager({ onKeyChange, onModelChange, compac
             <label className="text-xs font-medium text-vintage-dark/70 mb-1 flex items-center gap-1">
               <Cpu className="h-3 w-3 text-vintage-olive" />
               Gemini Model
+              <button
+                onClick={handleRefreshModels}
+                disabled={refreshingModels}
+                className="ml-auto flex items-center gap-1 text-[10px] text-vintage-olive hover:text-vintage-dark disabled:opacity-50 transition"
+                title="Tải danh sách model mới nhất từ Google API"
+              >
+                <RefreshCw className={`h-3 w-3 ${refreshingModels ? 'animate-spin' : ''}`} />
+                {refreshingModels ? 'Đang tải...' : 'Tải models'}
+              </button>
             </label>
+            {refreshError && (
+              <p className="text-[10px] text-red-500 mb-1">{refreshError}</p>
+            )}
+            {refreshSuccess && (
+              <p className="text-[10px] text-green-600 mb-1 flex items-center gap-1">
+                <Check className="h-3 w-3" />{refreshSuccess}
+              </p>
+            )}
             <select
               value={selectedModel || defaultModel}
               onChange={e => handleModelChange(e.target.value)}

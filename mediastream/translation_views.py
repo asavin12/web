@@ -101,15 +101,17 @@ def _rebuild_vtt(segments):
     return '\n'.join(lines)
 
 
-DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
+DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash'
 
-# Models available for user selection
-GEMINI_MODELS = [
-    {'id': 'gemini-2.0-flash', 'name': 'Gemini 2.0 Flash', 'description': 'Nhanh, phù hợp dịch phụ đề'},
-    {'id': 'gemini-2.0-flash-lite', 'name': 'Gemini 2.0 Flash Lite', 'description': 'Siêu nhanh, tiết kiệm'},
-    {'id': 'gemini-1.5-flash', 'name': 'Gemini 1.5 Flash', 'description': 'Ổn định, nhanh'},
-    {'id': 'gemini-1.5-pro', 'name': 'Gemini 1.5 Pro', 'description': 'Chất lượng cao, chậm hơn'},
-    {'id': 'gemini-2.5-flash-preview-05-20', 'name': 'Gemini 2.5 Flash (Preview)', 'description': 'Mới nhất, thử nghiệm'},
+# Cache key for dynamic model list  
+GEMINI_MODELS_CACHE_KEY = 'gemini_models_list'
+GEMINI_MODELS_CACHE_TIMEOUT = 60 * 60 * 24  # 24h
+
+# Fallback models when no dynamic list cached yet
+GEMINI_MODELS_FALLBACK = [
+    {'id': 'gemini-2.5-flash', 'name': 'Gemini 2.5 Flash', 'description': 'Nhanh, suy luận tốt'},
+    {'id': 'gemini-2.5-flash-lite', 'name': 'Gemini 2.5 Flash Lite', 'description': 'Nhanh nhất, tiết kiệm'},
+    {'id': 'gemini-2.5-pro', 'name': 'Gemini 2.5 Pro', 'description': 'Chất lượng cao nhất'},
 ]
 
 
@@ -307,14 +309,97 @@ def translate_subtitle(request):
     })
 
 
+@csrf_exempt
 def gemini_models_list(request):
     """
-    GET /media-stream/gemini-models/
-    Returns list of available Gemini models
+    GET  /media-stream/gemini-models/ — Trả về danh sách models đã cache (cho mọi user)
+    POST /media-stream/gemini-models/ — Tải models mới từ Google API bằng API key, cache lên server
+    
+    Body POST: { gemini_api_key: string }
     """
+    if request.method == 'POST':
+        # Refresh models from Google API
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        
+        user_key = body.get('gemini_api_key', '').strip()
+        api_key = user_key or _get_gemini_api_key()
+        if not api_key:
+            return JsonResponse({'error': 'Cần API Key để tải danh sách models'}, status=400)
+        
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            
+            models_list = []
+            for m in genai.list_models():
+                # Only include models that support generateContent (text generation)
+                supported = [method.name if hasattr(method, 'name') else str(method) 
+                            for method in (m.supported_generation_methods or [])]
+                if 'generateContent' not in supported:
+                    continue
+                
+                model_id = m.name.replace('models/', '') if m.name.startswith('models/') else m.name
+                display_name = m.display_name or model_id
+                desc = m.description or ''
+                # Truncate long descriptions
+                if len(desc) > 80:
+                    desc = desc[:77] + '...'
+                
+                models_list.append({
+                    'id': model_id,
+                    'name': display_name,
+                    'description': desc,
+                })
+            
+            if not models_list:
+                return JsonResponse({'error': 'Không tìm thấy model nào hỗ trợ generateContent'}, status=404)
+            
+            # Sort: stable/flash first, then pro, then others
+            def sort_key(m):
+                mid = m['id'].lower()
+                if '2.5-flash-lite' in mid:
+                    return (0, 2, mid)
+                if '2.5-flash' in mid and 'preview' not in mid and 'lite' not in mid:
+                    return (0, 0, mid)
+                if '2.5-flash' in mid:
+                    return (0, 1, mid)
+                if '2.5-pro' in mid and 'preview' not in mid:
+                    return (1, 0, mid)
+                if '2.5-pro' in mid:
+                    return (1, 1, mid)
+                if '3' in mid and 'flash' in mid:
+                    return (2, 0, mid)
+                if '3' in mid and 'pro' in mid:
+                    return (2, 1, mid)
+                return (9, 0, mid)
+            
+            models_list.sort(key=sort_key)
+            
+            # Cache for all users
+            cache.set(GEMINI_MODELS_CACHE_KEY, models_list, GEMINI_MODELS_CACHE_TIMEOUT)
+            
+            logger.info(f"Refreshed Gemini models list: {len(models_list)} models cached")
+            
+            return JsonResponse({
+                'models': models_list,
+                'default': DEFAULT_GEMINI_MODEL,
+                'refreshed': True,
+                'count': len(models_list),
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch Gemini models: {e}")
+            return JsonResponse({'error': f'Lỗi tải models: {str(e)}'}, status=500)
+    
+    # GET — Return cached or fallback
+    cached_models = cache.get(GEMINI_MODELS_CACHE_KEY)
     return JsonResponse({
-        'models': GEMINI_MODELS,
+        'models': cached_models or GEMINI_MODELS_FALLBACK,
         'default': DEFAULT_GEMINI_MODEL,
+        'cached': cached_models is not None,
     })
 
 
