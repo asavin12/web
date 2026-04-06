@@ -3,11 +3,14 @@ Media Stream Admin Configuration
 Quản lý video/audio trong Django Admin
 """
 
+import logging
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.contrib import messages
 from .models import StreamMedia, MediaCategory, MediaSubtitle, MediaPlaylist, PlaylistItem, GDriveAccount
+
+logger = logging.getLogger(__name__)
 
 
 class MediaSubtitleInline(admin.TabularInline):
@@ -314,60 +317,40 @@ class StreamMediaAdmin(admin.ModelAdmin):
     @admin.action(description='🔄 Cập nhật thông tin YouTube')
     def fetch_youtube_metadata(self, request, queryset):
         """Batch action: re-fetch metadata cho các video YouTube đã chọn"""
-        from core.youtube import fetch_youtube_info
+        from core.youtube import fetch_youtube_info_batch
         
-        yt_items = queryset.filter(storage_type='youtube').exclude(youtube_id='')
-        if not yt_items.exists():
+        yt_items = list(queryset.filter(storage_type='youtube').exclude(youtube_id=''))
+        if not yt_items:
             messages.warning(request, '⚠️ Không có video YouTube nào được chọn.')
             return
         
+        # Batch fetch: 1 API call cho tất cả video IDs
+        video_ids = [m.youtube_id for m in yt_items]
+        all_info = fetch_youtube_info_batch(video_ids)
+        
         updated = 0
         failed = 0
+        errors = []
         for media in yt_items:
             try:
-                info = fetch_youtube_info(media.youtube_id)
+                info = all_info.get(media.youtube_id)
                 if info:
-                    # Force update duration even if title exists
-                    if not media.title:
-                        media.title = info.get('title', '')[:255]
-                    if not media.description:
-                        media.description = info.get('description', '')
-                    
-                    # Always update duration if missing
-                    dur_secs = info.get('duration_seconds')
-                    if dur_secs and not media.duration:
-                        media.duration = int(dur_secs)
-                    elif not media.duration:
-                        duration_str = info.get('duration', '')
-                        if duration_str:
-                            parts = duration_str.split(':')
-                            try:
-                                if len(parts) == 3:
-                                    media.duration = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-                                elif len(parts) == 2:
-                                    media.duration = int(parts[0]) * 60 + int(parts[1])
-                            except (ValueError, IndexError):
-                                pass
-                    
-                    yt_tags = info.get('tags', [])
-                    if yt_tags and not media.tags:
-                        media.tags = ', '.join(yt_tags[:10])
-                    
-                    yt_views = info.get('view_count', 0)
-                    if yt_views and not media.view_count:
-                        media.view_count = yt_views
-                    
+                    self._apply_youtube_info(media, info)
                     media.save()
                     updated += 1
                 else:
                     failed += 1
+                    errors.append(f'{media.youtube_id}: không lấy được info')
             except Exception as e:
                 failed += 1
+                errors.append(f'{media.youtube_id}: {e}')
+                logger.error(f"Batch update error cho {media.youtube_id}: {e}")
         
         if updated:
             messages.success(request, f'✅ Đã cập nhật {updated} video từ YouTube')
         if failed:
-            messages.warning(request, f'⚠️ {failed} video không thể cập nhật')
+            error_detail = '; '.join(errors[:5])
+            messages.warning(request, f'⚠️ {failed} video không thể cập nhật: {error_detail}')
     
     def changelist_view(self, request, extra_context=None):
         """Add extra context for upload panel"""

@@ -14,35 +14,46 @@ class Command(BaseCommand):
         parser.add_argument('--force', action='store_true', help='Ghi đè cả fields đã có')
 
     def handle(self, *args, **options):
-        from core.youtube import fetch_youtube_info
+        from core.youtube import fetch_youtube_info_batch
         from django.db.models import Q
+
+        # Reload config to get fresh API key
+        from core.config import invalidate_cache
+        invalidate_cache()
 
         qs = StreamMedia.objects.filter(storage_type='youtube').exclude(youtube_id='')
         self.stdout.write(f'Tổng YouTube videos: {qs.count()}')
         
         if not options['all']:
-            # Chỉ fetch cho videos thiếu duration
             qs = qs.filter(Q(duration__isnull=True) | Q(duration=0) | Q(duration__lt=1))
 
-        total = qs.count()
+        media_list = list(qs)
+        total = len(media_list)
         if not total:
             self.stdout.write(self.style.SUCCESS('Tất cả YouTube videos đã có metadata đầy đủ.'))
             return
 
         self.stdout.write(f'Đang xử lý {total} YouTube videos...')
+        
+        # Batch fetch: 1 API call cho tất cả
+        video_ids = [m.youtube_id for m in media_list]
+        self.stdout.write(f'Fetching batch: {", ".join(video_ids)}')
+        all_info = fetch_youtube_info_batch(video_ids)
+        self.stdout.write(f'Nhận được info cho {len(all_info)}/{len(video_ids)} videos')
+        
         updated = 0
         failed = 0
         force = options.get('force', False)
 
-        for media in qs:
-            self.stdout.write(f'  [{media.id}] {media.youtube_id} — {media.title[:50]}...')
+        for media in media_list:
+            self.stdout.write(f'  [{media.id}] {media.youtube_id} — {media.title[:50] if media.title else "(no title)"}')
+            info = all_info.get(media.youtube_id)
+            if not info:
+                self.stdout.write(self.style.WARNING(f'    ❌ Không có info trong batch result'))
+                failed += 1
+                continue
+            
             try:
-                info = fetch_youtube_info(media.youtube_id)
-                if not info:
-                    self.stdout.write(self.style.WARNING(f'    ❌ Không lấy được info'))
-                    failed += 1
-                    continue
-
                 changed = False
 
                 if force or not media.title:

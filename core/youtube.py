@@ -3,8 +3,9 @@ YouTube API Utilities
 Tự động lấy thông tin video từ YouTube
 """
 import re
+import time
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from django.conf import settings
 
@@ -133,11 +134,95 @@ def fetch_youtube_info(video_id: str) -> Optional[Dict[str, Any]]:
         logger.error("Không thể import googleapiclient, dùng yt-dlp fallback")
         return _fetch_youtube_info_ytdlp(video_id)
     except HttpError as e:
-        logger.error(f"YouTube API error: {e}, dùng yt-dlp fallback")
+        logger.error(f"YouTube API error cho {video_id}: {e}, dùng yt-dlp fallback")
         return _fetch_youtube_info_ytdlp(video_id)
     except Exception as e:
-        logger.error(f"Lỗi khi lấy thông tin YouTube: {e}")
+        logger.error(f"Lỗi khi lấy thông tin YouTube {video_id}: {e}")
         return _fetch_youtube_info_ytdlp(video_id)
+
+
+def fetch_youtube_info_batch(video_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+    """
+    Batch fetch YouTube info cho nhiều video cùng lúc.
+    YouTube API hỗ trợ comma-separated IDs → 1 API call cho tất cả.
+    
+    Returns:
+        Dict mapping video_id → info dict. Missing IDs sẽ không có trong result.
+    """
+    if not video_ids:
+        return {}
+    
+    results = {}
+    api_key = getattr(settings, 'YOUTUBE_API_KEY', None)
+    
+    if api_key:
+        try:
+            from googleapiclient.discovery import build
+            from googleapiclient.errors import HttpError
+            
+            youtube = build('youtube', 'v3', developerKey=api_key)
+            
+            # YouTube API cho phép tối đa 50 IDs mỗi request
+            for i in range(0, len(video_ids), 50):
+                batch_ids = video_ids[i:i + 50]
+                ids_str = ','.join(batch_ids)
+                
+                request = youtube.videos().list(
+                    part='snippet,contentDetails,statistics',
+                    id=ids_str
+                )
+                response = request.execute()
+                
+                for item in response.get('items', []):
+                    vid = item['id']
+                    snippet = item.get('snippet', {})
+                    content_details = item.get('contentDetails', {})
+                    statistics = item.get('statistics', {})
+                    
+                    results[vid] = {
+                        'title': snippet.get('title', ''),
+                        'description': snippet.get('description', ''),
+                        'duration': parse_duration(content_details.get('duration', '')),
+                        'duration_seconds': _parse_duration_seconds(content_details.get('duration', '')),
+                        'thumbnail': snippet.get('thumbnails', {}).get('high', {}).get('url', ''),
+                        'view_count': int(statistics.get('viewCount', 0)),
+                        'channel_title': snippet.get('channelTitle', ''),
+                        'published_at': snippet.get('publishedAt', ''),
+                        'tags': snippet.get('tags', []),
+                    }
+                
+                logger.info(f"YouTube API batch OK: {len(results)}/{len(batch_ids)} videos")
+            
+            if results:
+                return results
+                
+        except ImportError:
+            logger.error("googleapiclient không cài, fallback từng video")
+        except HttpError as e:
+            logger.error(f"YouTube API batch error: {e}, fallback từng video")
+        except Exception as e:
+            logger.error(f"YouTube batch error: {e}, fallback từng video")
+    
+    # Fallback: fetch từng video với delay
+    for vid in video_ids:
+        if vid in results:
+            continue
+        try:
+            info = _fetch_youtube_info_noembed(vid)
+            if info and info.get('duration_seconds'):
+                results[vid] = info
+            else:
+                yt_info = _fetch_youtube_info_ytdlp(vid)
+                if yt_info:
+                    results[vid] = yt_info
+                elif info:
+                    results[vid] = info
+            # Delay giữa các request để tránh rate limit
+            time.sleep(2)
+        except Exception as e:
+            logger.error(f"Fallback fetch error cho {vid}: {e}")
+    
+    return results
 
 
 def _parse_duration_seconds(duration: str) -> Optional[int]:
