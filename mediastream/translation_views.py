@@ -101,7 +101,19 @@ def _rebuild_vtt(segments):
     return '\n'.join(lines)
 
 
-def _translate_with_gemini(texts, source_lang, target_lang, api_key):
+DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
+
+# Models available for user selection
+GEMINI_MODELS = [
+    {'id': 'gemini-2.0-flash', 'name': 'Gemini 2.0 Flash', 'description': 'Nhanh, phù hợp dịch phụ đề'},
+    {'id': 'gemini-2.0-flash-lite', 'name': 'Gemini 2.0 Flash Lite', 'description': 'Siêu nhanh, tiết kiệm'},
+    {'id': 'gemini-1.5-flash', 'name': 'Gemini 1.5 Flash', 'description': 'Ổn định, nhanh'},
+    {'id': 'gemini-1.5-pro', 'name': 'Gemini 1.5 Pro', 'description': 'Chất lượng cao, chậm hơn'},
+    {'id': 'gemini-2.5-flash-preview-05-20', 'name': 'Gemini 2.5 Flash (Preview)', 'description': 'Mới nhất, thử nghiệm'},
+]
+
+
+def _translate_with_gemini(texts, source_lang, target_lang, api_key, model_id=None):
     """
     Translate a list of subtitle texts using Gemini API
     Uses batch translation for efficiency
@@ -112,6 +124,8 @@ def _translate_with_gemini(texts, source_lang, target_lang, api_key):
     
     source_name = SUPPORTED_LANGUAGES.get(source_lang, source_lang)
     target_name = SUPPORTED_LANGUAGES.get(target_lang, target_lang)
+    
+    use_model = model_id or DEFAULT_GEMINI_MODEL
     
     # Batch texts into groups of ~50 to avoid too-long prompts
     BATCH_SIZE = 50
@@ -130,7 +144,7 @@ Do NOT add any explanation or extra text. Keep translations natural and concise 
 {numbered_texts}"""
         
         try:
-            model = genai.GenerativeModel('gemini-2.0-flash')
+            model = genai.GenerativeModel(use_model)
             response = model.generate_content(prompt)
             result_text = response.text.strip()
             
@@ -268,8 +282,9 @@ def translate_subtitle(request):
     texts = [seg['text'] for seg in segments]
     
     # Translate using Gemini
+    gemini_model = body.get('gemini_model', '').strip() or None
     try:
-        translated_texts = _translate_with_gemini(texts, source_lang, target_lang, api_key)
+        translated_texts = _translate_with_gemini(texts, source_lang, target_lang, api_key, gemini_model)
     except Exception as e:
         logger.error(f"Translation failed: {e}")
         return JsonResponse({'error': f'Translation failed: {str(e)}'}, status=500)
@@ -290,3 +305,100 @@ def translate_subtitle(request):
         'cached': False,
         'segment_count': len(segments),
     })
+
+
+def gemini_models_list(request):
+    """
+    GET /media-stream/gemini-models/
+    Returns list of available Gemini models
+    """
+    return JsonResponse({
+        'models': GEMINI_MODELS,
+        'default': DEFAULT_GEMINI_MODEL,
+    })
+
+
+@csrf_exempt
+@require_POST
+def word_lookup(request):
+    """
+    POST /media-stream/word-lookup/
+    Look up word/phrase meaning using Gemini API
+    
+    Body: { word, context, source_lang, target_lang, gemini_api_key?, gemini_model? }
+    """
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    
+    word = body.get('word', '').strip()
+    context = body.get('context', '').strip()
+    source_lang = body.get('source_lang', '').strip()
+    target_lang = body.get('target_lang', 'vi').strip()
+    
+    if not word:
+        return JsonResponse({'error': 'word required'}, status=400)
+    
+    # API key
+    user_key = body.get('gemini_api_key', '').strip()
+    api_key = user_key or _get_gemini_api_key()
+    if not api_key:
+        return JsonResponse({'error': 'Gemini API Key required'}, status=503)
+    
+    # Cache
+    cache_key = f"word_lookup:{hashlib.md5(f'{word}:{context}:{source_lang}:{target_lang}'.encode()).hexdigest()}"
+    cached = cache.get(cache_key)
+    if cached:
+        return JsonResponse(cached)
+    
+    source_name = SUPPORTED_LANGUAGES.get(source_lang, source_lang or 'auto-detect')
+    target_name = SUPPORTED_LANGUAGES.get(target_lang, target_lang)
+    
+    model_id = body.get('gemini_model', '').strip() or DEFAULT_GEMINI_MODEL
+    
+    prompt = f"""You are a language learning dictionary. The user is hovering over a word/phrase while watching a video with subtitles.
+
+Word/Phrase: "{word}"
+{f'Sentence context: "{context}"' if context else ''}
+Source language: {source_name}
+Translate to: {target_name}
+
+Respond in this EXACT JSON format only (no markdown, no code block):
+{{"meaning": "primary translation", "pronunciation": "IPA or phonetic", "word_type": "noun/verb/adj/etc", "examples": ["example 1"]}}
+
+Keep it SHORT - this is a tooltip popup. The meaning should be in {target_name}. Give max 1 short example."""
+
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(model_id)
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        
+        # Strip markdown code block if present
+        if text.startswith('```'):
+            text = text.split('\n', 1)[1] if '\n' in text else text[3:]
+            if text.endswith('```'):
+                text = text[:-3]
+            text = text.strip()
+        
+        result = json.loads(text)
+        result['word'] = word
+        result['cached'] = False
+        
+        # Cache for 24h
+        cache.set(cache_key, result, 60 * 60 * 24)
+        
+        return JsonResponse(result)
+        
+    except json.JSONDecodeError:
+        # Gemini didn't return valid JSON, return raw meaning
+        return JsonResponse({
+            'word': word,
+            'meaning': response.text.strip()[:200] if response else 'Không tra được',
+            'cached': False,
+        })
+    except Exception as e:
+        logger.error(f"Word lookup error: {e}")
+        return JsonResponse({'error': str(e)}, status=500)

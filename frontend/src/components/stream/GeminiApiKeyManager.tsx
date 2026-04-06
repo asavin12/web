@@ -1,12 +1,12 @@
 /**
- * GeminiApiKeyManager — Quản lý API Key Gemini cho tính năng dịch phụ đề
+ * GeminiApiKeyManager — Quản lý API Key Gemini + chọn model cho tính năng dịch phụ đề
  * 
- * - Lưu API key vào localStorage
+ * - Lưu API key + model vào localStorage
  * - Hiển thị trạng thái key (đã cấu hình / chưa)
- * - Nút xoá key để đổi key khác
+ * - Load danh sách model từ server để người dùng chọn
  * - Hướng dẫn chi tiết cách lấy API key miễn phí
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Key,
   Eye,
@@ -18,9 +18,12 @@ import {
   ChevronUp,
   AlertTriangle,
   Sparkles,
+  Cpu,
 } from 'lucide-react';
+import { mediaStreamApi, type GeminiModel } from '@/api/mediastream';
 
 const STORAGE_KEY = 'gemini_api_key';
+const MODEL_STORAGE_KEY = 'gemini_model';
 
 /** Đọc Gemini API key từ localStorage */
 export function getStoredGeminiApiKey(): string {
@@ -53,20 +56,67 @@ export function removeStoredGeminiApiKey(): void {
   }
 }
 
+/** Đọc Gemini model từ localStorage */
+export function getStoredGeminiModel(): string {
+  try {
+    return localStorage.getItem(MODEL_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+/** Lưu Gemini model vào localStorage */
+export function setStoredGeminiModel(model: string): void {
+  try {
+    if (model) {
+      localStorage.setItem(MODEL_STORAGE_KEY, model);
+    } else {
+      localStorage.removeItem(MODEL_STORAGE_KEY);
+    }
+  } catch {
+    // localStorage not available
+  }
+}
+
 interface GeminiApiKeyManagerProps {
   /** Callback khi key thay đổi (thêm/xoá) */
   onKeyChange?: (key: string) => void;
+  /** Callback khi model thay đổi */
+  onModelChange?: (model: string) => void;
   /** Hiển thị compact (không có guide) */
   compact?: boolean;
 }
 
-export default function GeminiApiKeyManager({ onKeyChange, compact }: GeminiApiKeyManagerProps) {
+export default function GeminiApiKeyManager({ onKeyChange, onModelChange, compact }: GeminiApiKeyManagerProps) {
   const [apiKey, setApiKey] = useState(() => getStoredGeminiApiKey());
   const [inputValue, setInputValue] = useState('');
   const [showInput, setShowInput] = useState(!apiKey);
   const [showKey, setShowKey] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Model selector state
+  const [models, setModels] = useState<GeminiModel[]>([]);
+  const [defaultModel, setDefaultModel] = useState('');
+  const [selectedModel, setSelectedModel] = useState(() => getStoredGeminiModel());
+
+  // Fetch models list from server
+  useEffect(() => {
+    mediaStreamApi.getGeminiModels().then(data => {
+      setModels(data.models);
+      setDefaultModel(data.default);
+      if (!selectedModel) {
+        setSelectedModel(data.default);
+        onModelChange?.(data.default);
+      }
+    }).catch(() => { /* silently fail */ });
+  }, []);
+
+  const handleModelChange = useCallback((model: string) => {
+    setSelectedModel(model);
+    setStoredGeminiModel(model);
+    onModelChange?.(model);
+  }, [onModelChange]);
 
   const handleSave = useCallback(() => {
     const trimmed = inputValue.trim();
@@ -187,6 +237,27 @@ export default function GeminiApiKeyManager({ onKeyChange, compact }: GeminiApiK
           >
             Đổi key khác
           </button>
+        )}
+
+        {/* Model Selector */}
+        {models.length > 0 && (
+          <div>
+            <label className="text-xs font-medium text-vintage-dark/70 mb-1 flex items-center gap-1">
+              <Cpu className="h-3 w-3 text-vintage-olive" />
+              Gemini Model
+            </label>
+            <select
+              value={selectedModel || defaultModel}
+              onChange={e => handleModelChange(e.target.value)}
+              className="w-full text-xs border rounded-md px-2 py-1.5 bg-white border-vintage-tan/30 focus:border-vintage-olive focus:ring-1 focus:ring-vintage-olive/30 outline-none"
+            >
+              {models.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.name} — {m.description}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
 
         {/* Hướng dẫn lấy API key */}

@@ -13,7 +13,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { mediaStreamApi, type MediaSubtitle } from '@/api/mediastream';
+import { mediaStreamApi, type MediaSubtitle, type WordLookupResponse } from '@/api/mediastream';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { SEO } from '@/components/common';
@@ -40,8 +40,9 @@ import {
   RotateCcw,
   Palette,
   Type,
+  GripVertical,
 } from 'lucide-react';
-import GeminiApiKeyManager, { getStoredGeminiApiKey } from '@/components/stream/GeminiApiKeyManager';
+import GeminiApiKeyManager, { getStoredGeminiApiKey, getStoredGeminiModel } from '@/components/stream/GeminiApiKeyManager';
 
 // ============================================================================
 // Subtitle Parsing (VTT + SRT)
@@ -538,6 +539,147 @@ function SubtitleStylePanel({ style, onChange, onClose }: SubtitleStylePanelProp
 }
 
 // ============================================================================
+// Word Tooltip (Dictionary popup on hover)
+// ============================================================================
+
+interface WordTooltipProps {
+  word: string;
+  context: string;
+  sourceLang: string;
+  targetLang: string;
+  position: { x: number; y: number };
+  onClose: () => void;
+  geminiApiKey: string;
+  geminiModel: string;
+}
+
+function WordTooltip({ word, context, sourceLang, targetLang, position, onClose, geminiApiKey, geminiModel }: WordTooltipProps) {
+  const [data, setData] = useState<WordLookupResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    mediaStreamApi.wordLookup({
+      word,
+      context,
+      source_lang: sourceLang,
+      target_lang: targetLang,
+      ...(geminiApiKey ? { gemini_api_key: geminiApiKey } : {}),
+      ...(geminiModel ? { gemini_model: geminiModel } : {}),
+    }).then(res => {
+      if (!cancelled) { setData(res); setLoading(false); }
+    }).catch(() => {
+      if (!cancelled) { setData({ word, meaning: 'Không tra được' }); setLoading(false); }
+    });
+    return () => { cancelled = true; };
+  }, [word, context, sourceLang, targetLang, geminiApiKey, geminiModel]);
+
+  // Close on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) onClose();
+    };
+    const timer = setTimeout(() => document.addEventListener('mousedown', handler), 50);
+    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler); };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={tooltipRef}
+      className="fixed z-[100] bg-neutral-900/95 backdrop-blur-md text-white rounded-xl shadow-2xl border border-white/10 p-3 min-w-[200px] max-w-[320px]"
+      style={{ left: position.x, top: position.y - 10, transform: 'translate(-50%, -100%)' }}
+    >
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-white/70">
+          <LoadingInline /> Tra từ...
+        </div>
+      ) : data ? (
+        <div className="space-y-1.5">
+          <div className="flex items-baseline gap-2">
+            <span className="font-bold text-base">{data.word}</span>
+            {data.word_type && (
+              <span className="text-[10px] text-white/40 italic">{data.word_type}</span>
+            )}
+          </div>
+          {data.pronunciation && (
+            <p className="text-xs text-white/50 font-mono">{data.pronunciation}</p>
+          )}
+          <p className="text-sm text-yellow-300 font-medium">{data.meaning}</p>
+          {data.examples?.length ? (
+            <p className="text-xs text-white/50 italic border-t border-white/10 pt-1 mt-1">
+              {data.examples[0]}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-neutral-900/95" />
+    </div>
+  );
+}
+
+// ============================================================================
+// SubtitleLine — renders text as clickable words
+// ============================================================================
+
+interface SubtitleLineProps {
+  text: string;
+  context: string;
+  sourceLang: string;
+  targetLang: string;
+  geminiApiKey: string;
+  geminiModel: string;
+  style: React.CSSProperties;
+  className?: string;
+}
+
+function SubtitleLine({ text, context, sourceLang, targetLang, geminiApiKey, geminiModel, style, className }: SubtitleLineProps) {
+  const [tooltip, setTooltip] = useState<{ word: string; x: number; y: number } | null>(null);
+  const words = text.split(/(\s+)/);
+
+  const handleWordClick = useCallback((e: React.MouseEvent, word: string) => {
+    e.stopPropagation();
+    const clean = word.replace(/[.,!?;:"""''()[\]{}]/g, '').trim();
+    if (!clean) return;
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setTooltip({ word: clean, x: rect.left + rect.width / 2, y: rect.top });
+  }, []);
+
+  return (
+    <>
+      <span className={className} style={style}>
+        {words.map((w, i) => {
+          const isSpace = /^\s+$/.test(w);
+          if (isSpace) return <span key={i}>{w}</span>;
+          return (
+            <span
+              key={i}
+              onClick={e => handleWordClick(e, w)}
+              className="cursor-pointer hover:bg-white/20 hover:rounded px-[1px] transition-colors duration-100"
+            >
+              {w}
+            </span>
+          );
+        })}
+      </span>
+      {tooltip && (
+        <WordTooltip
+          word={tooltip.word}
+          context={context}
+          sourceLang={sourceLang}
+          targetLang={targetLang}
+          position={{ x: tooltip.x, y: tooltip.y }}
+          onClose={() => setTooltip(null)}
+          geminiApiKey={geminiApiKey}
+          geminiModel={geminiModel}
+        />
+      )}
+    </>
+  );
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -566,6 +708,7 @@ export default function StreamPlayerPage() {
   const [translateError1, setTranslateError1] = useState('');
   const [translateError2, setTranslateError2] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState(() => getStoredGeminiApiKey());
+  const [geminiModel, setGeminiModel] = useState(() => getStoredGeminiModel());
 
   // Subtitle style (persisted to localStorage)
   const [subStyle, setSubStyle] = useState<SubtitleStyle>(() => {
@@ -668,6 +811,7 @@ export default function StreamPlayerPage() {
             subtitle_id: refId,
             target_lang: track1Source.targetLang,
             ...(geminiApiKey ? { gemini_api_key: geminiApiKey } : {}),
+            ...(geminiModel ? { gemini_model: geminiModel } : {}),
           });
           if (!cancelled) {
             setTrack1Cues(parseSubtitleContent(data.translated_vtt));
@@ -713,6 +857,7 @@ export default function StreamPlayerPage() {
             subtitle_id: refId,
             target_lang: track2Source.targetLang,
             ...(geminiApiKey ? { gemini_api_key: geminiApiKey } : {}),
+            ...(geminiModel ? { gemini_model: geminiModel } : {}),
           });
           if (!cancelled) {
             setTrack2Cues(parseSubtitleContent(data.translated_vtt));
@@ -967,41 +1112,57 @@ export default function StreamPlayerPage() {
                 {/* ===== Subtitle Overlay (non-YouTube only) ===== */}
                 {media.storage_type !== 'youtube' && subStyle.visible && (activeCue1 || activeCue2) && (
                   <div
-                    className="absolute left-0 right-0 flex flex-col items-center px-4 gap-1 z-10"
+                    className="absolute left-0 right-0 flex items-end justify-center z-10"
                     style={{ bottom: `${subStyle.bottomPercent}%` }}
                   >
-                    {/* Track 2 (secondary - top) */}
-                    {activeCue2 && (
-                      <div
-                        className="px-4 py-1 rounded-lg text-center max-w-[90%] backdrop-blur-sm cursor-grab active:cursor-grabbing select-none"
-                        style={{
-                          backgroundColor: `rgba(0,0,0,${subStyle.bgOpacity / 100 * 0.9})`,
-                          color: subStyle.track2Color,
-                          fontSize: `${Math.max(12, subStyle.fontSize - 2)}px`,
-                          fontFamily: subStyle.fontFamily,
-                        }}
-                        onMouseDown={handleSubDragStart}
-                        onTouchStart={handleSubDragStart}
-                      >
-                        {activeCue2.text}
-                      </div>
-                    )}
-                    {/* Track 1 (primary - bottom) */}
-                    {activeCue1 && (
-                      <div
-                        className="px-4 py-1.5 rounded-lg text-center max-w-[90%] backdrop-blur-sm font-medium cursor-grab active:cursor-grabbing select-none"
-                        style={{
-                          backgroundColor: `rgba(0,0,0,${subStyle.bgOpacity / 100})`,
-                          color: subStyle.track1Color,
-                          fontSize: `${subStyle.fontSize}px`,
-                          fontFamily: subStyle.fontFamily,
-                        }}
-                        onMouseDown={handleSubDragStart}
-                        onTouchStart={handleSubDragStart}
-                      >
-                        {activeCue1.text}
-                      </div>
-                    )}
+                    {/* Subtitle text area */}
+                    <div className="flex flex-col items-center px-4 gap-1 max-w-[92%]">
+                      {/* Track 2 (secondary - top) */}
+                      {activeCue2 && (
+                        <SubtitleLine
+                          text={activeCue2.text}
+                          context={activeCue2.text}
+                          sourceLang={media.language || ''}
+                          targetLang={media.language === 'vi' ? 'en' : 'vi'}
+                          geminiApiKey={geminiApiKey}
+                          geminiModel={geminiModel}
+                          className="px-4 py-1 rounded-lg text-center backdrop-blur-sm inline"
+                          style={{
+                            backgroundColor: `rgba(0,0,0,${subStyle.bgOpacity / 100 * 0.9})`,
+                            color: subStyle.track2Color,
+                            fontSize: `${Math.max(12, subStyle.fontSize - 2)}px`,
+                            fontFamily: subStyle.fontFamily,
+                          }}
+                        />
+                      )}
+                      {/* Track 1 (primary - bottom) */}
+                      {activeCue1 && (
+                        <SubtitleLine
+                          text={activeCue1.text}
+                          context={activeCue1.text}
+                          sourceLang={media.language || ''}
+                          targetLang={media.language === 'vi' ? 'en' : 'vi'}
+                          geminiApiKey={geminiApiKey}
+                          geminiModel={geminiModel}
+                          className="px-4 py-1.5 rounded-lg text-center backdrop-blur-sm font-medium inline"
+                          style={{
+                            backgroundColor: `rgba(0,0,0,${subStyle.bgOpacity / 100})`,
+                            color: subStyle.track1Color,
+                            fontSize: `${subStyle.fontSize}px`,
+                            fontFamily: subStyle.fontFamily,
+                          }}
+                        />
+                      )}
+                    </div>
+                    {/* Side drag handle */}
+                    <div
+                      className="flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-opacity ml-1 p-1 rounded bg-white/10"
+                      onMouseDown={handleSubDragStart}
+                      onTouchStart={handleSubDragStart}
+                      title="Kéo thả vị trí phụ đề"
+                    >
+                      <GripVertical className="h-5 w-5 text-white/80" />
+                    </div>
                   </div>
                 )}
 
@@ -1108,6 +1269,7 @@ export default function StreamPlayerPage() {
                 <div className="mt-3">
                   <GeminiApiKeyManager
                     onKeyChange={(key: string) => setGeminiApiKey(key)}
+                    onModelChange={(model: string) => setGeminiModel(model)}
                   />
                 </div>
               </div>

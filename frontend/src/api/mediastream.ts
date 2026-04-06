@@ -78,6 +78,7 @@ export interface TranslateRequest {
   source_lang?: string;
   target_lang: string;
   gemini_api_key?: string;
+  gemini_model?: string;
 }
 
 export interface TranslateResponse {
@@ -86,6 +87,36 @@ export interface TranslateResponse {
   target_lang: string;
   cached: boolean;
   segment_count?: number;
+}
+
+export interface GeminiModel {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface GeminiModelsResponse {
+  models: GeminiModel[];
+  default: string;
+}
+
+export interface WordLookupRequest {
+  word: string;
+  context?: string;
+  source_lang?: string;
+  target_lang?: string;
+  gemini_api_key?: string;
+  gemini_model?: string;
+}
+
+export interface WordLookupResponse {
+  word: string;
+  meaning: string;
+  pronunciation?: string;
+  word_type?: string;
+  examples?: string[];
+  cached?: boolean;
+  error?: string;
 }
 
 export interface StreamMediaFilters {
@@ -150,6 +181,22 @@ export const mediaStreamApi = {
       '/translate/',
       data
     );
+    return response.data;
+  },
+
+  /**
+   * Get available Gemini models
+   */
+  getGeminiModels: async (): Promise<GeminiModelsResponse> => {
+    const response = await streamApi.get<GeminiModelsResponse>('/gemini-models/');
+    return response.data;
+  },
+
+  /**
+   * Look up word meaning using Gemini
+   */
+  wordLookup: async (data: WordLookupRequest): Promise<WordLookupResponse> => {
+    const response = await streamApi.post<WordLookupResponse>('/word-lookup/', data);
     return response.data;
   },
 

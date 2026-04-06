@@ -33,6 +33,8 @@ urlpatterns = [
     
     # ===== Translation API (Gemini) =====
     path('translate/', translation_views.translate_subtitle, name='translate'),
+    path('gemini-models/', translation_views.gemini_models_list, name='gemini-models'),
+    path('word-lookup/', translation_views.word_lookup, name='word-lookup'),
     
     # ===== Smart Upload (AI-powered) =====
     path('smart-upload/', smart_upload.smart_upload_api, name='smart-upload'),
