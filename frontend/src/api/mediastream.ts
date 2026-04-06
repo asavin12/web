@@ -99,8 +99,12 @@ export interface GeminiModelsResponse {
   models: GeminiModel[];
   default: string;
   cached?: boolean;
+  from_db?: boolean;
   refreshed?: boolean;
   count?: number;
+  added?: number;
+  updated?: number;
+  removed?: number;
 }
 
 export interface WordLookupRequest {

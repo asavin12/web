@@ -130,8 +130,13 @@ export default function GeminiApiKeyManager({ onKeyChange, onModelChange, compac
       const data = await mediaStreamApi.refreshGeminiModels(key);
       setModels(data.models);
       setDefaultModel(data.default);
-      setRefreshSuccess(`Đã tải ${data.count || data.models.length} models từ Google`);
-      setTimeout(() => setRefreshSuccess(''), 4000);
+      const parts: string[] = [];
+      if (data.added) parts.push(`${data.added} mới`);
+      if (data.updated) parts.push(`${data.updated} cập nhật`);
+      if (data.removed) parts.push(`${data.removed} đã xoá`);
+      const detail = parts.length ? ` (${parts.join(', ')})` : ' (không có thay đổi)';
+      setRefreshSuccess(`${data.count || data.models.length} models đã lưu vào DB${detail}`);
+      setTimeout(() => setRefreshSuccess(''), 5000);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Lỗi tải models';
       setRefreshError(msg);

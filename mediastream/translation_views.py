@@ -103,16 +103,41 @@ def _rebuild_vtt(segments):
 
 DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash'
 
-# Cache key for dynamic model list  
-GEMINI_MODELS_CACHE_KEY = 'gemini_models_list'
-GEMINI_MODELS_CACHE_TIMEOUT = 60 * 60 * 24  # 24h
-
-# Fallback models when no dynamic list cached yet
+# Fallback models when database is empty
 GEMINI_MODELS_FALLBACK = [
     {'id': 'gemini-2.5-flash', 'name': 'Gemini 2.5 Flash', 'description': 'Nhanh, suy luận tốt'},
     {'id': 'gemini-2.5-flash-lite', 'name': 'Gemini 2.5 Flash Lite', 'description': 'Nhanh nhất, tiết kiệm'},
     {'id': 'gemini-2.5-pro', 'name': 'Gemini 2.5 Pro', 'description': 'Chất lượng cao nhất'},
 ]
+
+
+def _get_models_from_db():
+    """Get active Gemini models from database"""
+    from .models import GeminiModelEntry
+    entries = GeminiModelEntry.objects.filter(is_active=True).order_by('sort_order', 'model_id')
+    if not entries.exists():
+        return None
+    return [{'id': e.model_id, 'name': e.display_name, 'description': e.description} for e in entries]
+
+
+def _compute_sort_order(model_id):
+    """Compute sort order for a model based on its ID"""
+    mid = model_id.lower()
+    if '2.5-flash-lite' in mid:
+        return 12
+    if '2.5-flash' in mid and 'preview' not in mid and 'lite' not in mid:
+        return 10
+    if '2.5-flash' in mid:
+        return 11
+    if '2.5-pro' in mid and 'preview' not in mid:
+        return 20
+    if '2.5-pro' in mid:
+        return 21
+    if '3' in mid and 'flash' in mid:
+        return 30
+    if '3' in mid and 'pro' in mid:
+        return 31
+    return 100
 
 
 def _translate_with_gemini(texts, source_lang, target_lang, api_key, model_id=None):
@@ -312,11 +337,13 @@ def translate_subtitle(request):
 @csrf_exempt
 def gemini_models_list(request):
     """
-    GET  /media-stream/gemini-models/ — Trả về danh sách models đã cache (cho mọi user)
-    POST /media-stream/gemini-models/ — Tải models mới từ Google API bằng API key, cache lên server
+    GET  /media-stream/gemini-models/ — Trả về danh sách models từ database (cho mọi user)
+    POST /media-stream/gemini-models/ — Tải models từ Google API, so sánh + cập nhật database
     
     Body POST: { gemini_api_key: string }
     """
+    from .models import GeminiModelEntry
+    
     if request.method == 'POST':
         # Refresh models from Google API
         try:
@@ -333,7 +360,8 @@ def gemini_models_list(request):
             import google.generativeai as genai
             genai.configure(api_key=api_key)
             
-            models_list = []
+            # Fetch from Google API
+            fetched_models = {}
             for m in genai.list_models():
                 # Only include models that support generateContent (text generation)
                 supported = [method.name if hasattr(method, 'name') else str(method) 
@@ -344,62 +372,96 @@ def gemini_models_list(request):
                 model_id = m.name.replace('models/', '') if m.name.startswith('models/') else m.name
                 display_name = m.display_name or model_id
                 desc = m.description or ''
-                # Truncate long descriptions
                 if len(desc) > 80:
                     desc = desc[:77] + '...'
                 
-                models_list.append({
-                    'id': model_id,
-                    'name': display_name,
+                fetched_models[model_id] = {
+                    'display_name': display_name,
                     'description': desc,
-                })
+                    'sort_order': _compute_sort_order(model_id),
+                }
             
-            if not models_list:
+            if not fetched_models:
                 return JsonResponse({'error': 'Không tìm thấy model nào hỗ trợ generateContent'}, status=404)
             
-            # Sort: stable/flash first, then pro, then others
-            def sort_key(m):
-                mid = m['id'].lower()
-                if '2.5-flash-lite' in mid:
-                    return (0, 2, mid)
-                if '2.5-flash' in mid and 'preview' not in mid and 'lite' not in mid:
-                    return (0, 0, mid)
-                if '2.5-flash' in mid:
-                    return (0, 1, mid)
-                if '2.5-pro' in mid and 'preview' not in mid:
-                    return (1, 0, mid)
-                if '2.5-pro' in mid:
-                    return (1, 1, mid)
-                if '3' in mid and 'flash' in mid:
-                    return (2, 0, mid)
-                if '3' in mid and 'pro' in mid:
-                    return (2, 1, mid)
-                return (9, 0, mid)
+            # Compare with database and sync
+            existing = {e.model_id: e for e in GeminiModelEntry.objects.all()}
+            existing_ids = set(existing.keys())
+            fetched_ids = set(fetched_models.keys())
             
-            models_list.sort(key=sort_key)
+            added = 0
+            updated = 0
+            removed = 0
             
-            # Cache for all users
-            cache.set(GEMINI_MODELS_CACHE_KEY, models_list, GEMINI_MODELS_CACHE_TIMEOUT)
+            # Add new models
+            new_ids = fetched_ids - existing_ids
+            if new_ids:
+                new_entries = []
+                for mid in new_ids:
+                    data = fetched_models[mid]
+                    new_entries.append(GeminiModelEntry(
+                        model_id=mid,
+                        display_name=data['display_name'],
+                        description=data['description'],
+                        sort_order=data['sort_order'],
+                        is_active=True,
+                    ))
+                GeminiModelEntry.objects.bulk_create(new_entries)
+                added = len(new_entries)
             
-            logger.info(f"Refreshed Gemini models list: {len(models_list)} models cached")
+            # Update existing models (name/description changed)
+            for mid in fetched_ids & existing_ids:
+                entry = existing[mid]
+                data = fetched_models[mid]
+                changed = False
+                if entry.display_name != data['display_name']:
+                    entry.display_name = data['display_name']
+                    changed = True
+                if entry.description != data['description']:
+                    entry.description = data['description']
+                    changed = True
+                if entry.sort_order != data['sort_order']:
+                    entry.sort_order = data['sort_order']
+                    changed = True
+                if changed:
+                    entry.save()
+                    updated += 1
+            
+            # Deactivate models no longer in Google API
+            removed_ids = existing_ids - fetched_ids
+            if removed_ids:
+                removed = GeminiModelEntry.objects.filter(
+                    model_id__in=removed_ids, is_active=True
+                ).update(is_active=False)
+            
+            # Return updated list
+            db_models = _get_models_from_db() or GEMINI_MODELS_FALLBACK
+            
+            logger.info(
+                f"Gemini models sync: {added} added, {updated} updated, "
+                f"{removed} deactivated. Total active: {len(db_models)}"
+            )
             
             return JsonResponse({
-                'models': models_list,
+                'models': db_models,
                 'default': DEFAULT_GEMINI_MODEL,
                 'refreshed': True,
-                'count': len(models_list),
+                'count': len(db_models),
+                'added': added,
+                'updated': updated,
+                'removed': removed,
             })
             
         except Exception as e:
             logger.error(f"Failed to fetch Gemini models: {e}")
             return JsonResponse({'error': f'Lỗi tải models: {str(e)}'}, status=500)
     
-    # GET — Return cached or fallback
-    cached_models = cache.get(GEMINI_MODELS_CACHE_KEY)
+    # GET — Return from database or fallback
+    db_models = _get_models_from_db()
     return JsonResponse({
-        'models': cached_models or GEMINI_MODELS_FALLBACK,
+        'models': db_models or GEMINI_MODELS_FALLBACK,
         'default': DEFAULT_GEMINI_MODEL,
-        'cached': cached_models is not None,
+        'from_db': db_models is not None,
     })
 
 

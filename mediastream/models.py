@@ -568,3 +568,23 @@ class GDriveAccount(models.Model):
         total = self.storage_total
         return f'{total / 1024**3:.1f} GB'
 
+
+class GeminiModelEntry(models.Model):
+    """Gemini AI model — synced from Google API, shared across all users"""
+    model_id = models.CharField('Model ID', max_length=200, unique=True, db_index=True,
+                                help_text='VD: gemini-2.5-flash, gemini-2.5-pro')
+    display_name = models.CharField('Tên hiển thị', max_length=300)
+    description = models.CharField('Mô tả', max_length=500, blank=True, default='')
+    is_active = models.BooleanField('Hoạt động', default=True,
+                                    help_text='Bỏ chọn để ẩn model khỏi danh sách')
+    sort_order = models.IntegerField('Thứ tự', default=100)
+    synced_at = models.DateTimeField('Đồng bộ lần cuối', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Gemini Model'
+        verbose_name_plural = 'Gemini Models'
+        ordering = ['sort_order', 'model_id']
+
+    def __str__(self):
+        return f'{self.display_name} ({self.model_id})'
+

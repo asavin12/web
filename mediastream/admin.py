@@ -8,7 +8,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.contrib import messages
-from .models import StreamMedia, MediaCategory, MediaSubtitle, MediaPlaylist, PlaylistItem, GDriveAccount
+from .models import StreamMedia, MediaCategory, MediaSubtitle, MediaPlaylist, PlaylistItem, GDriveAccount, GeminiModelEntry
 
 logger = logging.getLogger(__name__)
 
@@ -562,4 +562,14 @@ class GDriveAccountAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False  # Must add via OAuth2 flow
+
+
+@admin.register(GeminiModelEntry)
+class GeminiModelEntryAdmin(admin.ModelAdmin):
+    """Admin cho Gemini AI Models"""
+    list_display = ['model_id', 'display_name', 'description', 'is_active', 'sort_order', 'synced_at']
+    list_filter = ['is_active']
+    list_editable = ['is_active', 'sort_order']
+    search_fields = ['model_id', 'display_name']
+    ordering = ['sort_order', 'model_id']
 
