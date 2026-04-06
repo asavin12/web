@@ -360,3 +360,135 @@ def upload_to_account(account, file_obj, filename, mime_type='video/mp4', media_
             'success': False,
             'error': f'Upload lên {account.email} thất bại: {str(e)[:300]}',
         }
+
+
+def fetch_gdrive_file_metadata(file_id):
+    """
+    Lấy metadata video từ Google Drive API (duration, size, resolution...).
+    
+    Google Drive tự phân tích video → trả về videoMediaMetadata:
+    - durationMillis: thời lượng (ms)
+    - width, height: resolution
+    
+    Thử lần lượt từng GDrive account cho đến khi thành công.
+    
+    Returns:
+        Dict với keys: name, size, mime_type, duration_seconds, width, height
+        Hoặc None nếu không lấy được.
+    """
+    from .models import GDriveAccount
+    
+    accounts = GDriveAccount.objects.filter(is_active=True)
+    if not accounts.exists():
+        logger.warning("Không có GDrive account active nào để fetch metadata")
+        return None
+    
+    fields = 'id,name,size,mimeType,videoMediaMetadata'
+    
+    for account in accounts:
+        try:
+            service = build_drive_service(account)
+            if not service:
+                continue
+            
+            file_info = service.files().get(
+                fileId=file_id,
+                fields=fields,
+                supportsAllDrives=True,
+            ).execute()
+            
+            result = {
+                'name': file_info.get('name', ''),
+                'size': int(file_info.get('size', 0)),
+                'mime_type': file_info.get('mimeType', ''),
+            }
+            
+            # Video metadata (Google Drive auto-processes uploaded videos)
+            video_meta = file_info.get('videoMediaMetadata', {})
+            if video_meta:
+                duration_ms = video_meta.get('durationMillis')
+                if duration_ms:
+                    result['duration_seconds'] = int(int(duration_ms) / 1000)
+                result['width'] = video_meta.get('width')
+                result['height'] = video_meta.get('height')
+            
+            logger.info(
+                "GDrive metadata OK cho %s: name=%s, size=%s, duration=%ss",
+                file_id, result['name'], result['size'],
+                result.get('duration_seconds', '?')
+            )
+            return result
+            
+        except Exception as e:
+            logger.debug("GDrive fetch metadata via %s failed for %s: %s", account.email, file_id, e)
+            continue
+    
+    logger.warning("Không lấy được metadata GDrive cho file %s (đã thử %d accounts)", file_id, accounts.count())
+    return None
+
+
+def fetch_gdrive_metadata_batch(file_ids):
+    """
+    Batch fetch metadata cho nhiều Google Drive files.
+    
+    Dùng 1 Drive service → gọi files().get() cho từng file.
+    (Google Drive API không hỗ trợ batch files().get() như YouTube)
+    
+    Returns:
+        Dict mapping file_id → metadata dict.
+    """
+    from .models import GDriveAccount
+    
+    if not file_ids:
+        return {}
+    
+    accounts = list(GDriveAccount.objects.filter(is_active=True))
+    if not accounts:
+        logger.warning("Không có GDrive account active nào")
+        return {}
+    
+    results = {}
+    fields = 'id,name,size,mimeType,videoMediaMetadata'
+    
+    # Try first active account
+    for account in accounts:
+        service = build_drive_service(account)
+        if not service:
+            continue
+        
+        remaining_ids = [fid for fid in file_ids if fid not in results]
+        for file_id in remaining_ids:
+            try:
+                file_info = service.files().get(
+                    fileId=file_id,
+                    fields=fields,
+                    supportsAllDrives=True,
+                ).execute()
+                
+                result = {
+                    'name': file_info.get('name', ''),
+                    'size': int(file_info.get('size', 0)),
+                    'mime_type': file_info.get('mimeType', ''),
+                }
+                
+                video_meta = file_info.get('videoMediaMetadata', {})
+                if video_meta:
+                    duration_ms = video_meta.get('durationMillis')
+                    if duration_ms:
+                        result['duration_seconds'] = int(int(duration_ms) / 1000)
+                    result['width'] = video_meta.get('width')
+                    result['height'] = video_meta.get('height')
+                
+                results[file_id] = result
+                logger.info("GDrive batch: %s → %s (%ss)", file_id, result['name'], result.get('duration_seconds', '?'))
+                
+            except Exception as e:
+                logger.debug("GDrive batch: %s failed via %s: %s", file_id, account.email, e)
+                # File might belong to different account, continue with next account
+                continue
+        
+        if len(results) == len(file_ids):
+            break  # All files fetched
+    
+    logger.info("GDrive batch: %d/%d files fetched", len(results), len(file_ids))
+    return results

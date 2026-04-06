@@ -58,7 +58,7 @@ class StreamMediaAdmin(admin.ModelAdmin):
     list_filter = ['media_type', 'storage_type', 'language', 'level', 'is_active', 'is_public', 'category']
     search_fields = ['title', 'description', 'tags']
     prepopulated_fields = {'slug': ('title',)}
-    actions = ['fetch_youtube_metadata']
+    actions = ['fetch_youtube_metadata', 'fetch_gdrive_metadata']
     readonly_fields = [
         'uid', 'file_size', 'mime_type', 
         'view_count', 'download_count',
@@ -248,6 +248,10 @@ class StreamMediaAdmin(admin.ModelAdmin):
         if obj.youtube_id:
             self._auto_fetch_youtube(request, obj, change)
         
+        # Auto-fetch GDrive metadata when gdrive_file_id is set
+        if obj.gdrive_file_id and obj.storage_type == 'gdrive':
+            self._auto_fetch_gdrive(request, obj, change)
+        
         super().save_model(request, obj, form, change)
     
     def _auto_fetch_youtube(self, request, obj, is_change):
@@ -348,6 +352,95 @@ class StreamMediaAdmin(admin.ModelAdmin):
         
         if updated:
             messages.success(request, f'✅ Đã cập nhật {updated} video từ YouTube')
+        if failed:
+            error_detail = '; '.join(errors[:5])
+            messages.warning(request, f'⚠️ {failed} video không thể cập nhật: {error_detail}')
+    
+    def _auto_fetch_gdrive(self, request, obj, is_change):
+        """Tự động lấy metadata từ Google Drive khi có gdrive_file_id"""
+        from . import gdrive_oauth
+        
+        # Auto-fetch nếu mới, gdrive_file_id thay đổi, hoặc thiếu duration
+        should_fetch = False
+        if not is_change:
+            should_fetch = True
+        elif obj.pk:
+            try:
+                old = StreamMedia.objects.get(pk=obj.pk)
+                if old.gdrive_file_id != obj.gdrive_file_id:
+                    should_fetch = True
+                elif not obj.duration:
+                    should_fetch = True
+            except StreamMedia.DoesNotExist:
+                should_fetch = True
+        
+        if not should_fetch:
+            return
+        
+        info = gdrive_oauth.fetch_gdrive_file_metadata(obj.gdrive_file_id)
+        if not info:
+            messages.warning(request, '⚠️ Không thể lấy metadata từ Google Drive.')
+            return
+        
+        self._apply_gdrive_info(obj, info)
+        dur = info.get('duration_seconds', '')
+        messages.success(request, f'✅ Đã lấy metadata từ GDrive: {info.get("name", "")} ({dur}s)')
+    
+    @staticmethod
+    def _apply_gdrive_info(obj, info):
+        """Áp dụng metadata Google Drive vào object — chỉ fill các field trống"""
+        if info.get('size') and not obj.file_size:
+            obj.file_size = info['size']
+        
+        if info.get('duration_seconds') and not obj.duration:
+            obj.duration = info['duration_seconds']
+        
+        if info.get('mime_type') and not obj.mime_type:
+            obj.mime_type = info['mime_type']
+        
+        if info.get('width') and not obj.width:
+            obj.width = info['width']
+        
+        if info.get('height') and not obj.height:
+            obj.height = info['height']
+        
+        if info.get('name') and not obj.title:
+            obj.title = info['name'][:255]
+    
+    @admin.action(description='📁 Cập nhật metadata Google Drive')
+    def fetch_gdrive_metadata(self, request, queryset):
+        """Batch action: fetch metadata cho các video GDrive đã chọn"""
+        from . import gdrive_oauth
+        
+        gdrive_items = list(queryset.filter(storage_type='gdrive').exclude(gdrive_file_id=''))
+        if not gdrive_items:
+            messages.warning(request, '⚠️ Không có video Google Drive nào được chọn.')
+            return
+        
+        # Batch fetch
+        file_ids = [m.gdrive_file_id for m in gdrive_items]
+        all_info = gdrive_oauth.fetch_gdrive_metadata_batch(file_ids)
+        
+        updated = 0
+        failed = 0
+        errors = []
+        for media in gdrive_items:
+            try:
+                info = all_info.get(media.gdrive_file_id)
+                if info:
+                    self._apply_gdrive_info(media, info)
+                    media.save()
+                    updated += 1
+                else:
+                    failed += 1
+                    errors.append(f'{media.gdrive_file_id[:15]}: không lấy được')
+            except Exception as e:
+                failed += 1
+                errors.append(f'{media.gdrive_file_id[:15]}: {e}')
+                logger.error(f"GDrive metadata error cho {media.gdrive_file_id}: {e}")
+        
+        if updated:
+            messages.success(request, f'✅ Đã cập nhật {updated} video từ Google Drive')
         if failed:
             error_detail = '; '.join(errors[:5])
             messages.warning(request, f'⚠️ {failed} video không thể cập nhật: {error_detail}')
