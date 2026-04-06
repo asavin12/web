@@ -44,8 +44,8 @@ class StreamMediaAdmin(admin.ModelAdmin):
         'storage_type_badge',
         'language_badge',
         'level',
-        'file_size_display', 
-        'duration_display',
+        'file_size_col', 
+        'duration_col',
         'view_count',
         'is_active',
         'is_public',
@@ -55,6 +55,7 @@ class StreamMediaAdmin(admin.ModelAdmin):
     list_filter = ['media_type', 'storage_type', 'language', 'level', 'is_active', 'is_public', 'category']
     search_fields = ['title', 'description', 'tags']
     prepopulated_fields = {'slug': ('title',)}
+    actions = ['fetch_youtube_metadata']
     readonly_fields = [
         'uid', 'file_size', 'mime_type', 
         'view_count', 'download_count',
@@ -185,9 +186,30 @@ class StreamMediaAdmin(admin.ModelAdmin):
         return '-'
     embed_code_display.short_description = 'Embed Code'
     
+    def file_size_col(self, obj):
+        """Hiển thị file size - ẩn cho YouTube"""
+        if obj.storage_type == 'youtube':
+            return format_html('<span style="color:#999;">—</span>')
+        if not obj.file_size:
+            return format_html('<span style="color:#999;">—</span>')
+        return obj.file_size_display
+    file_size_col.short_description = 'Kích thước'
+    file_size_col.admin_order_field = 'file_size'
+    
+    def duration_col(self, obj):
+        """Hiển thị duration đẹp hơn"""
+        if obj.duration:
+            return obj.duration_display
+        return format_html('<span style="color:#ccc;">—</span>')
+    duration_col.short_description = 'Thời lượng'
+    duration_col.admin_order_field = 'duration'
+
     def actions_column(self, obj):
         if obj.pk:
-            play_url = obj.get_stream_url()
+            if obj.storage_type == 'youtube' and obj.youtube_id:
+                play_url = f'https://www.youtube.com/watch?v={obj.youtube_id}'
+            else:
+                play_url = obj.get_stream_url()
             return format_html(
                 '<a href="{}" target="_blank" class="button" style="padding:4px 8px;font-size:11px;">▶ Play</a>',
                 play_url
@@ -229,15 +251,17 @@ class StreamMediaAdmin(admin.ModelAdmin):
         """Tự động lấy thông tin từ YouTube khi có youtube_id"""
         from core.youtube import fetch_youtube_info
         
-        # Only auto-fetch if title is empty (new) or youtube_id changed
+        # Auto-fetch if new, youtube_id changed, or missing essential info
         should_fetch = False
         if not is_change:
-            should_fetch = True  # New object
+            should_fetch = True
         elif obj.pk:
             try:
                 old = StreamMedia.objects.get(pk=obj.pk)
                 if old.youtube_id != obj.youtube_id:
-                    should_fetch = True  # YouTube ID changed
+                    should_fetch = True
+                elif not obj.duration:
+                    should_fetch = True  # Missing duration → re-fetch
             except StreamMedia.DoesNotExist:
                 should_fetch = True
         
@@ -246,33 +270,104 @@ class StreamMediaAdmin(admin.ModelAdmin):
         
         info = fetch_youtube_info(obj.youtube_id)
         if not info:
-            messages.warning(request, '⚠️ Không thể lấy thông tin từ YouTube. Kiểm tra API key hoặc video ID.')
+            messages.warning(request, '⚠️ Không thể lấy thông tin từ YouTube. Kiểm tra video ID.')
             return
         
-        # Auto-fill empty fields only
+        self._apply_youtube_info(obj, info)
+        messages.success(request, f'✅ Đã lấy thông tin từ YouTube: {info.get("title", "")[:60]}')
+    
+    @staticmethod
+    def _apply_youtube_info(obj, info):
+        """Áp dụng thông tin YouTube vào object — chỉ fill các field trống"""
         if not obj.title or obj.title.strip() == '':
             obj.title = info.get('title', '')[:255]
         if not obj.description or obj.description.strip() == '':
             obj.description = info.get('description', '')
         
-        # Duration: convert "H:MM:SS" or "M:SS" to seconds
-        duration_str = info.get('duration', '')
-        if duration_str and not obj.duration:
-            parts = duration_str.split(':')
-            try:
-                if len(parts) == 3:
-                    obj.duration = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-                elif len(parts) == 2:
-                    obj.duration = int(parts[0]) * 60 + int(parts[1])
-            except (ValueError, IndexError):
-                pass
+        # Duration: prefer duration_seconds (int), fallback to parsing string
+        if not obj.duration:
+            dur_secs = info.get('duration_seconds')
+            if dur_secs:
+                obj.duration = int(dur_secs)
+            else:
+                duration_str = info.get('duration', '')
+                if duration_str:
+                    parts = duration_str.split(':')
+                    try:
+                        if len(parts) == 3:
+                            obj.duration = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                        elif len(parts) == 2:
+                            obj.duration = int(parts[0]) * 60 + int(parts[1])
+                    except (ValueError, IndexError):
+                        pass
         
         # Tags
         yt_tags = info.get('tags', [])
         if yt_tags and not obj.tags:
             obj.tags = ', '.join(yt_tags[:10])
         
-        messages.success(request, f'✅ Đã lấy thông tin từ YouTube: {info.get("title", "")[:60]}')
+        # View count from YouTube
+        yt_views = info.get('view_count', 0)
+        if yt_views and not obj.view_count:
+            obj.view_count = yt_views
+    
+    @admin.action(description='🔄 Cập nhật thông tin YouTube')
+    def fetch_youtube_metadata(self, request, queryset):
+        """Batch action: re-fetch metadata cho các video YouTube đã chọn"""
+        from core.youtube import fetch_youtube_info
+        
+        yt_items = queryset.filter(storage_type='youtube').exclude(youtube_id='')
+        if not yt_items.exists():
+            messages.warning(request, '⚠️ Không có video YouTube nào được chọn.')
+            return
+        
+        updated = 0
+        failed = 0
+        for media in yt_items:
+            try:
+                info = fetch_youtube_info(media.youtube_id)
+                if info:
+                    # Force update duration even if title exists
+                    if not media.title:
+                        media.title = info.get('title', '')[:255]
+                    if not media.description:
+                        media.description = info.get('description', '')
+                    
+                    # Always update duration if missing
+                    dur_secs = info.get('duration_seconds')
+                    if dur_secs and not media.duration:
+                        media.duration = int(dur_secs)
+                    elif not media.duration:
+                        duration_str = info.get('duration', '')
+                        if duration_str:
+                            parts = duration_str.split(':')
+                            try:
+                                if len(parts) == 3:
+                                    media.duration = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                                elif len(parts) == 2:
+                                    media.duration = int(parts[0]) * 60 + int(parts[1])
+                            except (ValueError, IndexError):
+                                pass
+                    
+                    yt_tags = info.get('tags', [])
+                    if yt_tags and not media.tags:
+                        media.tags = ', '.join(yt_tags[:10])
+                    
+                    yt_views = info.get('view_count', 0)
+                    if yt_views and not media.view_count:
+                        media.view_count = yt_views
+                    
+                    media.save()
+                    updated += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                failed += 1
+        
+        if updated:
+            messages.success(request, f'✅ Đã cập nhật {updated} video từ YouTube')
+        if failed:
+            messages.warning(request, f'⚠️ {failed} video không thể cập nhật')
     
     def changelist_view(self, request, extra_context=None):
         """Add extra context for upload panel"""

@@ -87,8 +87,8 @@ def fetch_youtube_info(video_id: str) -> Optional[Dict[str, Any]]:
     api_key = getattr(settings, 'YOUTUBE_API_KEY', None)
     
     if not api_key:
-        logger.warning("YOUTUBE_API_KEY chưa được cấu hình trong settings")
-        return _fetch_youtube_info_noembed(video_id)
+        logger.info("YOUTUBE_API_KEY chưa cấu hình, dùng yt-dlp fallback")
+        return _fetch_youtube_info_ytdlp(video_id)
     
     try:
         from googleapiclient.discovery import build
@@ -116,6 +116,7 @@ def fetch_youtube_info(video_id: str) -> Optional[Dict[str, Any]]:
             'title': snippet.get('title', ''),
             'description': snippet.get('description', ''),
             'duration': parse_duration(content_details.get('duration', '')),
+            'duration_seconds': _parse_duration_seconds(content_details.get('duration', '')),
             'thumbnail': snippet.get('thumbnails', {}).get('high', {}).get('url', ''),
             'view_count': int(statistics.get('viewCount', 0)),
             'channel_title': snippet.get('channelTitle', ''),
@@ -124,13 +125,76 @@ def fetch_youtube_info(video_id: str) -> Optional[Dict[str, Any]]:
         }
         
     except ImportError:
-        logger.error("Không thể import googleapiclient. Hãy cài đặt: pip install google-api-python-client")
-        return _fetch_youtube_info_noembed(video_id)
+        logger.error("Không thể import googleapiclient, dùng yt-dlp fallback")
+        return _fetch_youtube_info_ytdlp(video_id)
     except HttpError as e:
-        logger.error(f"YouTube API error: {e}")
-        return _fetch_youtube_info_noembed(video_id)
+        logger.error(f"YouTube API error: {e}, dùng yt-dlp fallback")
+        return _fetch_youtube_info_ytdlp(video_id)
     except Exception as e:
         logger.error(f"Lỗi khi lấy thông tin YouTube: {e}")
+        return _fetch_youtube_info_ytdlp(video_id)
+
+
+def _parse_duration_seconds(duration: str) -> Optional[int]:
+    """Parse ISO 8601 duration to seconds"""
+    if not duration:
+        return None
+    match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration)
+    if not match:
+        return None
+    hours = int(match.group(1) or 0)
+    minutes = int(match.group(2) or 0)
+    seconds = int(match.group(3) or 0)
+    return hours * 3600 + minutes * 60 + seconds
+
+
+def _fetch_youtube_info_ytdlp(video_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Lấy thông tin YouTube bằng yt-dlp (không cần API key).
+    Trả về đầy đủ: title, description, duration, thumbnail, tags...
+    """
+    try:
+        import yt_dlp
+        
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'skip_download': True,
+            'socket_timeout': 15,
+        }
+        
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        
+        if not info:
+            logger.warning(f"yt-dlp: không lấy được info cho {video_id}")
+            return _fetch_youtube_info_noembed(video_id)
+        
+        duration_secs = info.get('duration') or 0
+        if duration_secs:
+            hours, remainder = divmod(int(duration_secs), 3600)
+            minutes, seconds = divmod(remainder, 60)
+            duration_str = f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes}:{seconds:02d}"
+        else:
+            duration_str = ''
+        
+        return {
+            'title': info.get('title', ''),
+            'description': info.get('description', ''),
+            'duration': duration_str,
+            'duration_seconds': int(duration_secs) if duration_secs else None,
+            'thumbnail': info.get('thumbnail', f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"),
+            'view_count': info.get('view_count', 0) or 0,
+            'channel_title': info.get('uploader', '') or info.get('channel', ''),
+            'published_at': info.get('upload_date', ''),
+            'tags': info.get('tags', []) or [],
+        }
+    except ImportError:
+        logger.error("yt-dlp chưa cài đặt: pip install yt-dlp")
+        return _fetch_youtube_info_noembed(video_id)
+    except Exception as e:
+        logger.error(f"yt-dlp error cho {video_id}: {e}")
         return _fetch_youtube_info_noembed(video_id)
 
 

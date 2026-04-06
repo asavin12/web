@@ -63,3 +63,4 @@ drf-spectacular>=0.27.0
 django-storages==1.14.6
 boto3==1.42.37
 whitenoise>=6.5.0
+yt-dlp>=2024.0.0
