@@ -417,7 +417,7 @@ def fetch_gdrive_file_metadata(file_id):
                     result['height'] = video_meta['height']
             
             # Get authenticated download URL for ffprobe fallback
-            download_url = _get_authenticated_download_url(service, account, file_id)
+            download_url, access_token = _get_authenticated_download_url(service, account, file_id)
             
             logger.info(
                 "GDrive API OK cho %s: name=%s, size=%s, duration=%s, has_video_meta=%s",
@@ -438,7 +438,7 @@ def fetch_gdrive_file_metadata(file_id):
     # Tier 2: ffprobe fallback nếu thiếu duration
     if not result.get('duration_seconds') and download_url:
         logger.info("GDrive API thiếu duration cho %s, dùng ffprobe...", file_id)
-        probe_info = _ffprobe_url(download_url)
+        probe_info = _ffprobe_url(download_url, access_token=access_token)
         if probe_info:
             if probe_info.get('duration'):
                 result['duration_seconds'] = probe_info['duration']
@@ -506,9 +506,9 @@ def fetch_gdrive_metadata_batch(file_ids):
                 
                 # Save download URL for ffprobe fallback
                 if not result.get('duration_seconds'):
-                    url = _get_authenticated_download_url(service, account, file_id)
+                    url, token = _get_authenticated_download_url(service, account, file_id)
                     if url:
-                        download_urls[file_id] = url
+                        download_urls[file_id] = (url, token)
                 
                 logger.info("GDrive batch: %s → %s (dur=%ss)", file_id, result['name'], result.get('duration_seconds', 'N/A'))
                 
@@ -520,10 +520,10 @@ def fetch_gdrive_metadata_batch(file_ids):
             break
     
     # Tier 2: ffprobe fallback cho files thiếu duration
-    for file_id, url in download_urls.items():
+    for file_id, (url, token) in download_urls.items():
         if file_id in results and not results[file_id].get('duration_seconds'):
             logger.info("ffprobe fallback cho %s...", file_id)
-            probe_info = _ffprobe_url(url)
+            probe_info = _ffprobe_url(url, access_token=token)
             if probe_info:
                 if probe_info.get('duration'):
                     results[file_id]['duration_seconds'] = probe_info['duration']
@@ -538,25 +538,25 @@ def fetch_gdrive_metadata_batch(file_ids):
 
 def _get_authenticated_download_url(service, account, file_id):
     """
-    Lấy URL download có auth token từ Google Drive API.
-    Dùng access_token trong header cho ffprobe.
-    Returns: (url, headers_dict) tuple hoặc direct URL string.
+    Lấy URL download + access_token từ Google Drive API.
+    Returns: (url, access_token) tuple hoặc (None, None).
     """
     try:
         creds = _build_credentials(account)
-        if not creds or not creds.valid:
+        if not creds:
+            return None, None
+        if not creds.valid or creds.expired:
             from google.auth.transport.requests import Request
             creds.refresh(Request())
         
-        # URL có thể dùng với access_token
         url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
-        return f"{url}&access_token={creds.token}"
+        return url, creds.token
     except Exception as e:
         logger.debug("Failed to get auth download URL: %s", e)
-        return None
+        return None, None
 
 
-def _ffprobe_url(url, timeout=30):
+def _ffprobe_url(url, access_token=None, timeout=45):
     """
     Dùng ffprobe để lấy duration + resolution từ URL.
     ffprobe chỉ đọc header/moov atom → không download toàn bộ file.
@@ -568,17 +568,22 @@ def _ffprobe_url(url, timeout=30):
     import json as _json
     
     try:
+        # Build headers: Authorization Bearer nếu có token
+        headers_str = "User-Agent: Mozilla/5.0 (X11; Linux x86_64) Chrome/120.0\r\n"
+        if access_token:
+            headers_str = f"Authorization: Bearer {access_token}\r\n{headers_str}"
+        
         cmd = [
-            'ffprobe', '-v', 'quiet',
+            'ffprobe', '-v', 'error',
             '-print_format', 'json',
             '-show_format', '-show_streams',
-            '-headers', 'User-Agent: Mozilla/5.0\r\n',
+            '-headers', headers_str,
             url,
         ]
         proc = subprocess.run(cmd, capture_output=True, timeout=timeout, text=True)
         
         if proc.returncode != 0:
-            logger.warning("ffprobe failed (rc=%d): %s", proc.returncode, proc.stderr[:200] if proc.stderr else '')
+            logger.warning("ffprobe failed (rc=%d): stderr=%s", proc.returncode, proc.stderr[:500] if proc.stderr else '(empty)')
             return None
         
         probe = _json.loads(proc.stdout)
@@ -605,7 +610,7 @@ def _ffprobe_url(url, timeout=30):
             logger.info("ffprobe OK: duration=%ds, %sx%s", result['duration'], result.get('width', '?'), result.get('height', '?'))
             return result
         
-        logger.warning("ffprobe: no duration found in output")
+        logger.warning("ffprobe: no duration found in output (stdout=%s)", proc.stdout[:300] if proc.stdout else '(empty)')
         return None
         
     except subprocess.TimeoutExpired:
@@ -621,7 +626,7 @@ def extract_gdrive_thumbnail(file_id, duration_seconds=None):
     Trích xuất thumbnail random từ video Google Drive.
     
     Dùng ffmpeg để lấy 1 frame tại thời điểm random (hoặc 25% video).
-    Không download toàn bộ file — ffmpeg seek qua HTTP range.
+    Sử dụng Authorization header để download qua Google Drive API.
     
     Returns:
         Path to thumbnail file (caller phải cleanup) hoặc None
@@ -635,20 +640,27 @@ def extract_gdrive_thumbnail(file_id, duration_seconds=None):
     # Get authenticated download URL
     accounts = list(GDriveAccount.objects.filter(is_active=True))
     download_url = None
+    access_token = None
     
     for account in accounts:
         try:
             service = build_drive_service(account)
             if service:
-                download_url = _get_authenticated_download_url(service, account, file_id)
+                download_url, access_token = _get_authenticated_download_url(service, account, file_id)
                 if download_url:
                     break
         except Exception:
             continue
     
     if not download_url:
-        # Fallback: public download URL
+        # Fallback: public download URL (no auth header)
         download_url = f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t"
+        access_token = None
+    
+    # Build headers
+    headers_str = "User-Agent: Mozilla/5.0 (X11; Linux x86_64) Chrome/120.0\r\n"
+    if access_token:
+        headers_str = f"Authorization: Bearer {access_token}\r\n{headers_str}"
     
     # Chọn thời điểm random: 10%-80% video, hoặc 5s nếu không biết duration
     if duration_seconds and duration_seconds > 10:
@@ -658,13 +670,14 @@ def extract_gdrive_thumbnail(file_id, duration_seconds=None):
     else:
         seek_time = 5
     
+    thumb_path = None
     try:
         with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
             thumb_path = tmp.name
         
         cmd = [
             'ffmpeg', '-y',
-            '-headers', 'User-Agent: Mozilla/5.0\r\n',
+            '-headers', headers_str,
             '-ss', str(seek_time),
             '-i', download_url,
             '-frames:v', '1',
@@ -676,6 +689,7 @@ def extract_gdrive_thumbnail(file_id, duration_seconds=None):
         result = subprocess.run(cmd, capture_output=True, timeout=60, text=True)
         
         if result.returncode != 0:
+            logger.info("ffmpeg thumbnail retry at ss=1 cho %s: %s", file_id, result.stderr[:200] if result.stderr else '')
             # Retry at beginning
             cmd[cmd.index('-ss') + 1] = '1'
             result = subprocess.run(cmd, capture_output=True, timeout=60, text=True)
@@ -684,14 +698,14 @@ def extract_gdrive_thumbnail(file_id, duration_seconds=None):
             logger.info("GDrive thumbnail OK cho %s (seek=%ds): %s", file_id, seek_time, thumb_path)
             return thumb_path
         
-        logger.warning("ffmpeg thumbnail failed cho %s: %s", file_id, result.stderr[:300] if result.stderr else '')
-        if os.path.isfile(thumb_path):
+        logger.warning("ffmpeg thumbnail failed cho %s: %s", file_id, result.stderr[:500] if result.stderr else '(empty)')
+        if thumb_path and os.path.isfile(thumb_path):
             os.unlink(thumb_path)
         return None
         
     except subprocess.TimeoutExpired:
         logger.warning("ffmpeg thumbnail timeout cho %s", file_id)
-        if os.path.isfile(thumb_path):
+        if thumb_path and os.path.isfile(thumb_path):
             os.unlink(thumb_path)
         return None
     except Exception as e:
