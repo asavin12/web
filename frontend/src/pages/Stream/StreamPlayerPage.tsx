@@ -551,9 +551,25 @@ interface WordTooltipProps {
   onClose: () => void;
   geminiApiKey: string;
   geminiModel: string;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
 }
 
-function WordTooltip({ word, context, sourceLang, targetLang, position, onClose, geminiApiKey, geminiModel }: WordTooltipProps) {
+function WordTooltip({ word, context, sourceLang, targetLang, position, onClose, geminiApiKey, geminiModel, videoRef }: WordTooltipProps) {
+  const wasPlayingRef = useRef(false);
+
+  // Pause video on mount, resume on unmount
+  useEffect(() => {
+    const video = videoRef?.current;
+    if (video && !video.paused) {
+      wasPlayingRef.current = true;
+      video.pause();
+    }
+    return () => {
+      if (wasPlayingRef.current && videoRef?.current) {
+        videoRef.current.play().catch(() => {});
+      }
+    };
+  }, [videoRef]);
   const [data, setData] = useState<WordLookupResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -595,8 +611,16 @@ function WordTooltip({ word, context, sourceLang, targetLang, position, onClose,
       className="fixed z-[100] bg-neutral-900/95 backdrop-blur-md text-white rounded-xl shadow-2xl border border-white/10 p-3 min-w-[200px] max-w-[320px]"
       style={{ left: position.x, top: position.y - 10, transform: 'translate(-50%, -100%)' }}
     >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors text-xs"
+        title="Đóng"
+      >
+        ✕
+      </button>
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-white/70">
+        <div className="flex items-center gap-2 text-sm text-white/70 pr-4">
           <LoadingInline /> Tra từ...
         </div>
       ) : data ? (
@@ -636,9 +660,10 @@ interface SubtitleLineProps {
   geminiModel: string;
   style: React.CSSProperties;
   className?: string;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
 }
 
-function SubtitleLine({ text, context, sourceLang, targetLang, geminiApiKey, geminiModel, style, className }: SubtitleLineProps) {
+function SubtitleLine({ text, context, sourceLang, targetLang, geminiApiKey, geminiModel, style, className, videoRef }: SubtitleLineProps) {
   const [tooltip, setTooltip] = useState<{ word: string; x: number; y: number } | null>(null);
   const words = text.split(/(\s+)/);
 
@@ -677,6 +702,7 @@ function SubtitleLine({ text, context, sourceLang, targetLang, geminiApiKey, gem
           onClose={() => setTooltip(null)}
           geminiApiKey={geminiApiKey}
           geminiModel={geminiModel}
+          videoRef={videoRef}
         />
       )}
     </>
@@ -1130,6 +1156,7 @@ export default function StreamPlayerPage() {
                           targetLang={media.language === 'vi' ? 'en' : 'vi'}
                           geminiApiKey={geminiApiKey}
                           geminiModel={geminiModel}
+                          videoRef={videoRef}
                           className="px-4 py-1 rounded-lg text-center backdrop-blur-sm inline"
                           style={{
                             backgroundColor: `rgba(0,0,0,${subStyle.bgOpacity / 100 * 0.9})`,
@@ -1148,6 +1175,7 @@ export default function StreamPlayerPage() {
                           targetLang={media.language === 'vi' ? 'en' : 'vi'}
                           geminiApiKey={geminiApiKey}
                           geminiModel={geminiModel}
+                          videoRef={videoRef}
                           className="px-4 py-1.5 rounded-lg text-center backdrop-blur-sm font-medium inline"
                           style={{
                             backgroundColor: `rgba(0,0,0,${subStyle.bgOpacity / 100})`,
