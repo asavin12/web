@@ -5,7 +5,7 @@ Quản lý hồ sơ người dùng trong Django Admin
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from .models import UserProfile
 
 
@@ -45,6 +45,12 @@ class UserAdmin(BaseUserAdmin):
 # Đăng ký lại UserAdmin
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
+
+# Remove unused Group model from admin
+try:
+    admin.site.unregister(Group)
+except admin.sites.NotRegistered:
+    pass
 
 
 @admin.register(UserProfile)

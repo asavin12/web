@@ -19,6 +19,11 @@ from django.views.static import serve as static_serve
 from .spa_views import spa_view, admin_gateway
 from .seo import sitemaps, robots_txt
 
+# Admin site customization
+admin.site.site_header = 'UnstressVN — Quản trị'
+admin.site.site_title = 'UnstressVN Admin'
+admin.site.index_title = 'Bảng điều khiển'
+
 
 urlpatterns = [
     # Favicon redirect
