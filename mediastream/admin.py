@@ -357,7 +357,7 @@ class StreamMediaAdmin(admin.ModelAdmin):
             messages.warning(request, f'⚠️ {failed} video không thể cập nhật: {error_detail}')
     
     def _auto_fetch_gdrive(self, request, obj, is_change):
-        """Tự động lấy metadata từ Google Drive khi có gdrive_file_id"""
+        """Tự động lấy metadata + thumbnail từ Google Drive khi có gdrive_file_id"""
         from . import gdrive_oauth
         
         # Auto-fetch nếu mới, gdrive_file_id thay đổi, hoặc thiếu duration
@@ -383,8 +383,14 @@ class StreamMediaAdmin(admin.ModelAdmin):
             return
         
         self._apply_gdrive_info(obj, info)
-        dur = info.get('duration_seconds', '')
-        messages.success(request, f'✅ Đã lấy metadata từ GDrive: {info.get("name", "")} ({dur}s)')
+        
+        # Auto-extract thumbnail nếu chưa có
+        if not obj.thumbnail:
+            self._extract_gdrive_thumbnail(obj, info)
+        
+        dur = info.get('duration_seconds', 'N/A')
+        res = f"{info.get('width', '?')}x{info.get('height', '?')}"
+        messages.success(request, f'✅ GDrive: {info.get("name", "")} — {dur}s, {res}')
     
     @staticmethod
     def _apply_gdrive_info(obj, info):
@@ -407,9 +413,30 @@ class StreamMediaAdmin(admin.ModelAdmin):
         if info.get('name') and not obj.title:
             obj.title = info['name'][:255]
     
+    @staticmethod
+    def _extract_gdrive_thumbnail(obj, info=None):
+        """Trích xuất thumbnail random từ video GDrive"""
+        import os
+        from . import gdrive_oauth
+        from django.core.files import File
+        
+        duration = info.get('duration_seconds') if info else obj.duration
+        thumb_path = gdrive_oauth.extract_gdrive_thumbnail(obj.gdrive_file_id, duration)
+        if thumb_path:
+            try:
+                filename = f"gdrive_thumb_{obj.gdrive_file_id[:20]}.jpg"
+                with open(thumb_path, 'rb') as f:
+                    obj.thumbnail.save(filename, File(f), save=False)
+                logger.info("GDrive thumbnail saved cho %s: %s", obj.gdrive_file_id, filename)
+            except Exception as e:
+                logger.warning("Failed to save GDrive thumbnail: %s", e)
+            finally:
+                if os.path.isfile(thumb_path):
+                    os.unlink(thumb_path)
+    
     @admin.action(description='📁 Cập nhật metadata Google Drive')
     def fetch_gdrive_metadata(self, request, queryset):
-        """Batch action: fetch metadata cho các video GDrive đã chọn"""
+        """Batch action: fetch metadata + thumbnail cho các video GDrive đã chọn"""
         from . import gdrive_oauth
         
         gdrive_items = list(queryset.filter(storage_type='gdrive').exclude(gdrive_file_id=''))
@@ -417,11 +444,12 @@ class StreamMediaAdmin(admin.ModelAdmin):
             messages.warning(request, '⚠️ Không có video Google Drive nào được chọn.')
             return
         
-        # Batch fetch
+        # Batch fetch metadata
         file_ids = [m.gdrive_file_id for m in gdrive_items]
         all_info = gdrive_oauth.fetch_gdrive_metadata_batch(file_ids)
         
         updated = 0
+        thumbs = 0
         failed = 0
         errors = []
         for media in gdrive_items:
@@ -429,6 +457,13 @@ class StreamMediaAdmin(admin.ModelAdmin):
                 info = all_info.get(media.gdrive_file_id)
                 if info:
                     self._apply_gdrive_info(media, info)
+                    
+                    # Extract thumbnail nếu chưa có
+                    if not media.thumbnail:
+                        self._extract_gdrive_thumbnail(media, info)
+                        if media.thumbnail:
+                            thumbs += 1
+                    
                     media.save()
                     updated += 1
                 else:
@@ -439,8 +474,13 @@ class StreamMediaAdmin(admin.ModelAdmin):
                 errors.append(f'{media.gdrive_file_id[:15]}: {e}')
                 logger.error(f"GDrive metadata error cho {media.gdrive_file_id}: {e}")
         
+        parts = []
         if updated:
-            messages.success(request, f'✅ Đã cập nhật {updated} video từ Google Drive')
+            parts.append(f'✅ {updated} video cập nhật')
+        if thumbs:
+            parts.append(f'🖼️ {thumbs} thumbnail')
+        if parts:
+            messages.success(request, ' | '.join(parts))
         if failed:
             error_detail = '; '.join(errors[:5])
             messages.warning(request, f'⚠️ {failed} video không thể cập nhật: {error_detail}')

@@ -13,6 +13,7 @@ OAuth2 Flow:
 
 import json
 import logging
+import os
 import urllib.parse
 from datetime import timedelta
 
@@ -364,27 +365,28 @@ def upload_to_account(account, file_obj, filename, mime_type='video/mp4', media_
 
 def fetch_gdrive_file_metadata(file_id):
     """
-    Lấy metadata video từ Google Drive API (duration, size, resolution...).
+    Lấy metadata video từ Google Drive (duration, size, resolution, thumbnail).
     
-    Google Drive tự phân tích video → trả về videoMediaMetadata:
-    - durationMillis: thời lượng (ms)
-    - width, height: resolution
-    
-    Thử lần lượt từng GDrive account cho đến khi thành công.
+    Chiến lược 3 tầng:
+    1. Drive API: files().get() → videoMediaMetadata (nhanh nhất)
+    2. ffprobe: probe trực tiếp URL download → duration, resolution
+    3. Kết hợp: nếu API có size nhưng thiếu duration → ffprobe bổ sung
     
     Returns:
-        Dict với keys: name, size, mime_type, duration_seconds, width, height
+        Dict với keys: name, size, mime_type, duration_seconds, width, height, thumbnail_path
         Hoặc None nếu không lấy được.
     """
     from .models import GDriveAccount
     
-    accounts = GDriveAccount.objects.filter(is_active=True)
-    if not accounts.exists():
+    accounts = list(GDriveAccount.objects.filter(is_active=True))
+    if not accounts:
         logger.warning("Không có GDrive account active nào để fetch metadata")
         return None
     
-    fields = 'id,name,size,mimeType,videoMediaMetadata'
+    result = None
+    download_url = None
     
+    # Tier 1: Google Drive API
     for account in accounts:
         try:
             service = build_drive_service(account)
@@ -393,7 +395,7 @@ def fetch_gdrive_file_metadata(file_id):
             
             file_info = service.files().get(
                 fileId=file_id,
-                fields=fields,
+                fields='id,name,size,mimeType,videoMediaMetadata,webContentLink',
                 supportsAllDrives=True,
             ).execute()
             
@@ -409,30 +411,48 @@ def fetch_gdrive_file_metadata(file_id):
                 duration_ms = video_meta.get('durationMillis')
                 if duration_ms:
                     result['duration_seconds'] = int(int(duration_ms) / 1000)
-                result['width'] = video_meta.get('width')
-                result['height'] = video_meta.get('height')
+                if video_meta.get('width'):
+                    result['width'] = video_meta['width']
+                if video_meta.get('height'):
+                    result['height'] = video_meta['height']
+            
+            # Get authenticated download URL for ffprobe fallback
+            download_url = _get_authenticated_download_url(service, account, file_id)
             
             logger.info(
-                "GDrive metadata OK cho %s: name=%s, size=%s, duration=%ss",
+                "GDrive API OK cho %s: name=%s, size=%s, duration=%s, has_video_meta=%s",
                 file_id, result['name'], result['size'],
-                result.get('duration_seconds', '?')
+                result.get('duration_seconds', 'N/A'),
+                bool(video_meta)
             )
-            return result
+            break  # Got file info from API
             
         except Exception as e:
-            logger.debug("GDrive fetch metadata via %s failed for %s: %s", account.email, file_id, e)
+            logger.warning("GDrive API fetch via %s failed for %s: %s", account.email, file_id, e)
             continue
     
-    logger.warning("Không lấy được metadata GDrive cho file %s (đã thử %d accounts)", file_id, accounts.count())
-    return None
+    if not result:
+        logger.warning("Không lấy được metadata GDrive cho file %s", file_id)
+        return None
+    
+    # Tier 2: ffprobe fallback nếu thiếu duration
+    if not result.get('duration_seconds') and download_url:
+        logger.info("GDrive API thiếu duration cho %s, dùng ffprobe...", file_id)
+        probe_info = _ffprobe_url(download_url)
+        if probe_info:
+            if probe_info.get('duration'):
+                result['duration_seconds'] = probe_info['duration']
+            if probe_info.get('width') and not result.get('width'):
+                result['width'] = probe_info['width']
+            if probe_info.get('height') and not result.get('height'):
+                result['height'] = probe_info['height']
+    
+    return result
 
 
 def fetch_gdrive_metadata_batch(file_ids):
     """
     Batch fetch metadata cho nhiều Google Drive files.
-    
-    Dùng 1 Drive service → gọi files().get() cho từng file.
-    (Google Drive API không hỗ trợ batch files().get() như YouTube)
     
     Returns:
         Dict mapping file_id → metadata dict.
@@ -448,9 +468,10 @@ def fetch_gdrive_metadata_batch(file_ids):
         return {}
     
     results = {}
-    fields = 'id,name,size,mimeType,videoMediaMetadata'
+    download_urls = {}
+    fields = 'id,name,size,mimeType,videoMediaMetadata,webContentLink'
     
-    # Try first active account
+    # Tier 1: Google Drive API for all files
     for account in accounts:
         service = build_drive_service(account)
         if not service:
@@ -476,19 +497,203 @@ def fetch_gdrive_metadata_batch(file_ids):
                     duration_ms = video_meta.get('durationMillis')
                     if duration_ms:
                         result['duration_seconds'] = int(int(duration_ms) / 1000)
-                    result['width'] = video_meta.get('width')
-                    result['height'] = video_meta.get('height')
+                    if video_meta.get('width'):
+                        result['width'] = video_meta['width']
+                    if video_meta.get('height'):
+                        result['height'] = video_meta['height']
                 
                 results[file_id] = result
-                logger.info("GDrive batch: %s → %s (%ss)", file_id, result['name'], result.get('duration_seconds', '?'))
+                
+                # Save download URL for ffprobe fallback
+                if not result.get('duration_seconds'):
+                    url = _get_authenticated_download_url(service, account, file_id)
+                    if url:
+                        download_urls[file_id] = url
+                
+                logger.info("GDrive batch: %s → %s (dur=%ss)", file_id, result['name'], result.get('duration_seconds', 'N/A'))
                 
             except Exception as e:
-                logger.debug("GDrive batch: %s failed via %s: %s", file_id, account.email, e)
-                # File might belong to different account, continue with next account
+                logger.warning("GDrive batch: %s failed via %s: %s", file_id, account.email, e)
                 continue
         
         if len(results) == len(file_ids):
-            break  # All files fetched
+            break
+    
+    # Tier 2: ffprobe fallback cho files thiếu duration
+    for file_id, url in download_urls.items():
+        if file_id in results and not results[file_id].get('duration_seconds'):
+            logger.info("ffprobe fallback cho %s...", file_id)
+            probe_info = _ffprobe_url(url)
+            if probe_info:
+                if probe_info.get('duration'):
+                    results[file_id]['duration_seconds'] = probe_info['duration']
+                if probe_info.get('width') and not results[file_id].get('width'):
+                    results[file_id]['width'] = probe_info['width']
+                if probe_info.get('height') and not results[file_id].get('height'):
+                    results[file_id]['height'] = probe_info['height']
     
     logger.info("GDrive batch: %d/%d files fetched", len(results), len(file_ids))
     return results
+
+
+def _get_authenticated_download_url(service, account, file_id):
+    """
+    Lấy URL download có auth token từ Google Drive API.
+    Dùng access_token trong header cho ffprobe.
+    Returns: (url, headers_dict) tuple hoặc direct URL string.
+    """
+    try:
+        creds = _build_credentials(account)
+        if not creds or not creds.valid:
+            from google.auth.transport.requests import Request
+            creds.refresh(Request())
+        
+        # URL có thể dùng với access_token
+        url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+        return f"{url}&access_token={creds.token}"
+    except Exception as e:
+        logger.debug("Failed to get auth download URL: %s", e)
+        return None
+
+
+def _ffprobe_url(url, timeout=30):
+    """
+    Dùng ffprobe để lấy duration + resolution từ URL.
+    ffprobe chỉ đọc header/moov atom → không download toàn bộ file.
+    
+    Returns:
+        Dict {duration: int, width: int, height: int} hoặc None
+    """
+    import subprocess
+    import json as _json
+    
+    try:
+        cmd = [
+            'ffprobe', '-v', 'quiet',
+            '-print_format', 'json',
+            '-show_format', '-show_streams',
+            '-headers', 'User-Agent: Mozilla/5.0\r\n',
+            url,
+        ]
+        proc = subprocess.run(cmd, capture_output=True, timeout=timeout, text=True)
+        
+        if proc.returncode != 0:
+            logger.warning("ffprobe failed (rc=%d): %s", proc.returncode, proc.stderr[:200] if proc.stderr else '')
+            return None
+        
+        probe = _json.loads(proc.stdout)
+        result = {}
+        
+        # Duration from format
+        duration_str = probe.get('format', {}).get('duration')
+        if duration_str:
+            result['duration'] = int(float(duration_str))
+        
+        # Width/height from video stream
+        for stream in probe.get('streams', []):
+            if stream.get('codec_type') == 'video':
+                if stream.get('width'):
+                    result['width'] = stream['width']
+                if stream.get('height'):
+                    result['height'] = stream['height']
+                # Duration from stream if not in format
+                if not result.get('duration') and stream.get('duration'):
+                    result['duration'] = int(float(stream['duration']))
+                break
+        
+        if result.get('duration'):
+            logger.info("ffprobe OK: duration=%ds, %sx%s", result['duration'], result.get('width', '?'), result.get('height', '?'))
+            return result
+        
+        logger.warning("ffprobe: no duration found in output")
+        return None
+        
+    except subprocess.TimeoutExpired:
+        logger.warning("ffprobe timeout (%ds) cho URL", timeout)
+        return None
+    except Exception as e:
+        logger.warning("ffprobe error: %s", e)
+        return None
+
+
+def extract_gdrive_thumbnail(file_id, duration_seconds=None):
+    """
+    Trích xuất thumbnail random từ video Google Drive.
+    
+    Dùng ffmpeg để lấy 1 frame tại thời điểm random (hoặc 25% video).
+    Không download toàn bộ file — ffmpeg seek qua HTTP range.
+    
+    Returns:
+        Path to thumbnail file (caller phải cleanup) hoặc None
+    """
+    import subprocess
+    import tempfile
+    import random
+    
+    from .models import GDriveAccount
+    
+    # Get authenticated download URL
+    accounts = list(GDriveAccount.objects.filter(is_active=True))
+    download_url = None
+    
+    for account in accounts:
+        try:
+            service = build_drive_service(account)
+            if service:
+                download_url = _get_authenticated_download_url(service, account, file_id)
+                if download_url:
+                    break
+        except Exception:
+            continue
+    
+    if not download_url:
+        # Fallback: public download URL
+        download_url = f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t"
+    
+    # Chọn thời điểm random: 10%-80% video, hoặc 5s nếu không biết duration
+    if duration_seconds and duration_seconds > 10:
+        seek_time = random.randint(int(duration_seconds * 0.1), int(duration_seconds * 0.8))
+    elif duration_seconds and duration_seconds > 2:
+        seek_time = int(duration_seconds * 0.25)
+    else:
+        seek_time = 5
+    
+    try:
+        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
+            thumb_path = tmp.name
+        
+        cmd = [
+            'ffmpeg', '-y',
+            '-headers', 'User-Agent: Mozilla/5.0\r\n',
+            '-ss', str(seek_time),
+            '-i', download_url,
+            '-frames:v', '1',
+            '-q:v', '2',
+            '-vf', 'scale=640:-2',
+            thumb_path,
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, timeout=60, text=True)
+        
+        if result.returncode != 0:
+            # Retry at beginning
+            cmd[cmd.index('-ss') + 1] = '1'
+            result = subprocess.run(cmd, capture_output=True, timeout=60, text=True)
+        
+        if result.returncode == 0 and os.path.isfile(thumb_path) and os.path.getsize(thumb_path) > 0:
+            logger.info("GDrive thumbnail OK cho %s (seek=%ds): %s", file_id, seek_time, thumb_path)
+            return thumb_path
+        
+        logger.warning("ffmpeg thumbnail failed cho %s: %s", file_id, result.stderr[:300] if result.stderr else '')
+        if os.path.isfile(thumb_path):
+            os.unlink(thumb_path)
+        return None
+        
+    except subprocess.TimeoutExpired:
+        logger.warning("ffmpeg thumbnail timeout cho %s", file_id)
+        if os.path.isfile(thumb_path):
+            os.unlink(thumb_path)
+        return None
+    except Exception as e:
+        logger.warning("ffmpeg thumbnail error cho %s: %s", file_id, e)
+        return None
