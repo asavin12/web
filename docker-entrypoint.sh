@@ -165,6 +165,10 @@ print('Media categories OK')
 echo "Migrating YouTube videos to Stream..."
 python manage.py migrate_videos_to_stream 2>&1 || echo "Video migration skipped"
 
+# Fetch YouTube metadata for videos missing duration/info
+echo "Fetching YouTube metadata..."
+python manage.py fetch_youtube_metadata 2>&1 || echo "YouTube metadata fetch skipped"
+
 # Cleanup duplicate resources (from sample data scripts run multiple times)
 echo "Cleaning up duplicate records..."
 python -c "
