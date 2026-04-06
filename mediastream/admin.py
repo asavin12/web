@@ -6,6 +6,7 @@ Quản lý video/audio trong Django Admin
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
+from django.contrib import messages
 from .models import StreamMedia, MediaCategory, MediaSubtitle, MediaPlaylist, PlaylistItem, GDriveAccount
 
 
@@ -58,12 +59,25 @@ class StreamMediaAdmin(admin.ModelAdmin):
         'uid', 'file_size', 'mime_type', 
         'view_count', 'download_count',
         'created_at', 'updated_at',
-        'stream_url_display', 'embed_code_display'
+        'stream_url_display', 'embed_code_display',
+        'youtube_preview',
     ]
     
     fieldsets = (
         ('Thông tin cơ bản', {
             'fields': ('title', 'slug', 'media_type', 'storage_type', 'file', 'thumbnail')
+        }),
+        ('YouTube', {
+            'fields': ('youtube_id', 'youtube_preview'),
+            'classes': ('collapse',),
+            'description': '<strong>🎬 Đăng video YouTube:</strong><br>'
+                           '1. Dán YouTube URL hoặc Video ID vào ô bên dưới<br>'
+                           '2. Nhấn "Lưu" → Hệ thống tự động lấy tiêu đề, mô tả, thời lượng, thumbnail từ YouTube<br>'
+                           '3. Loại media & lưu trữ sẽ tự động chuyển thành Video + YouTube<br><br>'
+                           '<strong>Định dạng hỗ trợ:</strong> '
+                           '<code>dQw4w9WgXcQ</code> · '
+                           '<code>https://www.youtube.com/watch?v=dQw4w9WgXcQ</code> · '
+                           '<code>https://youtu.be/dQw4w9WgXcQ</code>'
         }),
         ('Google Drive', {
             'fields': ('gdrive_url', 'gdrive_file_id'),
@@ -96,11 +110,20 @@ class StreamMediaAdmin(admin.ModelAdmin):
     
     inlines = [MediaSubtitleInline]
     
+    class Media:
+        js = ('js/admin_youtube_autofetch.js',)
+    
     def thumbnail_preview(self, obj):
         if obj.thumbnail:
             return format_html(
                 '<img src="{}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;" />',
                 obj.thumbnail.url
+            )
+        if obj.youtube_id:
+            return format_html(
+                '<img src="https://img.youtube.com/vi/{}/default.jpg" '
+                'style="width:60px;height:40px;object-fit:cover;border-radius:4px;" />',
+                obj.youtube_id
             )
         icons = {'video': '🎬', 'audio': '🎵', 'podcast': '🎙️'}
         icon = icons.get(obj.media_type, '🎵')
@@ -123,8 +146,8 @@ class StreamMediaAdmin(admin.ModelAdmin):
     media_type_badge.short_description = 'Loại'
     
     def storage_type_badge(self, obj):
-        colors = {'local': '#607D8B', 'gdrive': '#4285F4'}
-        icons = {'local': '💾', 'gdrive': '☁️'}
+        colors = {'local': '#607D8B', 'gdrive': '#4285F4', 'youtube': '#c4302b'}
+        icons = {'local': '💾', 'gdrive': '☁️', 'youtube': '▶'}
         return format_html(
             '<span style="background:{};color:white;padding:2px 8px;border-radius:4px;font-size:11px;">'
             '{} {}</span>',
@@ -172,10 +195,84 @@ class StreamMediaAdmin(admin.ModelAdmin):
         return '-'
     actions_column.short_description = 'Actions'
     
+    def youtube_preview(self, obj):
+        """Xem trước video YouTube trong form"""
+        if obj.youtube_id:
+            return format_html(
+                '<div style="max-width:560px;">'
+                '<img src="https://img.youtube.com/vi/{}/hqdefault.jpg" '
+                'style="width:100%;max-width:480px;border-radius:8px;margin-bottom:8px;" /><br>'
+                '<a href="https://www.youtube.com/watch?v={}" target="_blank" '
+                'style="color:#c4302b;font-weight:bold;text-decoration:none;">'
+                '▶ Xem trên YouTube</a>'
+                ' &nbsp;|&nbsp; '
+                '<code style="background:#f5f5f5;padding:2px 6px;border-radius:3px;">{}</code>'
+                '</div>',
+                obj.youtube_id, obj.youtube_id, obj.youtube_id
+            )
+        return format_html(
+            '<span style="color:#999;">💡 Nhập YouTube URL/ID ở trên rồi lưu để xem trước</span>'
+        )
+    youtube_preview.short_description = 'Xem trước YouTube'
+
     def save_model(self, request, obj, form, change):
         if not obj.uploaded_by:
             obj.uploaded_by = request.user
+        
+        # Auto-fetch YouTube info when youtube_id is set
+        if obj.youtube_id:
+            self._auto_fetch_youtube(request, obj, change)
+        
         super().save_model(request, obj, form, change)
+    
+    def _auto_fetch_youtube(self, request, obj, is_change):
+        """Tự động lấy thông tin từ YouTube khi có youtube_id"""
+        from core.youtube import fetch_youtube_info
+        
+        # Only auto-fetch if title is empty (new) or youtube_id changed
+        should_fetch = False
+        if not is_change:
+            should_fetch = True  # New object
+        elif obj.pk:
+            try:
+                old = StreamMedia.objects.get(pk=obj.pk)
+                if old.youtube_id != obj.youtube_id:
+                    should_fetch = True  # YouTube ID changed
+            except StreamMedia.DoesNotExist:
+                should_fetch = True
+        
+        if not should_fetch:
+            return
+        
+        info = fetch_youtube_info(obj.youtube_id)
+        if not info:
+            messages.warning(request, '⚠️ Không thể lấy thông tin từ YouTube. Kiểm tra API key hoặc video ID.')
+            return
+        
+        # Auto-fill empty fields only
+        if not obj.title or obj.title.strip() == '':
+            obj.title = info.get('title', '')[:255]
+        if not obj.description or obj.description.strip() == '':
+            obj.description = info.get('description', '')
+        
+        # Duration: convert "H:MM:SS" or "M:SS" to seconds
+        duration_str = info.get('duration', '')
+        if duration_str and not obj.duration:
+            parts = duration_str.split(':')
+            try:
+                if len(parts) == 3:
+                    obj.duration = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                elif len(parts) == 2:
+                    obj.duration = int(parts[0]) * 60 + int(parts[1])
+            except (ValueError, IndexError):
+                pass
+        
+        # Tags
+        yt_tags = info.get('tags', [])
+        if yt_tags and not obj.tags:
+            obj.tags = ', '.join(yt_tags[:10])
+        
+        messages.success(request, f'✅ Đã lấy thông tin từ YouTube: {info.get("title", "")[:60]}')
     
     def changelist_view(self, request, extra_context=None):
         """Add extra context for upload panel"""
