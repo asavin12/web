@@ -104,7 +104,7 @@ class Tool(WebPImageMixin, models.Model):
     
     # Trạng thái
     is_featured = models.BooleanField(default=False, verbose_name='Nổi bật')
-    is_published = models.BooleanField(default=True, verbose_name='Xuất bản')
+    is_published = models.BooleanField(default=True, db_index=True, verbose_name='Xuất bản')
     is_active = models.BooleanField(default=True, verbose_name='Hiển thị')
     order = models.PositiveIntegerField(default=0, verbose_name='Thứ tự')
     

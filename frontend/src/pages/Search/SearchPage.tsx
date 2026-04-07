@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { LoadingInline } from '@/components/ui/Spinner';
-import { HighlightText } from '@/components/common';
+import { HighlightText, SEO } from '@/components/common';
 
 // Chỉ tìm kiếm resources - không tìm users/posts để bảo vệ thông tin
 type SearchTab = 'all' | 'resources';
@@ -42,6 +42,7 @@ export default function SearchPage() {
 
   return (
     <div className="space-y-6">
+      <SEO title={query ? `Tìm kiếm: ${query}` : 'Tìm kiếm'} description="Tìm kiếm tài liệu, bài viết, kiến thức trên UnstressVN" />
       <h1 className="text-3xl font-bold">{t('search.title')}</h1>
 
       {/* Search Form */}

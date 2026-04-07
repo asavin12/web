@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import Spinner from '@/components/ui/Spinner';
+import { SEO } from '@/components/common';
 
 export default function RegisterPage() {
   const { t } = useTranslation();
@@ -108,6 +109,7 @@ export default function RegisterPage() {
 
   return (
     <div className="max-w-md mx-auto py-12">
+      <SEO title="Đăng ký tài khoản" description="Tạo tài khoản miễn phí tại UnstressVN - Học ngoại ngữ dễ dàng với video, phụ đề và AI" />
       <Card>
         <CardHeader>
           <CardTitle className="text-center text-2xl">

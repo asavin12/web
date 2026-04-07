@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import Spinner from '@/components/ui/Spinner';
+import { SEO } from '@/components/common';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -55,6 +56,7 @@ export default function LoginPage() {
 
   return (
     <div className="max-w-md mx-auto py-12">
+      <SEO title="Đăng nhập" description="Đăng nhập vào UnstressVN - Nền tảng học ngoại ngữ dễ dàng" />
       <Card>
         <CardHeader>
           <CardTitle className="text-center text-2xl">

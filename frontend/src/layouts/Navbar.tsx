@@ -505,7 +505,7 @@ export default function Navbar() {
                                 {/* Icon or Avatar */}
                                 <div className="flex-shrink-0">
                                   {notif.sender?.avatar ? (
-                                    <img src={notif.sender.avatar} className="w-10 h-10 rounded-full object-cover" alt="" />
+                                    <img src={notif.sender.avatar} className="w-10 h-10 rounded-full object-cover" alt={notif.sender.username} />
                                   ) : notif.sender ? (
                                     <div className="w-10 h-10 rounded-full bg-vintage-olive/20 flex items-center justify-center text-vintage-olive font-bold">
                                       {notif.sender.username.charAt(0).toUpperCase()}
@@ -726,7 +726,7 @@ export default function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 text-vintage-dark hover:bg-vintage-tan/20 rounded-lg touch-target"
                 >
-                  <img src={avatar} alt="" className="h-10 w-10 rounded-full object-cover border-2 border-vintage-tan" />
+                  <img src={avatar} alt={user?.username || 'Avatar'} className="h-10 w-10 rounded-full object-cover border-2 border-vintage-tan" />
                   <div>
                     <span className="font-bold text-base block">{user?.username}</span>
                     <span className="text-xs text-vintage-olive font-medium">

@@ -31,12 +31,18 @@ parse_db_conn
 # =============================================
 if [ -z "${SECRET_KEY:-}" ]; then
   echo "SECRET_KEY not set — reading/creating from database..."
-  PGPASSWORD="$DB_PASS_PARSED" psql -h "$DB_HOST_PARSED" -p "${DB_PORT_PARSED:-5432}" \
+  
+  # Use .pgpass file instead of PGPASSWORD in command line (security: not visible in ps aux)
+  export PGPASSFILE="/tmp/.pgpass_$$"
+  echo "$DB_HOST_PARSED:${DB_PORT_PARSED:-5432}:$DB_NAME_PARSED:$DB_USER_PARSED:$DB_PASS_PARSED" > "$PGPASSFILE"
+  chmod 600 "$PGPASSFILE"
+  
+  psql -h "$DB_HOST_PARSED" -p "${DB_PORT_PARSED:-5432}" \
     -U "$DB_USER_PARSED" -d "$DB_NAME_PARSED" -qtAX \
     -c "CREATE TABLE IF NOT EXISTS _app_config (key VARCHAR(64) PRIMARY KEY, value TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW());" \
     2>/dev/null || true
 
-  STORED_KEY=$(PGPASSWORD="$DB_PASS_PARSED" psql -h "$DB_HOST_PARSED" -p "${DB_PORT_PARSED:-5432}" \
+  STORED_KEY=$(psql -h "$DB_HOST_PARSED" -p "${DB_PORT_PARSED:-5432}" \
     -U "$DB_USER_PARSED" -d "$DB_NAME_PARSED" -qtAX \
     -c "SELECT value FROM _app_config WHERE key='secret_key';" 2>/dev/null || echo "")
 
@@ -46,13 +52,18 @@ if [ -z "${SECRET_KEY:-}" ]; then
   else
     # Generate and store a new key
     NEW_KEY=$(python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
-    PGPASSWORD="$DB_PASS_PARSED" psql -h "$DB_HOST_PARSED" -p "${DB_PORT_PARSED:-5432}" \
+    # Use dollar-quoting to safely handle special characters in key
+    psql -h "$DB_HOST_PARSED" -p "${DB_PORT_PARSED:-5432}" \
       -U "$DB_USER_PARSED" -d "$DB_NAME_PARSED" -qtAX \
-      -c "INSERT INTO _app_config (key, value) VALUES ('secret_key', '$NEW_KEY') ON CONFLICT (key) DO NOTHING;" \
+      -c "INSERT INTO _app_config (key, value) VALUES ('secret_key', \$\$${NEW_KEY}\$\$) ON CONFLICT (key) DO NOTHING;" \
       2>/dev/null || true
     export SECRET_KEY="$NEW_KEY"
     echo "SECRET_KEY generated and stored in database."
   fi
+  
+  # Clean up .pgpass file
+  rm -f "$PGPASSFILE"
+  unset PGPASSFILE
 fi
 
 # Wait for PostgreSQL to be ready

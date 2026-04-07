@@ -250,7 +250,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # File upload limits — cho phép upload file lớn (video/audio)
-DATA_UPLOAD_MAX_MEMORY_SIZE = None  # Không giới hạn POST body
+DATA_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024  # 500MB max POST body (chống DoS)
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # >10MB → ghi ra temp file
 
 # =============================================

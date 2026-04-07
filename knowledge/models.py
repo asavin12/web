@@ -124,9 +124,9 @@ class KnowledgeArticle(WebPImageMixin, N8NTrackingMixin, models.Model):
                                    help_text='Loại structured data cho Google')
     
     # Trạng thái
-    is_published = models.BooleanField(default=False, verbose_name='Đã xuất bản')
+    is_published = models.BooleanField(default=False, db_index=True, verbose_name='Đã xuất bản')
     is_featured = models.BooleanField(default=False, verbose_name='Nổi bật')
-    published_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True, db_index=True)
     
     # Tags (comma-separated, Vietnamese with diacritics)
     tags = models.CharField(max_length=500, blank=True, verbose_name='Tags',

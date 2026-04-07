@@ -801,8 +801,8 @@ export default function StreamPlayerPage() {
     try {
       const content = await mediaStreamApi.getSubtitleContent(subtitle.subtitle_url);
       return parseSubtitleContent(content);
-    } catch (err) {
-      console.error('Failed to load subtitle:', err);
+    } catch {
+      // Subtitle load failed — return empty silently (user sees "no subtitle" state)
       return [];
     }
   }, [media]);
