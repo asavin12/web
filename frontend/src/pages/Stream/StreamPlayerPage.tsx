@@ -10,7 +10,7 @@
  * - Hiển thị song ngữ (Track 1 dưới, Track 2 trên)
  * - Transcript panel hiển thị cả 2 track
  */
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -548,14 +548,14 @@ interface WordTooltipProps {
   context: string;
   sourceLang: string;
   targetLang: string;
-  position: { x: number; y: number };
+  anchorEl: HTMLElement;
   onClose: () => void;
   geminiApiKey: string;
   geminiModel: string;
   videoRef?: React.RefObject<HTMLVideoElement | null>;
 }
 
-function WordTooltip({ word, context, sourceLang, targetLang, position, onClose, geminiApiKey, geminiModel, videoRef }: WordTooltipProps) {
+function WordTooltip({ word, context, sourceLang, targetLang, anchorEl, onClose, geminiApiKey, geminiModel, videoRef }: WordTooltipProps) {
   const wasPlayingRef = useRef(false);
 
   // Pause video on mount, resume on unmount
@@ -571,27 +571,62 @@ function WordTooltip({ word, context, sourceLang, targetLang, position, onClose,
       }
     };
   }, [videoRef]);
+
   const [data, setData] = useState<WordLookupResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const [adjustedPos, setAdjustedPos] = useState(position);
+  const [pos, setPos] = useState<{ x: number; y: number; showBelow: boolean }>({ x: 0, y: 0, showBelow: false });
+  const [ready, setReady] = useState(false);
 
-  // Adjust position to keep tooltip in viewport after render
-  useEffect(() => {
-    const el = tooltipRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    let { x, y } = position;
-    // Ensure tooltip doesn't go above viewport
-    if (y - rect.height - 10 < 0) {
-      y = rect.height + 10;
+  // Compute position from anchor element — runs synchronously before paint
+  const updatePosition = useCallback(() => {
+    if (!anchorEl || !tooltipRef.current) return;
+    const wordRect = anchorEl.getBoundingClientRect();
+    const tipRect = tooltipRef.current.getBoundingClientRect();
+
+    let x = wordRect.left + wordRect.width / 2;
+    const yAbove = wordRect.top - 8;
+    let showBelow = false;
+
+    // If not enough space above, show below the word
+    if (yAbove - tipRect.height < 4) {
+      showBelow = true;
     }
-    // Ensure tooltip doesn't go off-screen left/right
-    const halfW = rect.width / 2;
+    const y = showBelow ? wordRect.bottom + 8 : yAbove;
+
+    // Clamp horizontal
+    const halfW = tipRect.width / 2;
     if (x - halfW < 8) x = halfW + 8;
     if (x + halfW > window.innerWidth - 8) x = window.innerWidth - halfW - 8;
-    setAdjustedPos({ x, y });
-  }, [position, loading, data]);
+
+    setPos({ x, y, showBelow });
+    setReady(true);
+  }, [anchorEl]);
+
+  // Position synchronously before paint (avoids flash at wrong location)
+  useLayoutEffect(() => {
+    updatePosition();
+  }, [updatePosition, loading, data]);
+
+  // Re-position on scroll/resize
+  useEffect(() => {
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [updatePosition]);
+
+  // Highlight the clicked word
+  useEffect(() => {
+    anchorEl.style.backgroundColor = 'rgba(59,130,246,0.5)';
+    anchorEl.style.borderRadius = '2px';
+    return () => {
+      anchorEl.style.backgroundColor = '';
+      anchorEl.style.borderRadius = '';
+    };
+  }, [anchorEl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -627,13 +662,18 @@ function WordTooltip({ word, context, sourceLang, targetLang, position, onClose,
   return createPortal(
     <div
       ref={tooltipRef}
-      className="fixed z-[9999] bg-neutral-900/95 backdrop-blur-md text-white rounded-xl shadow-2xl border border-white/10 p-3 min-w-[200px] max-w-[320px]"
-      style={{ left: adjustedPos.x, top: adjustedPos.y - 10, transform: 'translate(-50%, -100%)' }}
+      className="fixed z-[9999] bg-[#1e293b]/95 text-white rounded-xl shadow-2xl border border-white/10 p-3 min-w-[200px] max-w-[320px]"
+      style={{
+        left: pos.x,
+        top: pos.y,
+        transform: pos.showBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
+        visibility: ready ? 'visible' : 'hidden',
+      }}
     >
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors text-xs"
+        className="absolute top-1 right-1.5 w-5 h-5 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors text-xs"
         title="Đóng"
       >
         ✕
@@ -645,7 +685,7 @@ function WordTooltip({ word, context, sourceLang, targetLang, position, onClose,
       ) : data ? (
         <div className="space-y-1.5">
           <div className="flex items-baseline gap-2">
-            <span className="font-bold text-base">{data.word}</span>
+            <span className="font-bold text-base text-sky-300">{data.word}</span>
             {data.word_type && (
               <span className="text-[10px] text-white/40 italic">{data.word_type}</span>
             )}
@@ -653,15 +693,22 @@ function WordTooltip({ word, context, sourceLang, targetLang, position, onClose,
           {data.pronunciation && (
             <p className="text-xs text-white/50 font-mono">{data.pronunciation}</p>
           )}
-          <p className="text-sm text-yellow-300 font-medium">{data.meaning}</p>
+          <p className="text-sm text-amber-300 font-medium leading-relaxed">{data.meaning}</p>
           {data.examples?.length ? (
-            <p className="text-xs text-white/50 italic border-t border-white/10 pt-1 mt-1">
+            <p className="text-xs text-white/50 italic border-t border-white/10 pt-1.5 mt-1.5">
               {data.examples[0]}
             </p>
           ) : null}
         </div>
       ) : null}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-neutral-900/95" />
+      {/* Arrow pointer */}
+      <div
+        className={`absolute left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent ${
+          pos.showBelow
+            ? 'top-0 -translate-y-full border-b-[6px] border-b-[#1e293b]/95'
+            : 'bottom-0 translate-y-full border-t-[6px] border-t-[#1e293b]/95'
+        }`}
+      />
     </div>,
     document.body
   );
@@ -684,15 +731,14 @@ interface SubtitleLineProps {
 }
 
 function SubtitleLine({ text, context, sourceLang, targetLang, geminiApiKey, geminiModel, style, className, videoRef }: SubtitleLineProps) {
-  const [tooltip, setTooltip] = useState<{ word: string; x: number; y: number } | null>(null);
+  const [tooltip, setTooltip] = useState<{ word: string; anchorEl: HTMLElement } | null>(null);
   const words = text.split(/(\s+)/);
 
   const handleWordClick = useCallback((e: React.MouseEvent, word: string) => {
     e.stopPropagation();
     const clean = word.replace(/[.,!?;:"""''()[\]{}]/g, '').trim();
     if (!clean) return;
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    setTooltip({ word: clean, x: rect.left + rect.width / 2, y: rect.top });
+    setTooltip({ word: clean, anchorEl: e.target as HTMLElement });
   }, []);
 
   return (
@@ -718,7 +764,7 @@ function SubtitleLine({ text, context, sourceLang, targetLang, geminiApiKey, gem
           context={context}
           sourceLang={sourceLang}
           targetLang={targetLang}
-          position={{ x: tooltip.x, y: tooltip.y }}
+          anchorEl={tooltip.anchorEl}
           onClose={() => setTooltip(null)}
           geminiApiKey={geminiApiKey}
           geminiModel={geminiModel}
