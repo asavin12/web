@@ -11,6 +11,7 @@
  * - Transcript panel hiển thị cả 2 track
  */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mediaStreamApi, type MediaSubtitle, type WordLookupResponse } from '@/api/mediastream';
@@ -573,6 +574,24 @@ function WordTooltip({ word, context, sourceLang, targetLang, position, onClose,
   const [data, setData] = useState<WordLookupResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const [adjustedPos, setAdjustedPos] = useState(position);
+
+  // Adjust position to keep tooltip in viewport after render
+  useEffect(() => {
+    const el = tooltipRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    let { x, y } = position;
+    // Ensure tooltip doesn't go above viewport
+    if (y - rect.height - 10 < 0) {
+      y = rect.height + 10;
+    }
+    // Ensure tooltip doesn't go off-screen left/right
+    const halfW = rect.width / 2;
+    if (x - halfW < 8) x = halfW + 8;
+    if (x + halfW > window.innerWidth - 8) x = window.innerWidth - halfW - 8;
+    setAdjustedPos({ x, y });
+  }, [position, loading, data]);
 
   useEffect(() => {
     let cancelled = false;
@@ -605,11 +624,11 @@ function WordTooltip({ word, context, sourceLang, targetLang, position, onClose,
     return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler); };
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
       ref={tooltipRef}
-      className="fixed z-[100] bg-neutral-900/95 backdrop-blur-md text-white rounded-xl shadow-2xl border border-white/10 p-3 min-w-[200px] max-w-[320px]"
-      style={{ left: position.x, top: position.y - 10, transform: 'translate(-50%, -100%)' }}
+      className="fixed z-[9999] bg-neutral-900/95 backdrop-blur-md text-white rounded-xl shadow-2xl border border-white/10 p-3 min-w-[200px] max-w-[320px]"
+      style={{ left: adjustedPos.x, top: adjustedPos.y - 10, transform: 'translate(-50%, -100%)' }}
     >
       {/* Close button */}
       <button
@@ -643,7 +662,8 @@ function WordTooltip({ word, context, sourceLang, targetLang, position, onClose,
         </div>
       ) : null}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-neutral-900/95" />
-    </div>
+    </div>,
+    document.body
   );
 }
 
