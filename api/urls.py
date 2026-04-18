@@ -3,7 +3,6 @@ URL configuration cho REST API
 """
 
 from django.urls import path, include
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken.views import obtain_auth_token
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
@@ -27,15 +26,15 @@ urlpatterns = [
     # Router URLs
     path('', include(router.urls)),
     
-    # Authentication (csrf_exempt for external API calls)
-    path('auth/login/', csrf_exempt(views.api_login), name='login'),
-    path('auth/logout/', csrf_exempt(views.api_logout), name='logout'),
-    path('auth/register/', csrf_exempt(views.api_register), name='register'),
-    path('auth/password/change/', csrf_exempt(views.api_change_password), name='change-password'),
-    path('auth/token/', csrf_exempt(obtain_auth_token), name='token'),
+    # Authentication — DRF @api_view and APIView.as_view() are CSRF-exempt via DRF internals
+    path('auth/login/', views.api_login, name='login'),
+    path('auth/logout/', views.api_logout, name='logout'),
+    path('auth/register/', views.api_register, name='register'),
+    path('auth/password/change/', views.api_change_password, name='change-password'),
+    path('auth/token/', obtain_auth_token, name='token'),
     
     # Backward compatibility: also support /login/ directly
-    path('login/', csrf_exempt(views.api_login), name='login-alt'),
+    path('login/', views.api_login, name='login-alt'),
     
     # User
     path('me/', views.api_me, name='me'),

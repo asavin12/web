@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Tạo dữ liệu mẫu chuẩn SEO cho local dev — gọn nhẹ, 3 bài news + 3 bài knowledge."""
-import os, sys, django
+import os, sys, django, secrets, string
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unstressvn_settings.settings')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 django.setup()
@@ -19,7 +19,12 @@ admin, _ = User.objects.get_or_create(username='admin', defaults={
     'email': 'admin@unstressvn.com', 'is_staff': True, 'is_superuser': True
 })
 if not admin.has_usable_password():
-    admin.set_password('admin123')
+    password = os.environ.get('ADMIN_INITIAL_PASSWORD', '')
+    if not password:
+        alphabet = string.ascii_letters + string.digits + '!@#$%^&*'
+        password = ''.join(secrets.choice(alphabet) for _ in range(20))
+        print(f"  ⚠️  Generated admin password: {password}  (save this!)")
+    admin.set_password(password)
     admin.save()
 
 # ═══════════════════════════════════════

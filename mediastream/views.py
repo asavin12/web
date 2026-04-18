@@ -741,7 +741,7 @@ def _extract_from_uploaded_video(uploaded_file):
 # ADMIN UPLOAD VIEWS
 # ============================================================================
 
-@csrf_exempt
+@csrf_exempt  # Required for cross-origin direct upload via X-Upload-Token signed token
 @require_http_methods(['POST'])
 def upload_media(request):
     """
@@ -753,6 +753,12 @@ def upload_media(request):
     # === Authentication ===
     if request.user.is_authenticated and request.user.is_staff:
         upload_user = request.user
+        # For session-auth requests (same-origin), enforce CSRF protection
+        from django.middleware.csrf import CsrfViewMiddleware
+        _csrf_mw = CsrfViewMiddleware(lambda r: None)
+        _csrf_reason = _csrf_mw.process_view(request, None, [], {})
+        if _csrf_reason is not None:
+            return JsonResponse({'error': 'CSRF validation failed'}, status=403)
     else:
         # Cross-origin: verify signed upload token
         token = request.META.get('HTTP_X_UPLOAD_TOKEN', '')
@@ -1185,7 +1191,6 @@ def gdrive_update_storage(request, account_id):
 
 
 @staff_member_required
-@csrf_exempt
 @require_http_methods(['POST'])
 def gdrive_delete_account(request, account_id):
     """API: Delete a GDrive account."""
@@ -1200,7 +1205,6 @@ def gdrive_delete_account(request, account_id):
 
 
 @staff_member_required
-@csrf_exempt
 @require_http_methods(['POST'])
 def gdrive_oauth_upload_json(request):
     """

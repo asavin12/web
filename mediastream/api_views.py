@@ -6,6 +6,7 @@ from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import StreamMedia, MediaCategory, MediaPlaylist
@@ -15,6 +16,16 @@ from .serializers import (
 )
 
 
+class MediaStreamAnonThrottle(AnonRateThrottle):
+    """60 requests/minute cho anonymous users"""
+    scope = 'mediastream_anon'
+
+
+class MediaStreamUserThrottle(UserRateThrottle):
+    """300 requests/minute cho authenticated users"""
+    scope = 'mediastream_user'
+
+
 class MediaCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint để lấy danh sách categories
@@ -22,6 +33,7 @@ class MediaCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = MediaCategory.objects.all()
     serializer_class = MediaCategorySerializer
     permission_classes = [AllowAny]
+    throttle_classes = [MediaStreamAnonThrottle, MediaStreamUserThrottle]
     lookup_field = 'slug'
 
 
@@ -44,6 +56,7 @@ class StreamMediaViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = StreamMedia.objects.filter(is_active=True, is_public=True)
     serializer_class = StreamMediaSerializer
     permission_classes = [AllowAny]
+    throttle_classes = [MediaStreamAnonThrottle, MediaStreamUserThrottle]
     lookup_field = 'uid'
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

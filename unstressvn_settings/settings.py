@@ -15,6 +15,21 @@ import mimetypes
 from pathlib import Path
 
 # =============================================
+# SENTRY — Error tracking (optional)
+# Đặt SENTRY_DSN env var để bật
+# =============================================
+_SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+if _SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    sentry_sdk.init(
+        dsn=_SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=0.1,  # 10% performance tracing
+        send_default_pii=False,  # Không gửi dữ liệu cá nhân
+    )
+
+# =============================================
 # MIME TYPES — Đảm bảo đúng trong Docker slim
 # python:3.12-slim thiếu /etc/mime.types
 # Cần đăng ký trước khi Django serve media files
@@ -118,7 +133,7 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'resources.apps.ResourcesConfig',
     'api.apps.ApiConfig',  # REST API
-    # 'search.apps.SearchConfig',  # Search — placeholder, chưa triển khai
+    # 'search.apps.SearchConfig',  # TODO: Full-text search — chưa triển khai (PostgreSQL tsvector)
     'news.apps.NewsConfig',  # News/Blog
     'knowledge.apps.KnowledgeConfig',  # Knowledge Base
     'tools.apps.ToolsConfig',  # Learning Tools
@@ -176,6 +191,29 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
 }
+
+# =============================================
+# CACHE — Redis nếu có, fallback LocMem
+# =============================================
+_REDIS_URL = os.environ.get('REDIS_URL', '')
+if _REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': _REDIS_URL,
+            'OPTIONS': {
+                'socket_timeout': 5,
+                'socket_connect_timeout': 5,
+            },
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unstressvn-default',
+        }
+    }
 
 # =============================================
 # DATABASE — Bootstrap defaults
@@ -250,7 +288,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # File upload limits — cho phép upload file lớn (video/audio)
-DATA_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024  # 500MB max POST body (chống DoS)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB max POST body
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # >10MB → ghi ra temp file
 
 # =============================================
@@ -311,6 +349,8 @@ REST_FRAMEWORK = {
         'anon': '100/hour',
         'user': '1000/hour',
         'login': '5/minute',
+        'mediastream_anon': '60/minute',
+        'mediastream_user': '300/minute',
     },
 }
 

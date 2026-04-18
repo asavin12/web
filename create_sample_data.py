@@ -18,6 +18,9 @@ from django.utils.text import slugify
 from datetime import timedelta
 import random
 
+import secrets
+import string
+
 User = get_user_model()
 
 print("=" * 50)
@@ -45,7 +48,16 @@ for user_data in users_data:
         defaults=user_data
     )
     if created:
-        password = 'admin123' if user_data.get('is_superuser') else 'password123'
+        if user_data.get('is_superuser'):
+            # Admin: use env var or generate secure random password
+            password = os.environ.get('ADMIN_INITIAL_PASSWORD', '')
+            if not password:
+                alphabet = string.ascii_letters + string.digits + '!@#$%^&*'
+                password = ''.join(secrets.choice(alphabet) for _ in range(20))
+                print(f"  ⚠️  Generated admin password: {password}  (save this!)")
+        else:
+            alphabet = string.ascii_letters + string.digits
+            password = ''.join(secrets.choice(alphabet) for _ in range(16))
         user.set_password(password)
         user.save()
         print(f"  ✓ Created user: {user.username}")

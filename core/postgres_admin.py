@@ -10,8 +10,11 @@ from django.db import connection
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 import json
+import logging
 import secrets
 import string
+
+logger = logging.getLogger(__name__)
 
 
 def generate_secure_password(length=32, include_special=True):
@@ -825,6 +828,28 @@ def restore_database(request):
         
         if cleanup_after and os.path.exists(filepath):
             os.unlink(filepath)
+        
+        # ── 2b. Kiểm tra lệnh nguy hiểm trước khi thực thi ───────────
+        DANGEROUS_PATTERNS = [
+            r'\bDROP\s+DATABASE\b',
+            r'\bDROP\s+SCHEMA\s+public\b',
+            r'\bTRUNCATE\s+(?:TABLE\s+)?ALL\b',
+            r'\bCREATE\s+OR\s+REPLACE\s+FUNCTION.*?(?:SECURITY\s+DEFINER|pg_exec|shell_exec)\b',
+            r'\bCOPY\s+\S+\s+(?:TO|FROM)\s+(?:PROGRAM|/(?!media/))',
+            r'pg_read_file|pg_write_file|pg_ls_dir|pg_stat_file',
+            r'lo_import|lo_export',
+        ]
+        import re as _re
+        for pattern in DANGEROUS_PATTERNS:
+            if _re.search(pattern, sql_content, _re.IGNORECASE):
+                logger.error(
+                    f'restore_database: dangerous SQL pattern detected: {pattern}  '
+                    f'user={request.user.username} file={filename}'
+                )
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'File SQL chứa lệnh nguy hiểm và bị từ chối. Vui lòng kiểm tra lại file backup.',
+                }, status=400)
         
         # ── 3. Thực thi SQL qua Django connection (psycopg2) ─────────
         lines = sql_content.split('\n')
