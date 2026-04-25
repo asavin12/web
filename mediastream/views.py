@@ -19,38 +19,13 @@ from django.http import (
 )
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods, require_GET
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import get_user_model
-from django.core import signing
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db.models import Q
 
 from .models import StreamMedia, MediaCategory, MediaSubtitle, MediaPlaylist
-
-
-# ============================================================================
-# UPLOAD TOKEN (for direct upload bypass Cloudflare)
-# ============================================================================
-
-def _generate_upload_token(user):
-    """Generate signed upload token valid for 2 hours."""
-    return signing.dumps({'uid': user.pk}, salt='direct-upload')
-
-
-def _verify_upload_token(token):
-    """Verify upload token, returns User or None."""
-    if not token:
-        return None
-    User = get_user_model()
-    try:
-        data = signing.loads(token, salt='direct-upload', max_age=7200)
-        user = User.objects.get(pk=data['uid'], is_staff=True)
-        return user
-    except (signing.BadSignature, signing.SignatureExpired, User.DoesNotExist, KeyError):
-        return None
 
 
 # ============================================================================
@@ -741,30 +716,18 @@ def _extract_from_uploaded_video(uploaded_file):
 # ADMIN UPLOAD VIEWS
 # ============================================================================
 
-@csrf_exempt  # Required for cross-origin direct upload via X-Upload-Token signed token
 @require_http_methods(['POST'])
 def upload_media(request):
     """
     Handle media file upload (AJAX) - supports single file or multiple files
     URL: /media-stream/admin/upload/api/
-    
-    Auth: session-based (same origin) OR signed upload token (cross-origin direct upload)
+
+    Auth: session-based staff only (same origin, CSRF enforced by middleware)
     """
     # === Authentication ===
-    if request.user.is_authenticated and request.user.is_staff:
-        upload_user = request.user
-        # For session-auth requests (same-origin), enforce CSRF protection
-        from django.middleware.csrf import CsrfViewMiddleware
-        _csrf_mw = CsrfViewMiddleware(lambda r: None)
-        _csrf_reason = _csrf_mw.process_view(request, None, [], {})
-        if _csrf_reason is not None:
-            return JsonResponse({'error': 'CSRF validation failed'}, status=403)
-    else:
-        # Cross-origin: verify signed upload token
-        token = request.META.get('HTTP_X_UPLOAD_TOKEN', '')
-        upload_user = _verify_upload_token(token)
-        if upload_user is None:
-            return JsonResponse({'error': 'Authentication required — not staff or invalid token'}, status=403)
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({'error': 'Authentication required'}, status=403)
+    upload_user = request.user
     
     # Support both single 'file' and multiple 'files'
     files = request.FILES.getlist('files')

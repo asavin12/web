@@ -17,7 +17,12 @@ parse_db_conn() {
     DB_NAME_PARSED=$(echo "$database_url" | sed -n 's|.*/\([^?]*\).*|\1|p')
   else
     DB_USER_PARSED="${DB_USER:-unstressvn}"
-    DB_PASS_PARSED="${DB_PASSWORD:-unstressvn}"
+    # Support Docker secret for DB password
+    if [ -f "/run/secrets/db_password" ]; then
+      DB_PASS_PARSED=$(cat /run/secrets/db_password | tr -d '[:space:]')
+    else
+      DB_PASS_PARSED="${DB_PASSWORD:-unstressvn}"
+    fi
     DB_HOST_PARSED="${DB_HOST:-localhost}"
     DB_PORT_PARSED="${DB_PORT:-5432}"
     DB_NAME_PARSED="${DB_NAME:-unstressvn}"
@@ -87,7 +92,10 @@ else:
     port = os.environ.get('DB_PORT', '5432')
     dbname = os.environ.get('DB_NAME', 'unstressvn')
     user = os.environ.get('DB_USER', 'unstressvn')
-    password = os.environ.get('DB_PASSWORD', 'unstressvn')
+    # Support Docker secret
+    import pathlib
+    secret_file = pathlib.Path('/run/secrets/db_password')
+    password = secret_file.read_text().strip() if secret_file.is_file() else os.environ.get('DB_PASSWORD', 'unstressvn')
 
 try:
     conn = psycopg2.connect(host=host, port=port, dbname=dbname, user=user, password=password, connect_timeout=3)

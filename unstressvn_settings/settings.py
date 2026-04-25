@@ -90,7 +90,7 @@ DEBUG = True  # Default dev, DB override
 # Hỗ trợ ALLOWED_HOSTS từ env var (cần cho deploy lần đầu trước khi cấu hình SiteConfiguration)
 _env_hosts = os.environ.get('ALLOWED_HOSTS', '')
 if _env_hosts:
-    ALLOWED_HOSTS = [h.strip() for h in _env_hosts.split(',') if h.strip()]
+    ALLOWED_HOSTS = [h.strip() for h in _env_hosts.split(',') if h.strip() and h.strip() != '*']
 else:
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'host.docker.internal']
 # Luôn giữ localhost cho Docker healthcheck (curl localhost:8000/...)
@@ -148,6 +148,7 @@ MIDDLEWARE = [
     'unstressvn_settings.middleware.PublicMediaMiddleware',  # Public media headers — must be FIRST
     'corsheaders.middleware.CorsMiddleware',  # CORS — must be before CommonMiddleware
     'django.middleware.security.SecurityMiddleware',
+    'unstressvn_settings.middleware.SecurityHeadersMiddleware',  # CSP, Permissions-Policy, CORP
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Serve static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',  # Đa ngôn ngữ
@@ -227,7 +228,13 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'unstressvn'),
         'USER': os.environ.get('DB_USER', 'unstressvn'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'unstressvn'),
+        'PASSWORD': (
+            # 1. Docker secret file (recommended for production)
+            open('/run/secrets/db_password').read().strip()
+            if os.path.isfile('/run/secrets/db_password') else
+            # 2. Env var
+            os.environ.get('DB_PASSWORD', 'unstressvn')
+        ),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5433'),
         'OPTIONS': {
@@ -467,7 +474,6 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
     'x-api-key',  # Cho N8N automation API
-    'x-upload-token',  # Cho direct upload bypass Cloudflare
 ]
 
 # =============================================

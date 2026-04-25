@@ -61,7 +61,7 @@ def apply_dynamic_settings():
 
     # === Allowed Hosts ===
     if config.allowed_hosts:
-        hosts = [h.strip() for h in config.allowed_hosts.split(',') if h.strip()]
+        hosts = [h.strip() for h in config.allowed_hosts.split(',') if h.strip() and h.strip() != '*']
         # Merge env var ALLOWED_HOSTS (cần cho deploy trước khi cấu hình SiteConfiguration)
         env_hosts = os.environ.get('ALLOWED_HOSTS', '')
         if env_hosts:
@@ -98,33 +98,6 @@ def apply_dynamic_settings():
                 if o and o not in cors_origins:
                     cors_origins.append(o)
         settings.CORS_ALLOWED_ORIGINS = cors_origins
-
-    # === Direct Upload Domain (bypass Cloudflare) ===
-    upload_domain = getattr(config, 'direct_upload_domain', '').strip()
-    if upload_domain:
-        # Auto-add upload subdomain to ALLOWED_HOSTS
-        if upload_domain not in settings.ALLOWED_HOSTS:
-            settings.ALLOWED_HOSTS.append(upload_domain)
-        # Auto-add to CSRF_TRUSTED_ORIGINS
-        upload_origin = f'https://{upload_domain}'
-        if not hasattr(settings, 'CSRF_TRUSTED_ORIGINS'):
-            settings.CSRF_TRUSTED_ORIGINS = []
-        if upload_origin not in settings.CSRF_TRUSTED_ORIGINS:
-            settings.CSRF_TRUSTED_ORIGINS.append(upload_origin)
-        # Auto-add main site origins to CORS so browser allows cross-origin XHR
-        # Request: from unstressvn.com → to upload.unstressvn.com
-        if not hasattr(settings, 'CORS_ALLOWED_ORIGINS'):
-            settings.CORS_ALLOWED_ORIGINS = []
-        if config.allowed_hosts:
-            for host in config.allowed_hosts.split(','):
-                host = host.strip()
-                if host and host not in ('localhost', '127.0.0.1', 'host.docker.internal'):
-                    origin = f'https://{host}'
-                    if origin not in settings.CORS_ALLOWED_ORIGINS:
-                        settings.CORS_ALLOWED_ORIGINS.append(origin)
-        if upload_origin not in settings.CORS_ALLOWED_ORIGINS:
-            settings.CORS_ALLOWED_ORIGINS.append(upload_origin)
-        logger.info('📤 Direct upload domain: %s', upload_domain)
 
     # === Email ===
     settings.EMAIL_HOST = config.email_host

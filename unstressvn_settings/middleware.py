@@ -299,3 +299,57 @@ class ForceDefaultLanguageMiddleware:
         
         # Không tìm thấy ngôn ngữ hỗ trợ -> mặc định tiếng Anh
         return 'en'
+
+
+class SecurityHeadersMiddleware:
+    """
+    Thêm security headers vào mọi response (trừ /media/ và /static/ đã được xử lý riêng).
+
+    Headers được thêm:
+    - Content-Security-Policy: Chặn XSS, clickjacking, mixed content
+    - Permissions-Policy: Tắt các browser feature không dùng
+    - Cross-Origin-Resource-Policy: Chặn cross-origin embedding không mong muốn
+    - Referrer-Policy: Kiểm soát thông tin referrer gửi ra ngoài
+    """
+
+    # Paths mà middleware này bỏ qua (đã xử lý bởi middleware khác)
+    SKIP_PREFIXES = ('/media/', '/static/', '/staticfiles/')
+
+    # Content-Security-Policy baseline
+    # unsafe-inline cần thiết cho React/Tailwind; base-uri và form-action bảo vệ quan trọng
+    CSP = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https: blob:; "
+        "media-src 'self' blob: https://drive.google.com https://*.googleapis.com https://www.youtube.com; "
+        "frame-src https://www.youtube.com https://www.youtube-nocookie.com; "
+        "connect-src 'self' https://generativelanguage.googleapis.com https://*.googleapis.com; "
+        "font-src 'self' data:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "upgrade-insecure-requests;"
+    )
+
+    PERMISSIONS_POLICY = (
+        "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        # Bỏ qua media/static — PublicMediaMiddleware đã xử lý /media/
+        for prefix in self.SKIP_PREFIXES:
+            if request.path.startswith(prefix):
+                return response
+
+        response.setdefault('Content-Security-Policy', self.CSP)
+        response.setdefault('Permissions-Policy', self.PERMISSIONS_POLICY)
+        response.setdefault('Cross-Origin-Resource-Policy', 'same-site')
+        response.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+
+        return response
