@@ -822,32 +822,32 @@ export default function StreamPlayerPage() {
     } catch { /* localStorage not available */ }
   }, [subStyle]);
 
-  // Drag handler for subtitle position
-  const handleSubDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  // Drag handler for subtitle position (Pointer Events for mouse + touch)
+  const handleSubDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!containerRect) return;
 
-    const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+
+    const handleMove = (moveEvent: PointerEvent) => {
       moveEvent.preventDefault();
-      const clientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : (moveEvent as MouseEvent).clientY;
+      const clientY = moveEvent.clientY;
       const relativeY = containerRect.bottom - clientY;
       const percent = Math.max(5, Math.min(80, (relativeY / containerRect.height) * 100));
       setSubStyle(prev => ({ ...prev, bottomPercent: Math.round(percent) }));
     };
 
     const handleEnd = () => {
-      document.removeEventListener('mousemove', handleMove);
-      document.removeEventListener('mouseup', handleEnd);
-      document.removeEventListener('touchmove', handleMove);
-      document.removeEventListener('touchend', handleEnd);
+      document.removeEventListener('pointermove', handleMove);
+      document.removeEventListener('pointerup', handleEnd);
+      document.removeEventListener('pointercancel', handleEnd);
     };
 
-    document.addEventListener('mousemove', handleMove);
-    document.addEventListener('mouseup', handleEnd);
-    document.addEventListener('touchmove', handleMove, { passive: false });
-    document.addEventListener('touchend', handleEnd);
+    document.addEventListener('pointermove', handleMove);
+    document.addEventListener('pointerup', handleEnd);
+    document.addEventListener('pointercancel', handleEnd);
   }, []);
 
   // Fetch media data
@@ -1255,8 +1255,8 @@ export default function StreamPlayerPage() {
                     {/* Side drag handle */}
                     <div
                       className="flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-opacity ml-1 p-1 rounded bg-white/10"
-                      onMouseDown={handleSubDragStart}
-                      onTouchStart={handleSubDragStart}
+                      onPointerDown={handleSubDragStart}
+                      style={{ touchAction: 'none' }}
                       title="Kéo thả vị trí phụ đề"
                     >
                       <GripVertical className="h-5 w-5 text-white/80" />
