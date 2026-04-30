@@ -101,7 +101,7 @@ def _rebuild_vtt(segments):
     return '\n'.join(lines)
 
 
-DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash'
+DEFAULT_GEMINI_MODEL = 'gemini-1.5-flash'
 
 # Fallback models when database is empty
 GEMINI_MODELS_FALLBACK = [

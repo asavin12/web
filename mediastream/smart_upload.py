@@ -162,7 +162,7 @@ NỘI DUNG PHỤ ĐỀ:
 {subtitle_text}"""
 
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         result_text = response.text.strip()
 
