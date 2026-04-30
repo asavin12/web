@@ -230,7 +230,7 @@ export default function GeminiApiKeyManager({ onKeyChange, onModelChange, compac
 
         {/* Input nhập key */}
         {showInput && (
-          <div className="space-y-2">
+          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-2">
             <div className="flex gap-1.5">
               <input
                 type="password"
@@ -244,7 +244,7 @@ export default function GeminiApiKeyManager({ onKeyChange, onModelChange, compac
                 autoComplete="off"
               />
               <button
-                onClick={handleSave}
+                type="submit"
                 disabled={!inputValue.trim()}
                 className="h-8 px-3 text-xs font-medium rounded-md bg-vintage-olive text-white
                   hover:bg-vintage-olive/90 disabled:opacity-40 disabled:cursor-not-allowed transition"
@@ -260,7 +260,7 @@ export default function GeminiApiKeyManager({ onKeyChange, onModelChange, compac
                 ← Huỷ
               </button>
             )}
-          </div>
+          </form>
         )}
 
         {/* Nút đổi key (khi đã có key) */}

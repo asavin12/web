@@ -11,7 +11,8 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.core.cache import cache
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework import permissions
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +218,7 @@ Do NOT add any explanation or extra text. Keep translations natural and concise 
 
 
 @api_view(['POST'])
+@permission_classes([permissions.AllowAny])
 def translate_subtitle(request):
     """
     Translate subtitle content using Gemini API
@@ -350,6 +352,7 @@ def translate_subtitle(request):
 
 
 @api_view(['GET', 'POST'])
+@permission_classes([permissions.AllowAny])
 def gemini_models_list(request):
     """
     GET  /media-stream/gemini-models/ — Trả về danh sách models từ database (cho mọi user)
@@ -481,6 +484,7 @@ def gemini_models_list(request):
 
 
 @api_view(['POST'])
+@permission_classes([permissions.AllowAny])
 def word_lookup(request):
     """
     POST /media-stream/word-lookup/
