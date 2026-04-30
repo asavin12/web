@@ -147,7 +147,16 @@ def _translate_with_gemini(texts, source_lang, target_lang, api_key, model_id=No
     """
     import google.generativeai as genai
     
-    genai.configure(api_key=api_key)
+    # Ensure API key is properly cleaned up (remove all whitespace)
+    api_key = api_key.strip() if api_key else ''
+    if not api_key:
+        raise ValueError("API key is empty")
+    
+    try:
+        genai.configure(api_key=api_key)
+    except Exception as e:
+        logger.error(f"Failed to configure Gemini with API key: {e}")
+        raise
     
     source_name = SUPPORTED_LANGUAGES.get(source_lang, source_lang)
     target_name = SUPPORTED_LANGUAGES.get(target_lang, target_lang)
@@ -238,10 +247,17 @@ def translate_subtitle(request):
     user_api_key = body.get('gemini_api_key', '').strip()
     api_key = user_api_key or _get_gemini_api_key()
     if not api_key:
+        logger.warning('translate_subtitle: No API key provided (user_key=%s, server_key=%s)', 
+                      bool(user_api_key), bool(_get_gemini_api_key()))
         return JsonResponse({
             'error': 'Chưa có Gemini API Key. '
                      'Vui lòng nhập API Key trong phần "Dịch AI" để sử dụng tính năng dịch phụ đề.'
         }, status=503)
+    
+    # Log API key status (mask for security)
+    logger.info('translate_subtitle: Using API key (source=%s, masked=%s***%s)',
+               'user' if user_api_key else 'server',
+               api_key[:6], api_key[-4:])
     
     target_lang = body.get('target_lang', '').strip()
     if not target_lang or target_lang not in SUPPORTED_LANGUAGES:

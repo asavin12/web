@@ -184,6 +184,30 @@ export const mediaStreamApi = {
    * Translate subtitle using Gemini API
    */
   translateSubtitle: async (data: TranslateRequest): Promise<TranslateResponse> => {
+    // Fallback: if gemini_api_key not provided, try reading from localStorage
+    if (!data.gemini_api_key) {
+      try {
+        const storedKey = localStorage.getItem('gemini_api_key') || '';
+        if (storedKey) {
+          data = { ...data, gemini_api_key: storedKey };
+        }
+      } catch {
+        // localStorage not available
+      }
+    }
+    
+    // Fallback: if gemini_model not provided, try reading from localStorage
+    if (!data.gemini_model) {
+      try {
+        const storedModel = localStorage.getItem('gemini_model') || '';
+        if (storedModel) {
+          data = { ...data, gemini_model: storedModel };
+        }
+      } catch {
+        // localStorage not available
+      }
+    }
+    
     const response = await streamApi.post<TranslateResponse>(
       '/translate/',
       data
@@ -203,8 +227,16 @@ export const mediaStreamApi = {
    * Refresh Gemini models from Google API (POST with api key, caches on server for all users)
    */
   refreshGeminiModels: async (geminiApiKey: string): Promise<GeminiModelsResponse> => {
+    const apiKey = geminiApiKey || (() => {
+      try {
+        return localStorage.getItem('gemini_api_key') || '';
+      } catch {
+        return '';
+      }
+    })();
+    
     const response = await streamApi.post<GeminiModelsResponse>('/gemini-models/', {
-      gemini_api_key: geminiApiKey,
+      gemini_api_key: apiKey,
     });
     return response.data;
   },
@@ -213,6 +245,30 @@ export const mediaStreamApi = {
    * Look up word meaning using Gemini
    */
   wordLookup: async (data: WordLookupRequest): Promise<WordLookupResponse> => {
+    // Fallback: if gemini_api_key not provided, try reading from localStorage
+    if (!data.gemini_api_key) {
+      try {
+        const storedKey = localStorage.getItem('gemini_api_key') || '';
+        if (storedKey) {
+          data = { ...data, gemini_api_key: storedKey };
+        }
+      } catch {
+        // localStorage not available
+      }
+    }
+    
+    // Fallback: if gemini_model not provided, try reading from localStorage
+    if (!data.gemini_model) {
+      try {
+        const storedModel = localStorage.getItem('gemini_model') || '';
+        if (storedModel) {
+          data = { ...data, gemini_model: storedModel };
+        }
+      } catch {
+        // localStorage not available
+      }
+    }
+    
     const response = await streamApi.post<WordLookupResponse>('/word-lookup/', data);
     return response.data;
   },
